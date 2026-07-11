@@ -17,7 +17,7 @@ import {
   Bookmark, BookmarkCheck, Share2, Search, Wifi, WifiOff, X, Link as LinkIcon, Send, MessageCircle,
   Dna, Coins,
   Phone, Bot,
-  BarChart3, MessageSquare, Ticket as TicketIcon,
+  BarChart3, MessageSquare, Ticket as TicketIcon, Video,
   Megaphone, GraduationCap, BookOpen,
   type LucideIcon,
 } from "lucide-react";
@@ -1443,6 +1443,49 @@ export function HomeScreen() {
           ))}
         </div>
       </div>
+
+      {/* Citizen Shield — big glass hero card (most-used feature) */}
+      <section className="px-6">
+        <motion.button
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          onClick={() => window.dispatchEvent(new CustomEvent("circle:citizen-shield"))}
+          className="relative w-full text-start rounded-3xl glass-strong border border-primary/30 p-5 flex items-center gap-4 hover:scale-[1.01] transition overflow-hidden group shadow-float"
+        >
+          {/* Gradient glow background */}
+          <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-gradient-to-br from-primary/30 to-secondary/10 blur-3xl opacity-70 group-hover:opacity-100 transition" />
+          <div className="absolute -bottom-12 -left-12 w-32 h-32 rounded-full bg-accent/20 blur-3xl opacity-50" />
+
+          {/* Shield icon */}
+          <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/40 to-secondary/20 border border-primary/40 flex items-center justify-center shrink-0 shadow-lg">
+            <ShieldCheck className="w-8 h-8 text-secondary" />
+          </div>
+
+          {/* Content */}
+          <div className="relative flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">🛡️</span>
+              <h3 className="font-display text-xl leading-tight">Citizen Shield</h3>
+              <span className="ms-auto text-[9px] uppercase tracking-widest px-2 py-0.5 rounded-full bg-primary/20 text-secondary border border-primary/30 whitespace-nowrap">
+                Most Used
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1 leading-snug">
+              Report government issues · AI-verified evidence · auto-routing to authorities
+            </p>
+            <div className="flex items-center gap-4 mt-2.5 text-[10px] text-muted-foreground">
+              <span className="flex items-center gap-1"><Video className="w-3 h-3 text-secondary" /> Video evidence</span>
+              <span className="flex items-center gap-1"><Users className="w-3 h-3 text-secondary" /> Witness network</span>
+              <span className="flex items-center gap-1"><Brain className="w-3 h-3 text-secondary" /> AI case builder</span>
+              <span className="flex items-center gap-1"><BarChart3 className="w-3 h-3 text-secondary" /> Reputation scores</span>
+            </div>
+            <div className="mt-2.5 text-[11px] text-secondary flex items-center gap-1 font-medium">
+              Open Citizen Shield <ChevronRight className="w-3.5 h-3.5" />
+            </div>
+          </div>
+        </motion.button>
+      </section>
 
       {/* Cirkle Exclusives — compact (6 by default, expandable) */}
       <section id="cirkle-exclusives" className="px-6">
