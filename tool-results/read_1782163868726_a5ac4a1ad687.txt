@@ -1,0 +1,1236 @@
+     1→"use client";
+     2→
+     3→import * as React from "react";
+     4→import { motion, AnimatePresence } from "framer-motion";
+     5→import {
+     6→  Sparkles,
+     7→  Sun,
+     8→  Cloud,
+     9→  Lock,
+    10→  ShieldCheck,
+    11→  MapPin,
+    12→  ChevronRight,
+    13→  ChevronLeft,
+    14→  TrendingUp,
+    15→  BadgeCheck,
+    16→  Building2,
+    17→  Users,
+    18→  Heart,
+    19→  MessageCircle,
+    20→  Repeat2,
+    21→  Eye,
+    22→  ArrowRight,
+    23→  Calendar,
+    24→  Clock,
+    25→  MessageSquare,
+    26→  Camera,
+    27→  Video,
+    28→  Plane,
+    29→  CreditCard,
+    30→  Languages,
+    31→  ShieldCheck as VerifyIcon,
+    32→  Compass,
+    33→  Zap,
+    34→} from "lucide-react";
+    35→
+    36→import { ModuleHeader } from "@/components/circle/module-header";
+    37→import { CircleAvatar } from "@/components/brand/circle-avatar";
+    38→import { CircleLogo } from "@/components/brand/circle-logo";
+    39→import { Button } from "@/components/ui/button";
+    40→import { Badge } from "@/components/ui/badge";
+    41→import { Card } from "@/components/ui/card";
+    42→import { useCircleStore } from "@/stores/circle-store";
+    43→import { cn } from "@/lib/utils";
+    44→
+    45→import {
+    46→  POSTS,
+    47→  OFFICIAL_CHANNELS,
+    48→  CIRCLE_GROUPS,
+    49→} from "@/lib/circle/mock-data";
+    50→import type { Post } from "@/lib/circle/types";
+    51→import type { ModuleId } from "@/lib/circle/modules";
+    52→
+    53→// ---------------------------------------------------------------------------
+    54→// Local data — dashboard-only
+    55→// ---------------------------------------------------------------------------
+    56→
+    57→interface HeroCard {
+    58→  id: string;
+    59→  eyebrow: string;
+    60→  title: string;
+    61→  subtitle: string;
+    62→  cta: string;
+    63→  destination: ModuleId;
+    64→  gradient: string;
+    65→}
+    66→
+    67→const HERO_CARDS: HeroCard[] = [
+    68→  {
+    69→    id: "h1",
+    70→    eyebrow: "Welcome",
+    71→    title: "Welcome back, Layla",
+    72→    subtitle:
+    73→      "Your Circle is quiet today. 4 new messages, 2 events this week, and 142 learnings since you joined.",
+    74→    cta: "Open Wasl",
+    75→    destination: "wasl",
+    76→    gradient: "from-[hsl(195_56%_23%)] via-[hsl(211_30%_32%)] to-[hsl(351_41%_46%)]",
+    77→  },
+    78→  {
+    79→    id: "h2",
+    80→    eyebrow: "Release",
+    81→    title: "Circle v12.0 launched",
+    82→    subtitle: "30 modules · 200 languages · 100% free. We replaced 12 apps and $0 was spent building it.",
+    83→    cta: "Read release notes",
+    84→    destination: "official",
+    85→    gradient: "from-[hsl(39_45%_57%)] via-[hsl(39_45%_47%)] to-[hsl(195_56%_23%)]",
+    86→  },
+    87→  {
+    88→    id: "h3",
+    89→    eyebrow: "Advisory",
+    90→    title: "Heat advisory — Ministry of Health",
+    91→    subtitle: "Hydrate frequently this week. Peak UV between 11am–3pm across the Cairo governorate.",
+    92→    cta: "View advisory",
+    93→    destination: "official",
+    94→    gradient: "from-[hsl(351_51%_56%)] via-[hsl(351_51%_46%)] to-[hsl(39_45%_47%)]",
+    95→  },
+    96→  {
+    97→    id: "h4",
+    98→    eyebrow: "Rihla",
+    99→    title: "New Rihla itinerary: Aswan in 3 days",
+   100→    subtitle: "AI-planned on-device. Felucca at sunset, Philae at dawn, Nubian village lunch. Offline-ready.",
+   101→    cta: "Open Rihla",
+   102→    destination: "travel",
+   103→    gradient: "from-[hsl(195_56%_33%)] via-[hsl(211_30%_42%)] to-[hsl(39_45%_57%)]",
+   104→  },
+   105→  {
+   106→    id: "h5",
+   107→    eyebrow: "Circle",
+   108→    title: "Cairo Cyclists Friday ride — 31 attending",
+   109→    subtitle: "Maadi → Pyramids. 32 km. Departure 6:00 am from Maadi Grand Mall. Bring water + lights.",
+   110→    cta: "Open Circle",
+   111→    destination: "circle-groups",
+   112→    gradient: "from-[hsl(60_8%_18%)] via-[hsl(195_56%_23%)] to-[hsl(351_41%_46%)]",
+   113→  },
+   114→];
+   115→
+   116→interface QuickAction {
+   117→  label: string;
+   118→  icon: React.ComponentType<{ className?: string }>;
+   119→  module: ModuleId;
+   120→  color: "teal" | "gold" | "rose" | "steel" | "charcoal";
+   121→}
+   122→
+   123→const QUICK_ACTIONS: QuickAction[] = [
+   124→  { label: "New Message", icon: MessageSquare, module: "wasl", color: "teal" },
+   125→  { label: "Post to Midan", icon: MessageCircle, module: "midan", color: "steel" },
+   126→  { label: "Capture Glimpse", icon: Camera, module: "lamahat", color: "rose" },
+   127→  { label: "Watch Party", icon: Video, module: "mashahd", color: "teal" },
+   128→  { label: "Plan Trip", icon: Plane, module: "travel", color: "rose" },
+   129→  { label: "Send Money", icon: CreditCard, module: "payments", color: "gold" },
+   130→  { label: "Translate", icon: Languages, module: "translate", color: "steel" },
+   131→  { label: "Verify Identity", icon: VerifyIcon, module: "verify", color: "gold" },
+   132→];
+   133→
+   134→interface NearbyEvent {
+   135→  id: string;
+   136→  title: string;
+   137→  distance: string;
+   138→  time: string;
+   139→  category: string;
+   140→  gradient: string;
+   141→}
+   142→
+   143→const NEARBY_EVENTS: NearbyEvent[] = [
+   144→  {
+   145→    id: "n1",
+   146→    title: "Cairo Cyclists Friday Ride",
+   147→    distance: "1.2 km away",
+   148→    time: "Fri 6:00 AM",
+   149→    category: "Sports",
+   150→    gradient: "from-[hsl(195_56%_33%)] to-[hsl(195_56%_18%)]",
+   151→  },
+   152→  {
+   153→    id: "n2",
+   154→    title: "Maadi Farmers Market",
+   155→    distance: "0.8 km away",
+   156→    time: "Sat 9:00 AM",
+   157→    category: "Market",
+   158→    gradient: "from-[hsl(39_45%_57%)] to-[hsl(39_45%_42%)]",
+   159→  },
+   160→  {
+   161→    id: "n3",
+   162→    title: "Nile Folklore Night",
+   163→    distance: "3.4 km away",
+   164→    time: "Tonight 8:30 PM",
+   165→    category: "Music",
+   166→    gradient: "from-[hsl(351_41%_56%)] to-[hsl(351_41%_41%)]",
+   167→  },
+   168→  {
+   169→    id: "n4",
+   170→    title: "Citadel Photo Walk",
+   171→    distance: "5.1 km away",
+   172→    time: "Sun 5:00 PM",
+   173→    category: "Photo",
+   174→    gradient: "from-[hsl(211_30%_42%)] to-[hsl(211_30%_27%)]",
+   175→  },
+   176→];
+   177→
+   178→const TRENDING_TAGS: { tag: string; count: string }[] = [
+   179→  { tag: "#Cairo", count: "12.4k" },
+   180→  { tag: "#Rihla", count: "8.2k" },
+   181→  { tag: "#FalafelGate", count: "4.1k" },
+   182→  { tag: "#OpenSource", count: "3.8k" },
+   183→  { tag: "#CircleV12", count: "2.9k" },
+   184→];
+   185→
+   186→interface Workspace {
+   187→  id: string;
+   188→  name: string;
+   189→  members: number;
+   190→  online: number;
+   191→  arabicName?: string;
+   192→  color: "teal" | "gold" | "rose" | "steel" | "charcoal";
+   193→  initials: string;
+   194→}
+   195→
+   196→const WORKSPACES: Workspace[] = [
+   197→  {
+   198→    id: "w1",
+   199→    name: "Jozour Engineering",
+   200→    arabicName: "جذور للهندسة",
+   201→    members: 24,
+   202→    online: 11,
+   203→    color: "steel",
+   204→    initials: "JE",
+   205→  },
+   206→  {
+   207→    id: "w2",
+   208→    name: "Cairo International School",
+   209→    arabicName: "مدرسة القاهرة الدولية",
+   210→    members: 180,
+   211→    online: 42,
+   212→    color: "gold",
+   213→    initials: "CS",
+   214→  },
+   215→];
+   216→
+   217→// ---------------------------------------------------------------------------
+   218→// Helpers
+   219→// ---------------------------------------------------------------------------
+   220→
+   221→function relativeTime(iso: string): string {
+   222→  const then = new Date(iso).getTime();
+   223→  const now = Date.now();
+   224→  const diff = Math.max(0, now - then);
+   225→  const mins = Math.floor(diff / 60000);
+   226→  if (mins < 1) return "now";
+   227→  if (mins < 60) return `${mins}m`;
+   228→  const hours = Math.floor(mins / 60);
+   229→  if (hours < 24) return `${hours}h`;
+   230→  const days = Math.floor(hours / 24);
+   231→  if (days < 7) return `${days}d`;
+   232→  const weeks = Math.floor(days / 7);
+   233→  if (weeks < 5) return `${weeks}w`;
+   234→  return new Date(iso).toLocaleDateString();
+   235→}
+   236→
+   237→function formatStats(n: number): string {
+   238→  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+   239→  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+   240→  return String(n);
+   241→}
+   242→
+   243→const AVATAR_COLOR_MAP: Record<
+   244→  Post["authorColor"],
+   245→  "teal" | "gold" | "rose" | "steel" | "charcoal"
+   246→> = {
+   247→  teal: "teal",
+   248→  gold: "gold",
+   249→  rose: "rose",
+   250→  steel: "steel",
+   251→  charcoal: "charcoal",
+   252→};
+   253→
+   254→// ---------------------------------------------------------------------------
+   255→// Top greeting bar + AI core card
+   256→// ---------------------------------------------------------------------------
+   257→
+   258→function GreetingBar() {
+   259→  const { setActiveModule } = useCircleStore();
+   260→  const today = new Date();
+   261→  const enDate = today.toLocaleDateString("en-GB", {
+   262→    weekday: "long",
+   263→    day: "numeric",
+   264→    month: "long",
+   265→  });
+   266→  const arDate = today.toLocaleDateString("ar-EG", {
+   267→    weekday: "long",
+   268→    day: "numeric",
+   269→    month: "long",
+   270→  });
+   271→
+   272→  return (
+   273→    <div className="grid gap-4 lg:grid-cols-12">
+   274→      <Card className="lg:col-span-8 gap-0 overflow-hidden p-5 sm:p-6 shadow-soft">
+   275→        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+   276→          <div className="min-w-0">
+   277→            <div className="flex items-baseline gap-2 flex-wrap">
+   278→              <h2 className="font-display text-2xl sm:text-3xl font-semibold tracking-tight">
+   279→                <span className="font-arabic">السلام عليكم</span>, Layla{" "}
+   280→                <span className="inline-block animate-orb-float">👋</span>
+   281→              </h2>
+   282→            </div>
+   283→            <p className="mt-1.5 text-sm text-muted-foreground">
+   284→              <span className="font-arabic">{arDate}</span> · {enDate}
+   285→            </p>
+   286→            <div className="mt-3 flex flex-wrap items-center gap-2">
+   287→              <Badge
+   288→                variant="outline"
+   289→                className="gap-1.5 border-gold/40 bg-[hsl(var(--gold)/0.10)] text-foreground"
+   290→              >
+   291→                <Sun className="h-3 w-3 text-gold" />
+   292→                Sunny · 28°C · Cairo
+   293→              </Badge>
+   294→              <Badge
+   295→                variant="outline"
+   296→                className="gap-1.5 border-teal/40 bg-[hsl(var(--teal)/0.10)] text-foreground"
+   297→              >
+   298→                <Lock className="h-3 w-3 text-teal" />
+   299→                Your data stays on this device
+   300→              </Badge>
+   301→            </div>
+   302→          </div>
+   303→          <div className="flex sm:flex-col gap-2 shrink-0">
+   304→            <Button
+   305→              size="sm"
+   306→              onClick={() => setActiveModule("wasl")}
+   307→              className="bg-gradient-to-br from-[hsl(195_56%_33%)] to-[hsl(195_56%_23%)] text-cream hover:opacity-90"
+   308→            >
+   309→              <MessageSquare className="h-4 w-4" />
+   310→              4 new messages
+   311→            </Button>
+   312→            <Button
+   313→              size="sm"
+   314→              variant="outline"
+   315→              onClick={() => setActiveModule("circle-groups")}
+   316→            >
+   317→              <Calendar className="h-4 w-4" />
+   318→              2 events
+   319→            </Button>
+   320→          </div>
+   321→        </div>
+   322→      </Card>
+   323→
+   324→      <Card className="lg:col-span-4 gap-0 overflow-hidden p-5 shadow-soft relative">
+   325→        <div
+   326→          aria-hidden
+   327→          className="pointer-events-none absolute inset-0 opacity-30"
+   328→          style={{
+   329→            background:
+   330→              "radial-gradient(circle at 100% 0%, hsl(39 45% 57% / 0.4), transparent 60%)",
+   331→          }}
+   332→        />
+   333→        <div className="relative flex items-start gap-3">
+   334→          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[hsl(39_55%_67%)] to-[hsl(39_45%_47%)] text-charcoal">
+   335→            <Sparkles className="h-5 w-5" />
+   336→          </div>
+   337→          <div className="min-w-0 flex-1">
+   338→            <div className="flex items-center gap-2">
+   339→              <h3 className="font-semibold text-sm">Self-Learning Core</h3>
+   340→              <Badge
+   341→                variant="outline"
+   342→                className="text-[10px] border-teal/40 text-teal"
+   343→              >
+   344→                On-device
+   345→              </Badge>
+   346→            </div>
+   347→            <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+   348→              <span className="font-semibold text-foreground">142</span> events
+   349→              learned · <span className="font-semibold text-foreground">3</span>{" "}
+   350→              new interests this week ·{" "}
+   351→              <span className="font-semibold text-foreground">0 bytes</span>{" "}
+   352→              left your device.
+   353→            </p>
+   354→            <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+   355→              <div
+   356→                className="h-full rounded-full bg-gradient-to-r from-[hsl(39_55%_67%)] to-[hsl(351_51%_56%)]"
+   357→                style={{ width: "68%" }}
+   358→              />
+   359→            </div>
+   360→            <p className="mt-1.5 text-[10px] text-muted-foreground/80">
+   361→              matrix factorisation · last trained 4 minutes ago
+   362→            </p>
+   363→          </div>
+   364→        </div>
+   365→      </Card>
+   366→    </div>
+   367→  );
+   368→}
+   369→
+   370→// ---------------------------------------------------------------------------
+   371→// 1. Top Carousel
+   372→// ---------------------------------------------------------------------------
+   373→
+   374→function TopCarousel() {
+   375→  const { setActiveModule } = useCircleStore();
+   376→  const [index, setIndex] = React.useState(0);
+   377→  const count = HERO_CARDS.length;
+   378→
+   379→  React.useEffect(() => {
+   380→    const id = setInterval(() => setIndex((i) => (i + 1) % count), 5000);
+   381→    return () => clearInterval(id);
+   382→  }, [count]);
+   383→
+   384→  const go = (dir: 1 | -1) =>
+   385→    setIndex((i) => (i + dir + count) % count);
+   386→
+   387→  const current = HERO_CARDS[index];
+   388→
+   389→  return (
+   390→    <Card className="relative gap-0 overflow-hidden p-0 shadow-float">
+   391→      <div className="relative h-[260px] sm:h-[320px]">
+   392→        <AnimatePresence initial={false} mode="wait">
+   393→          <motion.div
+   394→            key={current.id}
+   395→            initial={{ opacity: 0, x: 24 }}
+   396→            animate={{ opacity: 1, x: 0 }}
+   397→            exit={{ opacity: 0, x: -24 }}
+   398→            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+   399→            className={cn(
+   400→              "absolute inset-0 flex flex-col justify-between p-6 sm:p-8 text-cream",
+   401→              "bg-gradient-to-br",
+   402→              current.gradient,
+   403→            )}
+   404→          >
+   405→            <div
+   406→              aria-hidden
+   407→              className="pointer-events-none absolute inset-0 opacity-30"
+   408→              style={{
+   409→                backgroundImage:
+   410→                  "radial-gradient(circle at 80% 20%, rgba(255,255,255,0.18), transparent 50%)",
+   411→              }}
+   412→            />
+   413→            <div className="relative">
+   414→              <Badge className="bg-cream/15 text-cream border-transparent backdrop-blur-sm">
+   415→                {current.eyebrow}
+   416→              </Badge>
+   417→              <h2 className="mt-3 font-display text-3xl sm:text-4xl font-semibold tracking-tight">
+   418→                {current.title}
+   419→              </h2>
+   420→              <p className="mt-2 max-w-xl text-sm sm:text-base text-cream/85">
+   421→                {current.subtitle}
+   422→              </p>
+   423→            </div>
+   424→            <div className="relative flex items-center justify-between">
+   425→              <Button
+   426→                size="sm"
+   427→                onClick={() => setActiveModule(current.destination)}
+   428→                className="bg-cream text-charcoal hover:bg-cream/90"
+   429→              >
+   430→                {current.cta}
+   431→                <ArrowRight className="h-4 w-4" />
+   432→              </Button>
+   433→              <div className="flex items-center gap-1.5">
+   434→                {HERO_CARDS.map((_, i) => (
+   435→                  <button
+   436→                    key={i}
+   437→                    onClick={() => setIndex(i)}
+   438→                    aria-label={`Slide ${i + 1}`}
+   439→                    className={cn(
+   440→                      "h-1.5 rounded-full transition-all",
+   441→                      i === index
+   442→                        ? "w-7 bg-cream"
+   443→                        : "w-2 bg-cream/40 hover:bg-cream/70",
+   444→                    )}
+   445→                  />
+   446→                ))}
+   447→              </div>
+   448→            </div>
+   449→          </motion.div>
+   450→        </AnimatePresence>
+   451→
+   452→        <button
+   453→          onClick={() => go(-1)}
+   454→          aria-label="Previous slide"
+   455→          className="absolute left-3 top-1/2 -translate-y-1/2 grid h-9 w-9 place-items-center rounded-full bg-cream/15 text-cream backdrop-blur-sm hover:bg-cream/25 transition-colors"
+   456→        >
+   457→          <ChevronLeft className="h-4 w-4" />
+   458→        </button>
+   459→        <button
+   460→          onClick={() => go(1)}
+   461→          aria-label="Next slide"
+   462→          className="absolute right-3 top-1/2 -translate-y-1/2 grid h-9 w-9 place-items-center rounded-full bg-cream/15 text-cream backdrop-blur-sm hover:bg-cream/25 transition-colors"
+   463→        >
+   464→          <ChevronRight className="h-4 w-4" />
+   465→        </button>
+   466→      </div>
+   467→    </Card>
+   468→  );
+   469→}
+   470→
+   471→// ---------------------------------------------------------------------------
+   472→// 2. Quick Actions
+   473→// ---------------------------------------------------------------------------
+   474→
+   475→const ACTION_COLOR_BG: Record<
+   476→  QuickAction["color"],
+   477→  string
+   478→> = {
+   479→  teal: "bg-[hsl(var(--teal)/0.12)] text-teal",
+   480→  gold: "bg-[hsl(var(--gold)/0.14)] text-gold",
+   481→  rose: "bg-[hsl(var(--rose)/0.14)] text-rose",
+   482→  steel: "bg-[hsl(var(--steel)/0.14)] text-steel",
+   483→  charcoal: "bg-muted text-foreground",
+   484→};
+   485→
+   486→function QuickActions() {
+   487→  const { setActiveModule } = useCircleStore();
+   488→  return (
+   489→    <Card className="gap-0 p-4 shadow-soft">
+   490→      <div className="flex items-center justify-between mb-3 px-1">
+   491→        <h3 className="font-display text-base font-semibold">Quick Actions</h3>
+   492→        <span className="font-arabic text-xs text-muted-foreground">
+   493→          إجراءات سريعة
+   494→        </span>
+   495→      </div>
+   496→      <div className="-mx-1 flex gap-2 overflow-x-auto scrollbar-hide px-1 pb-1">
+   497→        {QUICK_ACTIONS.map((a) => {
+   498→          const Icon = a.icon;
+   499→          return (
+   500→            <button
+   501→              key={a.label}
+   502→              onClick={() => setActiveModule(a.module)}
+   503→              className={cn(
+   504→                "group flex shrink-0 items-center gap-2 rounded-full border border-border/70 bg-background/60 px-3.5 py-2 text-sm font-medium transition-all",
+   505→                "hover:border-foreground/20 hover:bg-muted/60 hover:shadow-soft",
+   506→              )}
+   507→            >
+   508→              <span
+   509→                className={cn(
+   510→                  "grid h-6 w-6 place-items-center rounded-full",
+   511→                  ACTION_COLOR_BG[a.color],
+   512→                )}
+   513→              >
+   514→                <Icon className="h-3.5 w-3.5" />
+   515→              </span>
+   516→              <span>{a.label}</span>
+   517→            </button>
+   518→          );
+   519→        })}
+   520→      </div>
+   521→    </Card>
+   522→  );
+   523→}
+   524→
+   525→// ---------------------------------------------------------------------------
+   526→// 3. Happening Nearby
+   527→// ---------------------------------------------------------------------------
+   528→
+   529→function HappeningNearby() {
+   530→  const { setActiveModule } = useCircleStore();
+   531→  return (
+   532→    <Card className="gap-0 p-5 shadow-soft h-full">
+   533→      <div className="flex items-center justify-between mb-4">
+   534→        <div>
+   535→          <h3 className="font-display text-base font-semibold flex items-center gap-2">
+   536→            <Compass className="h-4 w-4 text-teal" />
+   537→            Happening Nearby
+   538→          </h3>
+   539→          <p className="text-xs text-muted-foreground mt-0.5">
+   540→            Within 10 km of Maadi, Cairo
+   541→          </p>
+   542→        </div>
+   543→        <Badge variant="outline" className="text-[10px]">
+   544→          4 events
+   545→        </Badge>
+   546→      </div>
+   547→      <div className="grid gap-3 sm:grid-cols-2">
+   548→        {NEARBY_EVENTS.map((e) => (
+   549→          <button
+   550→            key={e.id}
+   551→            onClick={() => setActiveModule("circle-groups")}
+   552→            className="group text-left rounded-xl overflow-hidden border border-border/70 hover:shadow-soft hover:border-foreground/15 transition-all bg-background"
+   553→          >
+   554→            <div
+   555→              className={cn(
+   556→                "relative h-20 bg-gradient-to-br",
+   557→                e.gradient,
+   558→              )}
+   559→            >
+   560→              <div
+   561→                aria-hidden
+   562→                className="absolute inset-0 opacity-30"
+   563→                style={{
+   564→                  backgroundImage:
+   565→                    "radial-gradient(circle at 30% 30%, rgba(255,255,255,0.18), transparent 50%)",
+   566→                }}
+   567→              />
+   568→              <Badge className="absolute top-2 left-2 bg-cream/20 text-cream border-transparent backdrop-blur-sm">
+   569→                {e.category}
+   570→              </Badge>
+   571→            </div>
+   572→            <div className="p-3">
+   573→              <div className="font-medium text-sm leading-snug">{e.title}</div>
+   574→              <div className="mt-1.5 flex items-center gap-3 text-xs text-muted-foreground">
+   575→                <span className="inline-flex items-center gap-1">
+   576→                  <MapPin className="h-3 w-3" />
+   577→                  {e.distance}
+   578→                </span>
+   579→                <span className="inline-flex items-center gap-1">
+   580→                  <Clock className="h-3 w-3" />
+   581→                  {e.time}
+   582→                </span>
+   583→              </div>
+   584→            </div>
+   585→          </button>
+   586→        ))}
+   587→      </div>
+   588→      <div className="mt-4 flex items-start gap-2 rounded-lg bg-[hsl(var(--teal)/0.08)] p-3 text-xs text-muted-foreground">
+   589→        <MapPin className="h-3.5 w-3.5 text-teal shrink-0 mt-0.5" />
+   590→        <span>
+   591→          <span className="font-medium text-foreground">Coarse city/geohash only.</span>{" "}
+   592→          Your precise location never leaves the device. Events shown come from
+   593→          your Circles and public local calendars.
+   594→        </span>
+   595→      </div>
+   596→    </Card>
+   597→  );
+   598→}
+   599→
+   600→// ---------------------------------------------------------------------------
+   601→// 4. For You (On-Device Personalization)
+   602→// ---------------------------------------------------------------------------
+   603→
+   604→function ForYouFeed() {
+   605→  const { setActiveModule } = useCircleStore();
+   606→  const posts = React.useMemo(() => POSTS.slice(0, 4), []);
+   607→  return (
+   608→    <Card className="gap-0 p-5 shadow-soft h-full">
+   609→      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+   610→        <div className="flex items-center gap-2">
+   611→          <h3 className="font-display text-base font-semibold flex items-center gap-2">
+   612→            <Sparkles className="h-4 w-4 text-gold" />
+   613→            For You
+   614→          </h3>
+   615→          <Badge
+   616→            variant="outline"
+   617→            className="text-[10px] border-gold/40 text-gold"
+   618→          >
+   619→            On-device · matrix factorization
+   620→          </Badge>
+   621→        </div>
+   622→        <Button
+   623→          size="sm"
+   624→          variant="ghost"
+   625→          onClick={() => setActiveModule("midan")}
+   626→          className="text-xs"
+   627→        >
+   628→          See more
+   629→          <ChevronRight className="h-3.5 w-3.5" />
+   630→        </Button>
+   631→      </div>
+   632→      <div className="grid gap-3 sm:grid-cols-2">
+   633→        {posts.map((p) => (
+   634→          <PostCard key={p.id} post={p} onOpen={() => setActiveModule("midan")} />
+   635→        ))}
+   636→      </div>
+   637→    </Card>
+   638→  );
+   639→}
+   640→
+   641→function PostCard({ post, onOpen }: { post: Post; onOpen: () => void }) {
+   642→  const [liked, setLiked] = React.useState(Boolean(post.liked));
+   643→  const [likes, setLikes] = React.useState(post.stats.likes);
+   644→  const color =
+   645→    AVATAR_COLOR_MAP[post.authorColor as Post["authorColor"]] ?? "teal";
+   646→
+   647→  return (
+   648→    <article className="rounded-xl border border-border/70 bg-background p-3.5 transition-all hover:shadow-soft hover:border-foreground/15 flex flex-col gap-3">
+   649→      <div className="flex items-start gap-3">
+   650→        <CircleAvatar
+   651→          initials={post.authorInitials}
+   652→          color={color}
+   653→          size="sm"
+   654→          verified={post.authorVerified}
+   655→        />
+   656→        <div className="min-w-0 flex-1">
+   657→          <div className="flex items-center gap-1.5 flex-wrap">
+   658→            <span className="font-medium text-sm truncate">
+   659→              {post.authorName}
+   660→            </span>
+   661→            <span className="text-xs text-muted-foreground truncate">
+   662→              @{post.authorHandle}
+   663→            </span>
+   664→          </div>
+   665→          <div className="text-[11px] text-muted-foreground flex items-center gap-2">
+   666→            <span>{relativeTime(post.timestamp)}</span>
+   667→            {post.location && (
+   668→              <span className="inline-flex items-center gap-0.5">
+   669→                <MapPin className="h-2.5 w-2.5" />
+   670→                {post.location}
+   671→              </span>
+   672→            )}
+   673→          </div>
+   674→        </div>
+   675→        <Badge
+   676→          variant="outline"
+   677→          className="text-[10px] capitalize border-border/60"
+   678→        >
+   679→          {post.module}
+   680→        </Badge>
+   681→      </div>
+   682→
+   683→      <p className="text-sm leading-relaxed text-foreground/90">{post.body}</p>
+   684→
+   685→      {post.media && (
+   686→        <div className="relative h-32 rounded-lg overflow-hidden bg-gradient-to-br from-[hsl(195_56%_23%)] via-[hsl(211_30%_42%)] to-[hsl(351_41%_46%)]">
+   687→          <div
+   688→            aria-hidden
+   689→            className="absolute inset-0 opacity-30"
+   690→            style={{
+   691→              backgroundImage:
+   692→                "radial-gradient(circle at 30% 70%, rgba(255,255,255,0.2), transparent 60%)",
+   693→            }}
+   694→          />
+   695→          {post.media.kind === "album" && (
+   696→            <Badge className="absolute bottom-2 right-2 bg-cream/20 text-cream border-transparent backdrop-blur-sm">
+   697→              +{post.media.count ?? 1} photos
+   698→            </Badge>
+   699→          )}
+   700→        </div>
+   701→      )}
+   702→
+   703→      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+   704→        <button
+   705→          onClick={() => {
+   706→            setLiked((v) => !v);
+   707→            setLikes((n) => (liked ? n - 1 : n + 1));
+   708→          }}
+   709→          className={cn(
+   710→            "inline-flex items-center gap-1 transition-colors hover:text-rose",
+   711→            liked && "text-rose",
+   712→          )}
+   713→        >
+   714→          <Heart className={cn("h-3.5 w-3.5", liked && "fill-current")} />
+   715→          {formatStats(likes)}
+   716→        </button>
+   717→        <span className="inline-flex items-center gap-1">
+   718→          <MessageCircle className="h-3.5 w-3.5" />
+   719→          {formatStats(post.stats.comments)}
+   720→        </span>
+   721→        <span className="inline-flex items-center gap-1">
+   722→          <Repeat2 className="h-3.5 w-3.5" />
+   723→          {formatStats(post.stats.shares)}
+   724→        </span>
+   725→        {post.stats.views !== undefined && (
+   726→          <span className="inline-flex items-center gap-1 ml-auto">
+   727→            <Eye className="h-3.5 w-3.5" />
+   728→            {formatStats(post.stats.views)}
+   729→          </span>
+   730→        )}
+   731→      </div>
+   732→      <Button
+   733→        size="sm"
+   734→        variant="outline"
+   735→        onClick={onOpen}
+   736→        className="w-full text-xs"
+   737→      >
+   738→        View
+   739→        <ArrowRight className="h-3 w-3" />
+   740→      </Button>
+   741→    </article>
+   742→  );
+   743→}
+   744→
+   745→// ---------------------------------------------------------------------------
+   746→// 5. Trending in Cairo
+   747→// ---------------------------------------------------------------------------
+   748→
+   749→function TrendingInCairo() {
+   750→  const { setActiveModule } = useCircleStore();
+   751→  return (
+   752→    <Card className="gap-0 p-5 shadow-soft h-full">
+   753→      <div className="flex items-center justify-between mb-4">
+   754→        <h3 className="font-display text-base font-semibold flex items-center gap-2">
+   755→          <TrendingUp className="h-4 w-4 text-rose" />
+   756→          Trending in Cairo
+   757→        </h3>
+   758→        <Badge variant="outline" className="text-[10px]">
+   759→          Last hour
+   760→        </Badge>
+   761→      </div>
+   762→      <div className="space-y-1.5">
+   763→        {TRENDING_TAGS.map((t, i) => (
+   764→          <button
+   765→            key={t.tag}
+   766→            onClick={() => setActiveModule("midan")}
+   767→            className="group w-full flex items-center justify-between gap-2 rounded-lg border border-border/60 bg-background px-3 py-2.5 text-left transition-all hover:border-foreground/15 hover:bg-muted/40"
+   768→          >
+   769→            <div className="flex items-center gap-3 min-w-0">
+   770→              <span className="text-xs font-mono text-muted-foreground w-4">
+   771→                {i + 1}
+   772→              </span>
+   773→              <div className="min-w-0">
+   774→                <div className="font-medium text-sm truncate">{t.tag}</div>
+   775→                <div className="text-[11px] text-muted-foreground">
+   776→                  {t.count} posts · Cairo
+   777→                </div>
+   778→              </div>
+   779→            </div>
+   780→            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+   781→          </button>
+   782→        ))}
+   783→      </div>
+   784→      <div className="mt-3 flex items-start gap-2 rounded-lg bg-[hsl(var(--rose)/0.08)] p-2.5 text-[11px] text-muted-foreground">
+   785→        <Sparkles className="h-3 w-3 text-rose shrink-0 mt-0.5" />
+   786→        <span>
+   787→          Trending computed on-device from your follows + your city. No global
+   788→          algorithm.
+   789→        </span>
+   790→      </div>
+   791→    </Card>
+   792→  );
+   793→}
+   794→
+   795→// ---------------------------------------------------------------------------
+   796→// 6. Official Updates
+   797→// ---------------------------------------------------------------------------
+   798→
+   799→function OfficialUpdates() {
+   800→  const { setActiveModule } = useCircleStore();
+   801→  const channels = OFFICIAL_CHANNELS.slice(0, 3);
+   802→  return (
+   803→    <Card className="gap-0 p-5 shadow-soft h-full">
+   804→      <div className="flex items-center justify-between mb-4">
+   805→        <h3 className="font-display text-base font-semibold flex items-center gap-2">
+   806→          <BadgeCheck className="h-4 w-4 text-gold" />
+   807→          Official Updates
+   808→        </h3>
+   809→        <Button
+   810→          size="sm"
+   811→          variant="ghost"
+   812→          onClick={() => setActiveModule("official")}
+   813→          className="text-xs"
+   814→        >
+   815→          All channels
+   816→          <ChevronRight className="h-3.5 w-3.5" />
+   817→        </Button>
+   818→      </div>
+   819→      <div className="space-y-3">
+   820→        {channels.map((c) => {
+   821→          const color =
+   822→            AVATAR_COLOR_MAP[c.avatarColor as Post["authorColor"]] ?? "teal";
+   823→          return (
+   824→            <button
+   825→              key={c.id}
+   826→              onClick={() => setActiveModule("official")}
+   827→              className="group w-full text-left rounded-xl border border-border/60 bg-background p-3 transition-all hover:border-foreground/15 hover:shadow-soft"
+   828→            >
+   829→              <div className="flex items-start gap-3">
+   830→                <CircleAvatar
+   831→                  initials={c.avatarInitials}
+   832→                  color={color}
+   833→                  size="sm"
+   834→                  verified={c.verified}
+   835→                />
+   836→                <div className="min-w-0 flex-1">
+   837→                  <div className="flex items-center justify-between gap-2">
+   838→                    <span className="text-sm font-medium truncate">
+   839→                      {c.name}
+   840→                    </span>
+   841→                    <span className="text-[10px] text-muted-foreground shrink-0">
+   842→                      {relativeTime(c.latestUpdate?.timestamp ?? "")}
+   843→                    </span>
+   844→                  </div>
+   845→                  <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
+   846→                    {c.latestUpdate?.body}
+   847→                  </p>
+   848→                  <div className="mt-1.5 flex items-center gap-2 text-[10px] text-muted-foreground">
+   849→                    <Badge
+   850→                      variant="outline"
+   851→                      className="text-[9px] capitalize py-0"
+   852→                    >
+   853→                      {c.category}
+   854→                    </Badge>
+   855→                    <span>{formatStats(c.subscribers)} subscribers</span>
+   856→                  </div>
+   857→                </div>
+   858→              </div>
+   859→            </button>
+   860→          );
+   861→        })}
+   862→      </div>
+   863→    </Card>
+   864→  );
+   865→}
+   866→
+   867→// ---------------------------------------------------------------------------
+   868→// 7. Your Workspaces
+   869→// ---------------------------------------------------------------------------
+   870→
+   871→function YourWorkspaces() {
+   872→  const { setActiveModule } = useCircleStore();
+   873→  return (
+   874→    <Card className="gap-0 p-5 shadow-soft h-full">
+   875→      <div className="flex items-center justify-between mb-4">
+   876→        <h3 className="font-display text-base font-semibold flex items-center gap-2">
+   877→          <Building2 className="h-4 w-4 text-steel" />
+   878→          Your Workspaces
+   879→        </h3>
+   880→        <Button
+   881→          size="sm"
+   882→          variant="ghost"
+   883→          onClick={() => setActiveModule("workspaces")}
+   884→          className="text-xs"
+   885→        >
+   886→          All
+   887→          <ChevronRight className="h-3.5 w-3.5" />
+   888→        </Button>
+   889→      </div>
+   890→      <div className="grid gap-3 sm:grid-cols-2">
+   891→        {WORKSPACES.map((w) => (
+   892→          <div
+   893→            key={w.id}
+   894→            className="rounded-xl border border-border/60 bg-background p-4 flex flex-col gap-3"
+   895→          >
+   896→            <div className="flex items-start gap-3">
+   897→              <CircleAvatar
+   898→                initials={w.initials}
+   899→                color={w.color}
+   900→                size="md"
+   901→                online
+   902→              />
+   903→              <div className="min-w-0 flex-1">
+   904→                <div className="font-medium text-sm truncate">{w.name}</div>
+   905→                {w.arabicName && (
+   906→                  <div className="font-arabic text-xs text-muted-foreground truncate">
+   907→                    {w.arabicName}
+   908→                  </div>
+   909→                )}
+   910→                <div className="mt-1 flex items-center gap-3 text-[11px] text-muted-foreground">
+   911→                  <span className="inline-flex items-center gap-1">
+   912→                    <Users className="h-3 w-3" />
+   913→                    {w.members} members
+   914→                  </span>
+   915→                  <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+   916→                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+   917→                    {w.online} online
+   918→                  </span>
+   919→                </div>
+   920→              </div>
+   921→            </div>
+   922→            <Button
+   923→              size="sm"
+   924→              variant="outline"
+   925→              onClick={() => setActiveModule("workspaces")}
+   926→              className="w-full text-xs"
+   927→            >
+   928→              Open Workspace
+   929→              <ArrowRight className="h-3 w-3" />
+   930→            </Button>
+   931→          </div>
+   932→        ))}
+   933→      </div>
+   934→    </Card>
+   935→  );
+   936→}
+   937→
+   938→// ---------------------------------------------------------------------------
+   939→// 8. Sponsored Banner (non-targeted, local)
+   940→// ---------------------------------------------------------------------------
+   941→
+   942→function SponsoredBanner() {
+   943→  return (
+   944→    <Card className="gap-0 p-0 overflow-hidden shadow-soft">
+   945→      <div className="grid sm:grid-cols-[1fr_auto] gap-0">
+   946→        <div className="p-5 flex flex-col justify-between gap-3">
+   947→          <div className="flex items-center gap-2 flex-wrap">
+   948→            <Badge
+   949→              variant="outline"
+   950→              className="text-[10px] border-gold/40 text-gold bg-[hsl(var(--gold)/0.10)]"
+   951→            >
+   952→              Sponsored · Non-targeted · Cairo only
+   953→            </Badge>
+   954→            <span className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
+   955→              <ShieldCheck className="h-2.5 w-2.5" />
+   956→              No profile data used
+   957→            </span>
+   958→          </div>
+   959→          <div>
+   960→            <h3 className="font-display text-lg font-semibold">
+   961→              Felfela Restaurant — Downtown Cairo
+   962→            </h3>
+   963→            <p className="mt-1 text-sm text-muted-foreground">
+   964→              15% off all Fridays for Circle members. Authentic Egyptian since
+   965→              1959. Show this card in-store.
+   966→            </p>
+   967→          </div>
+   968→          <div className="flex items-center gap-2">
+   969→            <Button
+   970→              size="sm"
+   971→              className="bg-gradient-to-br from-[hsl(39_55%_67%)] to-[hsl(39_45%_47%)] text-charcoal hover:opacity-90"
+   972→            >
+   973→              <MapPin className="h-4 w-4" />
+   974→              Get directions
+   975→            </Button>
+   976→            <span className="text-[10px] text-muted-foreground">
+   977→              Local business · Revenue shared with the Cairo community DAO
+   978→            </span>
+   979→          </div>
+   980→        </div>
+   981→        <div className="relative sm:w-48 min-h-[140px] bg-gradient-to-br from-[hsl(39_45%_57%)] via-[hsl(351_41%_56%)] to-[hsl(195_56%_23%)] flex items-center justify-center">
+   982→          <div
+   983→            aria-hidden
+   984→            className="absolute inset-0 opacity-30"
+   985→            style={{
+   986→              backgroundImage:
+   987→                "radial-gradient(circle at 50% 30%, rgba(255,255,255,0.25), transparent 60%)",
+   988→            }}
+   989→          />
+   990→          <div className="relative text-cream text-center px-3">
+   991→            <div className="font-display text-3xl font-bold">15%</div>
+   992→            <div className="text-xs uppercase tracking-widest mt-1">
+   993→              Friday only
+   994→            </div>
+   995→          </div>
+   996→        </div>
+   997→      </div>
+   998→    </Card>
+   999→  );
+  1000→}
+  1001→
+  1002→// ---------------------------------------------------------------------------
+  1003→// 9. Upcoming in Your Circles
+  1004→// ---------------------------------------------------------------------------
+  1005→
+  1006→function UpcomingInCircles() {
+  1007→  const { setActiveModule } = useCircleStore();
+  1008→  const circles = React.useMemo(
+  1009→    () => CIRCLE_GROUPS.filter((g) => g.upcomingEvent),
+  1010→    [],
+  1011→  );
+  1012→  return (
+  1013→    <Card className="gap-0 p-5 shadow-soft">
+  1014→      <div className="flex items-center justify-between mb-4">
+  1015→        <h3 className="font-display text-base font-semibold flex items-center gap-2">
+  1016→          <Calendar className="h-4 w-4 text-gold" />
+  1017→          Upcoming in Your Circles
+  1018→        </h3>
+  1019→        <Button
+  1020→          size="sm"
+  1021→          variant="ghost"
+  1022→          onClick={() => setActiveModule("circle-groups")}
+  1023→          className="text-xs"
+  1024→        >
+  1025→          View calendar
+  1026→          <ChevronRight className="h-3.5 w-3.5" />
+  1027→        </Button>
+  1028→      </div>
+  1029→      <div className="space-y-2">
+  1030→        {circles.map((g) => {
+  1031→          const color =
+  1032→            AVATAR_COLOR_MAP[g.avatarColor as Post["authorColor"]] ?? "teal";
+  1033→          const ev = g.upcomingEvent!;
+  1034→          const evDate = new Date(ev.date);
+  1035→          const day = evDate.toLocaleDateString("en-GB", { day: "numeric" });
+  1036→          const mon = evDate.toLocaleDateString("en-GB", { month: "short" });
+  1037→          return (
+  1038→            <div
+  1039→              key={g.id}
+  1040→              className="flex items-center gap-3 rounded-xl border border-border/60 bg-background p-3 hover:border-foreground/15 hover:bg-muted/30 transition-all"
+  1041→            >
+  1042→              <div className="shrink-0 grid place-items-center w-12 h-12 rounded-lg bg-gradient-to-br from-[hsl(39_55%_67%)] to-[hsl(39_45%_47%)] text-charcoal flex-col text-center">
+  1043→                <span className="text-base font-bold leading-none">{day}</span>
+  1044→                <span className="text-[10px] uppercase tracking-wider">
+  1045→                  {mon}
+  1046→                </span>
+  1047→              </div>
+  1048→              <CircleAvatar
+  1049→                initials={g.avatarInitials}
+  1050→                color={color}
+  1051→                size="sm"
+  1052→                ring
+  1053→              />
+  1054→              <div className="min-w-0 flex-1">
+  1055→                <div className="font-medium text-sm truncate">{ev.title}</div>
+  1056→                <div className="text-[11px] text-muted-foreground flex items-center gap-2 mt-0.5">
+  1057→                  <span className="truncate">{g.name}</span>
+  1058→                  <span>·</span>
+  1059→                  <span className="inline-flex items-center gap-1">
+  1060→                    <Users className="h-3 w-3" />
+  1061→                    {ev.attendees} attending
+  1062→                  </span>
+  1063→                </div>
+  1064→              </div>
+  1065→              <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+  1066→                <Button size="sm" variant="outline" className="text-xs">
+  1067→                  Interested
+  1068→                </Button>
+  1069→                <Button
+  1070→                  size="sm"
+  1071→                  className="text-xs bg-gradient-to-br from-[hsl(39_55%_67%)] to-[hsl(39_45%_47%)] text-charcoal hover:opacity-90"
+  1072→                >
+  1073→                  Going
+  1074→                </Button>
+  1075→              </div>
+  1076→              <Button
+  1077→                size="sm"
+  1078→                variant="ghost"
+  1079→                className="sm:hidden text-xs px-2"
+  1080→              >
+  1081→                RSVP
+  1082→              </Button>
+  1083→            </div>
+  1084→          );
+  1085→        })}
+  1086→      </div>
+  1087→    </Card>
+  1088→  );
+  1089→}
+  1090→
+  1091→// ---------------------------------------------------------------------------
+  1092→// Section header
+  1093→// ---------------------------------------------------------------------------
+  1094→
+  1095→function SectionLabel({
+  1096→  icon: Icon,
+  1097→  children,
+  1098→  arabic,
+  1099→  right,
+  1100→}: {
+  1101→  icon: React.ComponentType<{ className?: string }>;
+  1102→  children: React.ReactNode;
+  1103→  arabic?: string;
+  1104→  right?: React.ReactNode;
+  1105→}) {
+  1106→  return (
+  1107→    <div className="flex items-center justify-between mb-3">
+  1108→      <div className="flex items-center gap-2">
+  1109→        <Icon className="h-4 w-4 text-gold" />
+  1110→        <h2 className="font-display text-lg font-semibold tracking-tight">
+  1111→          {children}
+  1112→        </h2>
+  1113→        {arabic && (
+  1114→          <span className="font-arabic text-sm text-muted-foreground">
+  1115→            {arabic}
+  1116→          </span>
+  1117→        )}
+  1118→      </div>
+  1119→      {right}
+  1120→    </div>
+  1121→  );
+  1122→}
+  1123→
+  1124→// ---------------------------------------------------------------------------
+  1125→// Main
+  1126→// ---------------------------------------------------------------------------
+  1127→
+  1128→export function HomeDashboard() {
+  1129→  const m = React.useMemo(() => {
+  1130→    // local module metadata; we re-use ModuleHeader so the brand bar matches
+  1131→    return {
+  1132→      brand: "Home",
+  1133→      us: "Home",
+  1134→      arabic: "الرئيسية",
+  1135→      tagline: "Your daily entry to the Circle — what's happening near you, what's trending, what your circles are up to.",
+  1136→      color: "gold" as const,
+  1137→    };
+  1138→  }, []);
+  1139→
+  1140→  return (
+  1141→    <div>
+  1142→      <ModuleHeader
+  1143→        brand={m.brand}
+  1144→        us={m.us}
+  1145→        arabic={m.arabic}
+  1146→        tagline={m.tagline}
+  1147→        color={m.color}
+  1148→        actions={
+  1149→          <Badge
+  1150→            variant="outline"
+  1151→            className="hidden sm:inline-flex border-teal/40 text-teal"
+  1152→          >
+  1153→            <Lock className="h-3 w-3" />
+  1154→            0 bytes left device today
+  1155→          </Badge>
+  1156→        }
+  1157→      />
+  1158→
+  1159→      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-6 space-y-6">
+  1160→        {/* Greeting + AI Core mini card */}
+  1161→        <GreetingBar />
+  1162→
+  1163→        {/* 1. Top carousel */}
+  1164→        <section aria-label="Top carousel">
+  1165→          <TopCarousel />
+  1166→        </section>
+  1167→
+  1168→        {/* 2. Quick actions */}
+  1169→        <section aria-label="Quick actions">
+  1170→          <QuickActions />
+  1171→        </section>
+  1172→
+  1173→        {/* 3. Happening Nearby + 5. Trending */}
+  1174→        <div className="grid gap-6 lg:grid-cols-12">
+  1175→          <section aria-label="Happening nearby" className="lg:col-span-7">
+  1176→            <HappeningNearby />
+  1177→          </section>
+  1178→          <section aria-label="Trending" className="lg:col-span-5">
+  1179→            <TrendingInCairo />
+  1180→          </section>
+  1181→        </div>
+  1182→
+  1183→        {/* 4. For You + 6. Official Updates */}
+  1184→        <div className="grid gap-6 lg:grid-cols-12">
+  1185→          <section aria-label="For you" className="lg:col-span-8">
+  1186→            <ForYouFeed />
+  1187→          </section>
+  1188→          <section aria-label="Official updates" className="lg:col-span-4">
+  1189→            <OfficialUpdates />
+  1190→          </section>
+  1191→        </div>
+  1192→
+  1193→        {/* 7. Your Workspaces + 8. Sponsored */}
+  1194→        <div className="grid gap-6 lg:grid-cols-12">
+  1195→          <section aria-label="Your workspaces" className="lg:col-span-7">
+  1196→            <YourWorkspaces />
+  1197→          </section>
+  1198→          <section aria-label="Sponsored" className="lg:col-span-5">
+  1199→            <SponsoredBanner />
+  1200→          </section>
+  1201→        </div>
+  1202→
+  1203→        {/* 9. Upcoming in your circles */}
+  1204→        <section aria-label="Upcoming in your circles">
+  1205→          <UpcomingInCircles />
+  1206→        </section>
+  1207→
+  1208→        {/* Footer note */}
+  1209→        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl border border-dashed border-border/70 p-4 text-xs text-muted-foreground">
+  1210→          <div className="flex items-center gap-2">
+  1211→            <CircleLogo size={20} />
+  1212→            <span>
+  1213→              <span className="font-medium text-foreground">Circle v12.0</span>{" "}
+  1214→              · Covenant Edition · 30 modules · 200 languages
+  1215→            </span>
+  1216→          </div>
+  1217→          <div className="flex items-center gap-3">
+  1218→            <span className="inline-flex items-center gap-1">
+  1219→              <Zap className="h-3 w-3 text-gold" />
+  1220→              All AI on-device
+  1221→            </span>
+  1222→            <span className="inline-flex items-center gap-1">
+  1223→              <Lock className="h-3 w-3 text-teal" />
+  1224→              E2EE by default
+  1225→            </span>
+  1226→            <span className="inline-flex items-center gap-1">
+  1227→              <Cloud className="h-3 w-3 text-steel" />
+  1228→              Self-hostable
+  1229→            </span>
+  1230→          </div>
+  1231→        </div>
+  1232→      </div>
+  1233→    </div>
+  1234→  );
+  1235→}
+  1236→

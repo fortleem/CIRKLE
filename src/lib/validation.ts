@@ -1,0 +1,13 @@
+import { z } from "zod";
+export const aiAskSchema = z.object({ message: z.string().min(1).max(2000), country: z.string().length(2).optional() });
+export const smartReplySchema = z.object({ message: z.string().min(1).max(2000), context: z.string().max(5000).optional(), messages: z.array(z.object({ role: z.enum(["user", "assistant", "system"]), content: z.string().max(2000) })).optional() });
+export const translateSchema = z.object({ text: z.string().min(1).max(5000), to: z.string().length(2).optional().default("ar"), from: z.string().length(2).optional() });
+export const summarizeSchema = z.object({ posts: z.array(z.string().max(2000)).min(1).max(50) });
+export const itinerarySchema = z.object({ destination: z.string().min(1).max(200), days: z.number().int().min(1).max(30), travelers: z.number().int().min(1).max(20).optional().default(1), budget: z.string().max(100).optional().default("mid-range"), interests: z.array(z.string().max(100)).max(10).optional().default([]), language: z.string().length(2).optional().default("en") });
+export const memoirSchema = z.object({ prompt: z.string().min(1).max(2000) });
+export const createPostSchema = z.object({ body: z.string().min(1).max(5000), authorName: z.string().min(1).max(100), authorHandle: z.string().max(100).optional() });
+export const reactSchema = z.object({ kind: z.enum(["like", "love", "laugh", "angry", "sad"]).optional().default("like") });
+export const sendPaymentSchema = z.object({ recipient: z.string().min(1).max(200).optional(), counterparty: z.string().max(200).optional(), amount: z.number().positive().max(1000000), currency: z.string().length(3).optional(), method: z.string().max(50).optional(), memo: z.string().max(500).optional(), note: z.string().max(500).optional() }).refine((data) => data.recipient || data.counterparty, { message: "Either recipient or counterparty is required" });
+export const registerSchema = z.object({ username: z.string().regex(/^[a-z0-9_]{3,20}$/, "Username must be 3-20 chars: lowercase letters, numbers, underscore"), password: z.string().min(6).max(100), displayName: z.string().min(1).max(100), email: z.string().email().optional(), country: z.string().length(2).optional(), bio: z.string().max(500).optional() });
+export const loginSchema = z.object({ username: z.string().min(1).max(100), password: z.string().min(1).max(100) });
+export function validate<T>(schema: z.ZodSchema<T>, data: unknown): | { success: true; data: T } | { success: false; error: string } { const result = schema.safeParse(data); if (result.success) return { success: true, data: result.data }; const firstError = result.error.issues[0]; return { success: false, error: firstError?.message || "Invalid input" }; }

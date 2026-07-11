@@ -1,0 +1,601 @@
+< 300 ms
+“For You” inference latency
+< 100 ms
+Memory footprint (all sections)
+< 50 MB
+Battery impact (background training)
+< 1% per day (only when charging)
+5.9 Summary of Part 5
+Part 5 detailed the Home Dashboard as the central hub of Circle:
+✅ Nine core sections covering local events, personalization, updates, and ads.
+✅ Ondevice recommendation engine using matrix factorization – no cloud profiling.
+✅ Privacypreserving nearby discovery using coarse city/geohash only.
+✅ Offlinefirst caching for all sections.
+✅ User customization to reorder or hide sections.
+✅ Realworld examples and code snippets for implementation.
+The dashboard is the user’s daily entry point to the superapp, and its design respects every core promise: free, private, offlinecapable, and locally relevant.
+End of Part 5 (Regenerated & Expanded, English Only)
+6. Wasl (وصل) – Chat Module
+6.1 Overview
+Wasl (Arabic for “connection”; English brand name Wasl, US English Connect) is Circle’s endtoend encrypted (E2EE) messaging module. It replaces WhatsApp, Telegram, Signal, and Slack for personal and team communication. Wasl is built on Matrix (Rust/Synapse) and inherits its federation, E2EE (Olm/Megolm), and offline capabilities.
+Key principles:
+E2EE by default for all private 1:1 and group chats.
+Zero cost to Circle – authentication uses free email, free Telegram bot, or carrier SMS (user pays their own carrier if they choose SMS; Circle never pays for SMS).
+No phone number required – users can sign up with email or Telegram only.
+Privacy first – screenshot blocking, forwarding consent, ghost mode, disappearing messages.
+Works offline via local mesh and offline queue.
+6.2 Authentication (Zero Cost to Circle, No Billing)
+Circle offers three authentication methods. None require Circle to pay any thirdparty provider.The user may incur standard carrier charges if they choose SMS, but Circle never collects billing details nor subsidises SMS.
+Method
+Flow
+Cost to Circle
+Cost to User
+Email
+User enters email → Circle sends 6digit code via selfhosted Mailcow (Section 20) → user verifies.
+$0 (selfhosted SMTP)
+$0
+Telegram
+User clicks “Confirm with Telegram” → redirects to @CircleAuthBot → bot sends code → user enters code in Circle.
+$0 (Telegram Bot API free)
+$0
+Carrier OTP (SMS)
+User enters phone number → Circle generates a code, but does not send it. Instead, the user receives an SMS from their own carrier as part of standard mobile service. (Technical implementation: Circle uses a USSD or carrierside trigger to let the carrier send a verification SMS; or the user receives a code via a missed call.) Circle never sends SMS, never incurs cost.
+$0
+Standard carrier SMS rate (e.g., EGP 0.10) – user pays their own bill.
+Important: Circle does not collect, store, or verify phone numbers unless the user explicitly chooses SMS authentication. Even then, the phone number is hashed locally and only used to derive a uniqueness token – never sent to Circle servers except as a onetime hash for antispam.
+Code Example: Carrier OTP (UserPays)
+dart
+// lib/auth/sms_auth.dart
+// This is a simplified flow – the actual implementation uses carrier-specific APIs
+// that do not incur cost to Circle because the SMS is triggered by the carrier's own network.
+Future<void> sendCarrierOTP(String phoneNumber) async {
+  // Step 1: Contact the carrier's programmable SMS gateway (e.g., Vodafone Egypt's API)
+  // Circle has NO paid account. Instead, we use a free developer sandbox that only works
+  // for demonstration, OR we integrate with carrier's USSD service where the carrier bills the user.
+  // Real implementation for Egypt: Use Fawry's "Verify via Missed Call" – user receives a call,
+  // the last 4 digits of the caller ID are the OTP. No cost to Circle, user pays for the call
+  // (included in their plan). Fawry's missed call service is free for businesses.
+  final response = await http.post(
+    Uri.parse('https://api.fawry.com/ussd/request_otp'),
+    body: {'msisdn': phoneNumber},
+  );
+  // Fawry triggers an automatic call to the user; the OTP is the last 4 digits of the caller ID.
+  // Circle pays $0; Fawry charges the user’s carrier.
+}
+Because this complexity is high and carrier costs may still exist, Circle recommends email or Telegram authentication by default. SMS is an optional fallback for users without email.
+6.3 Privacy Controls (Expanded)
+Wasl provides granular privacy controls that exceed those of any mainstream messaging app.
+Feature
+User Experience
+Technical Implementation
+Ghost Mode
+User appears offline to everyone except trusted contacts. Calls from nontrusted contacts show “User unavailable.” Presence updates are suppressed in Matrix.
+Matrix presence state set to offlinefor all nontrusted users; trusted list stored locally and in account data.
+Screenshot Protection
+Screenshot attempt triggers a permission request to the other party. If blocked, the screenshot is replaced with a watermarked black image containing the requester’s ID.
+Uses Android’s FLAG_SECURE and iOS’s isSecureTextEntry for view hierarchy; a background service captures the screenshot event via onWindowFocusChanged and overlays watermark.
+Forwarding Consent
+Forwarding any message requires explicit sender approval (onetime or permanent).
+Message metadata includes a forward_auth flag; when user tries to forward, Matrix event is sent to original sender requesting a signed token.
+Incognito Chat
+Messages selfdestruct after being read; no local storage.
+Matrix room created with encryptionand message_retention set to 'delete_on_read'; custom SDK hook deletes local database entry after read receipt sent.
+Disappearing Messages
+Configurable timer: 5s, 30s, 1min, 1hr, 1 day, 1 week.
+Matrix message retention policy with expire_after_seconds. Both clients enforce deletion.
+Typing Status Toggle
+User can disable typing indicators globally or per chat.
+Matrix typing event not sent if setting is off.
+Screenshot Protection Code Sketch
+dart
+// lib/wasl/screenshot_protection.dart
+import 'package:flutter/services.dart';
+class ScreenshotBlocker {
+  static void enableBlocking(BuildContext context) {
+    if (Platform.isAndroid) {
+      // For Android 11+ we can detect screenshots via FileObserver
+      // but we use FLAG_SECURE to prevent capture
+      final window = context.findRenderObject() as RenderRepaintBoundary?;
+      // Not directly possible; instead we set at Activity level:
+      // In MainActivity.kt: window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, ...)
+    }
+    // For detection and watermarking, we use a native plugin
+  }
+}
+Due to platform restrictions, Circle implements screenshot detection and watermarking as a besteffort feature. Users on rooted/jailbroken devices may bypass it, but the default experience heavily discourages unauthorised capture.
+6.4 Work Mode (Wasl Maktab) – SelfHosted Workspaces
+For companies and schools, Circle provides Wasl Maktab (Office Wasl). This is a selfhosted Matrix environment with additional administration tools.
+Department Setup Example (Jozour Company)
+After deploying the workspace installer (Section 3.4), the admin creates rooms with specific visibility and retention rules:
+Room ID
+Audience
+Visibility
+Retention
+#announcements
+All employees
+Readonly
+365 days
+#engineering
+Engineering dept
+Full transparency (anyone can read)
+90 days
+#sales
+Sales team
+First name + department only (alias mode)
+180 days
+#hr
+HR team
+Alias mode: “HR Agent 4”
+365 days
+#job-applications-senior-flutter
+Company only
+Everyone in workspace can see, only HR can post
+180 days
+Admin Bot Commands
+The workspace includes a bot @workspace:domain that accepts commands in rooms:
+text
+/invite ahmed@jozour-egypt.com engineering              # Invites user to room
+/set-visibility engineering full                        # Make room visible in directory
+/audit-log --from 2026-04-01 --to 2026-04-10           # Export audit log (who joined, read)
+/set-retention #engineering 90d                         # Autodelete messages after 90 days
+/export-room #engineering --format json                 # Export all messages (admin only)
+6.5 Custom GIFs & Stickers
+Users can upload personal GIFs and stickers to their local IPFS node. The CID is stored in a local collection; sharing happens via IPFS.
+Upload Flow
+User selects a GIF from their gallery or a URL.
+App compresses and converts to optimal format (WebP or GIF).
+App adds file to local IPFS node (bundled go-ipfs).
+IPFS returns a CID (e.g., QmXo...).
+App sends a Matrix event with msgtype: m.image and url: ipfs://QmXo....
+Recipient’s app fetches the GIF from IPFS (via peers or gateway).
+Trending GIFs (OnDevice Search)
+Circle includes a local index of the most popular GIFs (public domain or Creative Commons) downloaded once. The index is generated from a communitycurated list and updated monthly.
+dart
+// lib/wasl/gif_picker.dart
+class GifSearchEngine {
+  Future<List<GifMetadata>> search(String query, {int limit = 20}) async {
+    // On-device SQLite FTS5 index of GIF tags
+    final results = await db.query(
+      'gifs',
+      where: 'tags MATCH ?',
+      whereArgs: [query],
+      limit: limit,
+    );
+    return results.map((row) => GifMetadata(
+      cid: row['cid'],
+      thumbnailUrl: 'ipfs://${row['cid']}?width=150',
+    )).toList();
+  }
+}
+6.6 Voice & Video Calls
+Wasl uses Matrix VoIP (WebRTC) for calls. No thirdparty services (e.g., Twilio) are used. Calls are P2P when possible, falling back to communityhosted Selective Forwarding Units (SFUs).
+Feature
+Technology
+Cost to Circle
+1:1 Voice/Video
+Matrix VoIP (WebRTC) with direct P2P
+$0
+Group Calls (up to 10)
+Matrix VoIP with SFU (communityhosted)
+$0 (community node)
+Screen Sharing
+WebRTC screen capture
+$0
+Call Recording (optin)
+Ondevice recording (user consent required)
+$0
+Call Flow (1:1)
+User A calls User B by sending a Matrix m.call.invite event.
+User B receives push notification (via ntfy).
+WebRTC offer/answer exchanged via Matrix signalling.
+ICE candidates gathered; direct P2P connection established if possible.
+If P2P fails (both behind symmetric NAT), fallback to community TURN server (Coturn, selfhosted).
+6.7 Broadcast Channels
+Broadcast channels allow onetomany communication. They are public, indexed, and can be followed by any user.
+Purpose: News, announcements, content distribution.
+Permissions: Only channel owner can send messages; subscribers can react but not reply (except via direct message to owner).
+Analytics for owner: Subscriber count, reach (number of devices that received the message), engagement (reactions). All analytics are anonymised aggregates (no peruser data).
+Example: @cairo_weather:matrix.circle.app sends daily weather updates to 50k subscribers.
+Creating a Broadcast Channel
+dart
+// Using Matrix SDK
+final channel = await client.createRoom(
+  preset: CreateRoomPreset.publicChat,
+  visibility: DirectoryVisibility.public,
+  name: 'Cairo Weather',
+  topic: 'Daily weather updates',
+  isDirect: false,
+);
+6.8 EndtoEnd Encryption Details
+Wasl uses Olm (ratchet) for 1:1 and Megolm (ratcheted group sessions) for groups.
+Keys are generated and stored locally.
+Users can verify each other’s devices via QR code (SAS verification).
+No backdoors – Circle cannot decrypt messages even if compelled by law. For China data plane, E2EE is disabled for public groups (by law), but private 1:1 remains E2EE with keys stored on device.
+6.9 Offline & Mesh Messaging
+When a device has no internet, Wasl uses the local mesh (Section 15) to send messages directly to nearby peers.
+Messages are queued locally with status pending_mesh.
+When a peer comes within range (BLE discovery), the message is sent via WiFi Direct.
+Once any internet is restored, the message is also sent to the Matrix homeserver to sync with other devices.
+Code snippet (retry logic from Section 15 adapted for Wasl):
+dart
+class MeshMessageQueue {
+  final List<OutgoingMessage> _queue = [];
+  Future<void> sendMessage(Message message) async {
+    if (await MeshManager.isPeerAvailable(message.recipientId)) {
+      await MeshManager.sendViaMesh(message);
+    } else if (await ConnectivityChecker.hasInternet()) {
+      await MatrixClient.sendEvent(message);
+    } else {
+      _queue.add(OutgoingMessage(message, DateTime.now()));
+      _scheduleRetry();
+    }
+  }
+}
+6.10 Broadcast Channels: Technical Implementation
+Broadcast channels are standard Matrix rooms with special rules enforced by the homeserver:
+ACLs: only the room creator (owner) can send events of type m.room.message.
+Subscribers receive messages but cannot send.
+The homeserver plugin restricted_rooms enforces this.
+Example configuration in Synapse (homeserver.yaml):
+yaml
+experimental_features:
+  restrict_join_to_address: true
+  room_list_publication_rules:
+    - action: allow
+      room_id_pattern: "!*:matrix.circle.app"
+      type: "broadcast"
+6.11 No Billing, No Premium Features
+No “read receipts” paywall – all features free.
+No “last seen” hidden behind subscription – fully configurable by user.
+No file size limits – files are stored on IPFS; the only limit is the user’s available local storage.
+No cloud backup upsell – backup is user’s responsibility (local export or IPFS).
+6.12 User Journey Example: Wasl in Daily Use
+Ahmed (Cairo) and Sara (Alexandria):
+Ahmed signs up with email (free). Sara signs up with email (free).
+They exchange messages with E2EE. Screenshot protection is on by default.
+Ahmed tries to forward Sara’s message to a group → Sara receives a request; she approves onetime.
+During a train trip with no internet, they use local mesh (BLE discovery) to continue chatting.
+Later, Ahmed calls Sara via WebRTC – call is P2P, zero cost.
+Ahmed creates a broadcast channel “Daily Soccer News” – 500 people subscribe.
+No billing details were ever collected. Circle paid $0.
+6.13 Summary of Part 6
+Part 6 detailed the Wasl (Connect) chat module:
+✅ Authentication – email, Telegram, carrier OTP (user pays SMS) – $0 to Circle.
+✅ Privacy controls – Ghost Mode, screenshot protection, forwarding consent, disappearing messages.
+✅ Work Mode (Wasl Maktab) – selfhosted Matrix for companies/schools, full admin tools.
+✅ Custom GIFs/Stickers – IPFSbased sharing.
+✅ Voice/video calls – P2P WebRTC + community SFU.
+✅ Broadcast channels – onetomany without reply.
+✅ Offline mesh – works without internet.
+✅ Zero billing – no premium tiers, no payments required.
+Wasl is a complete, private, zerocost messaging system that outperforms incumbents while respecting the user’s data and wallet.
+End of Part 6 (Regenerated & Expanded, English Only)
+7. Mashahd (مشاهد) – Video Module
+7.1 Overview
+Mashahd (English brand name Mashahd, US English Watch) is Circle’s video module – a full replacement for YouTube, TikTok, and Twitch – built on PeerTube, WebTorrent, and IPFS. It supports long-form videos, Shorts, live streams, watch parties, bullet comments (Bilibili-style), and creator analytics.
+Circle’s core commitments extend to Mashahd:
+100% free for all users – no subscriptions, no paywalls, no premium tiers.
+Zero cost to Circle – all infrastructure is communityhosted, P2P, or selfhosted by creators.
+Privacyfirst – no viewing history leaves the device; ads are nontargeted (citylevel only).
+This section focuses on a critical challenge: How does Circle generate sustainable revenue from video content so it can compete with YouTube and other platforms – without ever charging users, without collecting billing details, without becoming a custodial financial intermediary, and while remaining fully legal in every country?
+The answer is a multilayered, noncustodial monetisation ecosystem that shifts transaction costs and compliance burdens to specialised thirdparty APIs, while Circle earns through advertising, platform fees on optional premium features, affiliate commissions, API licensing, and creative zerocost mechanisms. Every income stream is structured so that Circle never touches user funds, never collects billing details, and never violates local laws – the platform acts purely as a referrer, a matching service, or a display surface, while regulated partners handle the money and compliance.
+7.2 Core Monetisation Principles
+Principle
+Implementation
+Circle never charges users
+No subscriptions, no inapp purchases. All userfacing features are free.
+Circle never holds user funds
+We are not a custodian, exchange, or payment processor. Money flows directly between payer and payee via thirdparty APIs.
+Circle never collects billing details
+We never ask for credit card numbers, bank accounts, or crypto wallet private keys.
+Every income stream is optin
+Creators choose which monetisation tools to enable; users choose whether to pay (via third parties).
+Legal compliance per transaction
+The party that handles the money (onramp, exchange, payment gateway) is responsible for KYC/AML, tax withholding, and regulatory reporting. Circle only provides the matchmaking layer.
+Profitability without exploitation
+Circle’s take is always a small percentage of advertiser spend, affiliate commission, or a subscription fee paid by creators/enterprises – never taken from user tips or viewer payments.
+7.3 Income Streams for Circle (Zero Cost to Circle)
+Circle generates revenue through the following streams. None require Circle to pay anything upfront, and none involve Circle holding user funds or billing users.
+7.3.1 NonTargeted Local Video Ads (CPM)
+How it works:
+Advertisers pay Circle via corporate invoice to display short video ads (preroll, midroll, or banner) on Mashahd content.
+Ads are shown only based on the viewer’s city (derived from IP, not precise location). No user profiling, no retargeting.
+Circle takes a commission (~30%) from the advertiser’s payment; the rest goes to the creator whose video hosted the ad (or to Circle if the ad runs on Circleowned inventory).
+Why it’s zero cost to Circle:
+Advertisers pay Circle directly by bank transfer or corporate card. Circle never pays for ad serving infrastructure (selfhosted on community nodes).
+Payment processing fees are borne by the advertiser or deducted from Circle’s share.
+Legal considerations:
+Advertisers must provide normal business documentation (tax ID, commercial registration). No special crossborder tax issues because the advertiser pays Circle directly.
+Example: A local Cairo restaurant pays 100CPMfora15secondprerolladshowntoviewersinCairo.Circleearns100CPMfora15secondprerolladshowntoviewersinCairo.Circleearns30, the creator earns $70.
+7.3.2 Affiliate Commissions (CreatorDriven Product Sales)
+How it works:
+Creators include affiliate links to products (e.g., “Buy the camera I use” with a link to Amazon or a local retailer). Viewers click and purchase.
+Circle integrates with major affiliate networks (Amazon Associates, ShareASale, local programmes like Jumia Affiliate in Egypt).
+When a viewer makes a purchase via a creator’s affiliate link, Circle receives a small commission(e.g., 15% of the sale). Circle splits this commission with the creator (e.g., Circle takes 20%, creator takes 80%).
+Why it’s zero cost to Circle:
+Affiliate networks handle all tracking, payment collection, and commission distribution. Circle merely embeds affiliate links (no cost).
+Circle’s affiliate income is paid by the merchant, not by the user.
+Legal considerations:
+Affiliate networks are responsible for crossborder tax issues and compliance with local ecommerce laws. Circle simply refers traffic.
+Example: A tech creator in Egypt reviews a smartphone and includes an Amazon affiliate link. A viewer in Saudi Arabia buys the phone. Amazon pays a commission (e.g., 5%). Circle retains 1% (20% of 5%), creator receives 4%. Circle never touches the buyer’s money.
+7.3.3 Optional Premium Features for Creators (Subscription)
+How it works:
+Creators may pay a small monthly subscription (e.g., $510/month) to unlock advanced analytics, priority IPFS pinning, faster transcoding, or custom domain support.
+Payment is handled by a thirdparty subscription processor (e.g., Stripe, Paymob). Circle never sees or stores payment details.
+Why it’s zero cost to Circle:
+The subscription processor takes a fee, but that fee is borne by the creator. Circle’s net revenue is the subscription price minus the processor’s fee – but Circle never pays the processor upfront; the creator pays.
+The infrastructure for “premium” features is the same as free features; the subscription merely unlocks access. No additional cost to Circle.
+Legal considerations:
+The subscription processor (Stripe, Paymob) handles KYC, tax withholding, and regulatory compliance. Circle only receives the net payment after processor fees.
+Estimated income: If 1% of creators (e.g., 1,000 creators) pay 5/month,Circleearns5/month,Circleearns5,000/month.
+7.3.4 Enterprise Workspaces (Wasl Maktab) – Already Covered
+As detailed in Section 6.4, companies and schools pay a nominal fee for Circle’s selfhosted Workspace installer, support, and updates. This is handled via corporate invoice, not user billing.
+7.3.5 Sponsored Hashtags & Trends (CityLevel Only)
+How it works:
+A brand pays Circle to promote a hashtag or trend in Mashahd’s “Trending” section for a specific city for a set period (e.g., $50/day).
+The promoted hashtag appears at the top of the trending list but is clearly labelled “Sponsored”.
+Why it’s zero cost to Circle:
+The brand pays Circle via corporate invoice. No infrastructure cost (the trending list is generated by an algorithm; sponsored items are inserted by a config file).
+Example: A new coffee shop in Alexandria pays $100 to have #BestCoffeeAlex appear as the top trending hashtag for one week.
+7.3.6 API Access for ThirdParty Apps (Freemium Model)
+How it works:
+Circle will expose a public API for querying public video metadata, comments, and engagement metrics.
+The API is free for small uses (e.g., up to 1,000 requests/day). Large commercial users (e.g., marketing analytics firms) pay a monthly subscription.
+Why it’s zero cost to Circle:
+The API runs on the same communityhosted infrastructure. The subscription covers bandwidth and administration.
+7.3.7 Creator & Fan Monetisation Through PerformanceBased Rewards
+How it works:
+Circle integrates a brandfunded incentive pool model: brands allocate marketing budgets into a reward pool. Creators (and fans) earn credits for promoting products, creating UGC, or driving sales.
+Credits can be cashed out via thirdparty payout providers (e.g., Payoneer, Stripe Connect). Circle takes a small administration fee from the reward pool.
+Why it’s zero cost to Circle:
+Brands fund the reward pool; Circle only administers the distribution logic. Payout providers handle KYC, tax reporting, and fee collection.
+Example: A film studio allocates 10,000torewardcreatorswhomakereviewvideosforitsnewrelease.Acreatorearns10,000torewardcreatorswhomakereviewvideosforitsnewrelease.Acreatorearns500 in credits, cashes out via Stripe Connect (which deducts its fee). Circle keeps 5% ($25) as an administration fee.
+7.3.8 NonCustodial Tipping and Virtual Gifts
+How it works:
+During live streams, viewers can send tips (direct monetary gifts) or virtual gifts (e.g., animated stars, roses) that carry monetary value.
+Viewers pay for tips/gifts using their existing payment methods (credit card, local mobile money, or crypto) via a thirdparty noncustodial payment widget embedded in the live stream UI. The widget is provided by a partner like MoonPay, Ramp, Transak, or WeChange. These providers handle KYC, AML, crossborder compliance, and antifraud.
+Tip proceeds go directly to the creator’s external wallet (crypto or fiat) without passing through Circle. Circle never holds the funds.
+Circle earns a referral fee from the payment widget provider for each successful transaction (e.g., 25% of the tip amount). Most widget providers operate on a revenueshare model: they charge the user a fee and share a portion with Circle for the traffic.
+Why this is legal and zero cost to Circle:
+Circle does not touch the money, does not need a money transmitter licence, and does not perform KYC. The payment widget provider is the regulated entity.
+Crossborder compliance (e.g., EU Travel Rule, FATF Recommendation 16) is the widget provider’s responsibility. They handle originator/beneficiary data collection and transmission.
+Tax withholding on tips is the creator’s responsibility, or is handled by the widget provider if required by law (e.g., Google withholds US taxes on Super Chats). Circle does not withhold taxes.
+The widget provider can enforce countryspecific rules: for example, they may block tips from certain sanctioned countries, apply local tax rates, or require realname verification where required. This happens entirely on the widget provider’s side, not Circle‘s.
+Example – NonCustodial Tip Flow:
+Viewer in France watches a live stream by a creator in Egypt.
+Viewer clicks “Send Tip” → Circle loads an embedded widget from MoonPay (or Ramp, WeChange, etc.).
+Viewer enters tip amount (e.g., €10) and their payment details (card or local method). MoonPay charges a 3.5% transaction fee, of which 1.5% is shared with Circle as a referral fee. The remaining 2% covers MoonPay’s processing and compliance costs.
+MoonPay performs KYC/AML checks, handles currency conversion (EUR → EGP or stablecoin), and sends the net amount (€9.65 after fees, of which €0.15 goes to Circle) to the creator’s external wallet (e.g., Vodafone Cash in Egypt or a crypto wallet).
+Circle never sees the viewer’s payment details nor the creator’s wallet keys. Circle simply receives a small fee from MoonPay for the referral.
+Technical implementation: Circle integrates a single noncustodial payment widget API (e.g., MoonPay’s embedded widget or Transak’s checkout). The widget automatically selects the optimal onramp based on the user’s country and preferred payment method.
+7.3.9 Channel Memberships (Paid Subscriptions to a Creator)
+How it works:
+A creator can offer a paid membership to their channel (e.g., $5/month). Members receive exclusive content, badges, and other perks.
+Payments are handled entirely by a thirdparty subscription processor (e.g., Stripe, Paymob, or crypto subscription service). The processor takes a fee and pays the creator the net amount. Circle earns a small referral fee (e.g., 1020% of the subscription price) for hosting the membership.
+Again, Circle never holds the funds, never touches the subscription billing details, and never performs KYC. The subscription processor handles all compliance, including crossborder tax issues and payment method localisation.
+7.3.10 ZeroCost Creative Ideas for Income
+The following are outofthebox methods that cost Circle nothing to implement and generate revenue without user friction:
+Idea
+How it works
+Why it’s zero cost
+Example
+Branded AR filters
+Brands pay Circle to sponsor AR filters (face lenses, background filters) for Mashahd Shorts and live streams.
+Filters are developed by brands or via community contests; Circle distributes them as a curated gallery. No dev cost.
+An ice cream brand pays $5,000 for a “Melting Summer” filter that appears as a sponsored option for one month.
+Contextual product placement
+An AI (ondevice) detects objects in a video (e.g., a phone, a coffee mug) and overlays a small, clickable brand logo if the creator has opted into a brand partnership. Brand pays per click or impression.
+AI runs ondevice; the brand link is an affiliate link. Circle takes a commission on any resulting sale.
+A cooking video shows a chef using a certain brand of olive oil. A tiny “Buy this olive oil” link appears for 3 seconds.
+IPFS storage rental
+Users with extra local storage can rent it to Circle’s IPFS network for pinning popular videos (i.e., keeping them seeded for faster retrieval). Rent is paid in Circle credits that can be donated to creators or cashed out via thirdparty.
+We are not paying for storage – peers are renting their own surplus.
+A user with a 1 TB external drive earns $2/month in credits for pinning 100 GB of popular content.
+Community node sponsorship
+Local businesses sponsor the default Matrix/PeerTube nodes for their city. In return, their logo appears on the Dashboard’s “Powered by” section.
+Sponsor pays Circle directly via invoice; Circle uses part of the payment to keep the node running, keeps the rest as profit.
+A telecom company in Cairo sponsors the Cairo node ($500/month) → 500,000 users see “Infrastructure sponsored by Orange” once a day.
+Machinery adbased transcoding
+For video transcoding (converting uploads to different formats), Circle uses a communitydistributed compute grid. Users donate idle computing power in exchange for a small credit (or just altruistically). Circle pays nothing.
+Users opt into donating compute power; no cost to Circle.
+A creator uploads a 4K video; the video is transcoded by 50 community volunteers’ idle laptops.
+Digital collectible marking
+Creators can “mark” a video as a limited digital collectible (not an NFT, just a marker). Viewers pay a small amount to collect the marker (bragging rights). Marker proceeds go to creator; Circle takes a referral fee.
+Marker is just a database entry; payment is via widget provider.
+A popular creator releases a “100K subscribers celebration marker” for 1.5,000fansbuyit→creatorearns1.5,000fansbuyit→creatorearns4,750, Circle earns $250 (5% referral fee).
+Fanfunded translation bounties
+Viewers can contribute small amounts to a bounty for translating a video into another language. When the translation is done, the translator is paid via thirdparty. Circle takes a fee from the bounty pool.
+Circle never touches funds; the bounty pool is held by a thirdparty escrow (e.g., Stripe Connect, a DAO treasury).
+A video in Arabic gets a 100bountyforanEnglishtranslation.Atranslatorclaims100bountyforanEnglishtranslation.Atranslatorclaims80, Circle earns $20.
+7.4 The Tipping Algorithm – Detailed Technical Specification
+Because tipping is a primary revenue lever (via referral fees from the payment widget provider), Circle’s tipping algorithm must maximise conversion while remaining zerocost and noncustodial.
+7.4.1 Algorithm Goals
+Maximise tip frequency – encourage many small tips rather than rare large ones.
+Maximise tip value – suggest appropriate tip amounts based on viewer context.
+Zero cost to Circle – the algorithm runs ondevice or on cheap community nodes; no paid APIs.
+Noncustodial – the algorithm never touches money; it merely selects the optimal payment widget and suggests amounts.
+Legal in every country – the algorithm respects local minimum age for tipping, bans tips from sanctioned countries, and only suggests payment methods available in the viewer’s country.
+7.4.2 Algorithm Components
+The tipping algorithm is a lightweight decision tree that runs on the viewer’s device (or on a community node) and provides a set of recommendations to the UI.
+Inputs:
+Viewer’s country (from IP)
+Creator’s country (profile setting)
+Viewer’s historical tip behaviour (local only, never uploaded)
+Current live stream context (viewer count, time spent watching, chat activity)
+Creator’s popularity (subscriber count, average concurrent viewers)
+Outputs:
+Recommended tip amount (e.g., “5 EGP”, “10 EGP”, “20 EGP”)
+Suggested virtual gift (e.g., “Send a Rose – 2 EGP”, “Send a Lion – 50 EGP”)
+Which payment widget to display (MoonPay, Ramp, Transak, etc.) – chosen based on country and payment method availability
+7.4.3 Decision Tree (Pseudocode)
+dart
+class TipRecommendationEngine {
+  TipSuggestion getSuggestion(User viewer, Creator creator, LiveStreamContext context) {
+    // 1. Determine allowed payment widget and currency based on viewer country
+    final widget = PaymentWidgetSelector.select(viewer.country);
+    final currency = widget.defaultCurrency;
+    // 2. Compute base tip amount based on viewer's wealth proxy (device value, IP geo, spending history)
+    final baseAmount = _estimateViewerDisposableIncome(viewer) * 0.05; // 5% of daily disposable
+    // 3. Adjust based on engagement
+    double multiplier = 1.0;
+    if (context.timeWatched > 10.minutes) multiplier *= 1.5;
+    if (context.chatSentCount > 5) multiplier *= 1.2;
+    if (context.viewer.currentStreak > 30.days) multiplier *= 2.0;
+    // 4. Suggest three rounded amounts
+    final amounts = [
+      (baseAmount * multiplier).roundDownToNearest(5).clamp(min: 1, max: 100),
+      (baseAmount * multiplier * 2).roundDownToNearest(10).clamp(min: 5, max: 200),
+      (baseAmount * multiplier * 5).roundDownToNearest(25).clamp(min: 25, max: 500),
+    ];
+    // 5. Suggest virtual gifts mapping to amounts
+    final gifts = _getLocalizedGifts(viewer.country).map((gift) {
+      gift.amount = amounts.firstWhere((a) => a >= gift.defaultPrice);
+      return gift;
+    });
+    return TipSuggestion(
+      amounts: amounts,
+      gifts: gifts,
+      widget: widget,
+    );
+  }
+}
+7.4.4 Widget Selection by Country
+The algorithm selects the payment widget based on the viewer’s country, using a static configuration file (updated weekly). This ensures that only legally compliant payment methods are offered.
+Country / Region
+Preferred Widget(s)
+Notes
+Egypt
+Paymob (local), Vodafone Cash direct (via hosted page), Fawry widget
+No crypto; all fiat, local payment methods.
+China
+WeChat Pay SDK, Alipay SDK
+Circle embeds the miniprogram or SDK; payment goes through Tencent/Alibaba, not through Circle.
+USA / Europe
+MoonPay, Ramp, Stripe Connect
+Crypto and fiat onramps. MoonPay charges a fee and shares a portion with Circle.
+Latin America
+Transak, local Pix (Brazil), SPEI (Mexico)
+Transak has wide coverage in LatAm.
+India
+Ramp (UPI support), Coinbase Onramp
+Ramp supports UPI.
+Russia
+Local aggregator (e.g., UnitPay) – no USbased widgets due to sanctions
+Circle does not provide tipping in Russia if sanctions would be violated.
+Iran
+Tipping disabled (by law)
+The widget returns an error “Not available in your country”.
+7.4.5 Tipping Flow (EndtoEnd)
+Viewer clicks “Send Tip” on a live stream.
+Circle calls TipRecommendationEngine.getSuggestion() → displays suggested amounts and gifts.
+Viewer selects an amount/gift and clicks “Send”.
+Circle opens the selected payment widget in a WebView (or invokes the SDK). The widget is nothosted by Circle; it is served by the widget provider (e.g., MoonPay).
+Viewer completes payment on the widget’s page. The widget may:
+Collect payment details
+Perform KYC if required by law (e.g., for large tips)
+Convert currency
+Send the net amount to the creator’s external wallet
+The widget provider sends a webhook to Circle’s server with a confirmed transaction ID (but nopayment details – only the amount and the creator’s recipient ID).
+Circle displays “Tip sent!” in the live stream chat and adds the virtual gift animation.
+Circle’s referral fee: The widget provider invoices Circle monthly for the referral fees earned (e.g., 1.5% of each tip amount). Circle pays the widget provider from its advertising revenue. This is the only time Circle ever pays anything – but it’s a small fraction of the tip amount, and Circle’s income from other streams (ads, affiliate) covers it.
+Crucially, Circle never pays upfront. The widget provider deducts its fees from the tip amount before sending it to the creator. If Circle did not receive payment from advertisers, it could still owe the widget provider – but the referral fee is a small percentage, and Circle’s ad revenue is designed to cover it.
+7.5 Compliance & Legal Framework for Monetisation
+Circle’s monetisation model is designed to comply with laws in every country without requiring Circle to become a financial institution. The key principle: Circle never touches the money.
+7.5.1 KYC/AML Responsibility
+Advertisers paying Circle directly: Circle performs normal business KYB (Know Your Business) – collects commercial registration, tax ID, etc. This is standard for any ad network and does not require a money transmitter licence.
+Viewers paying creators via widget providers: The widget provider (MoonPay, Ramp, Paymob, etc.) is responsible for KYC/AML, sanctions screening, and reporting suspicious transactions. Circle does not see the viewer’s identity or payment details.
+Creators receiving money: The widget provider or subscription processor collects the creator’s payout details (bank account, crypto wallet). The processor is responsible for verifying the creator’s identity and performing any required tax withholding.
+7.5.2 CrossBorder Transactions & Tax Withholding
+Circle is not a payor: Unlike YouTube, which pays creators directly and must withhold US taxes on USsource income, Circle does not pay creators. Instead, the widget provider pays the creator and may be required to withhold taxes depending on the provider’s jurisdiction and the creator’s residence.
+Creators are responsible for their own taxes: Circle provides no tax advice, and Circle does not issue tax forms. However, Circle may provide a statement of earnings (which is not a tax document) to help creators track their income.
+Sanctions compliance: Widget providers are responsible for blocking transactions from or to sanctioned countries. Circle only selects a widget provider that does not operate in sanctioned regions. If a viewer in Iran attempts to send a tip, the widget selector will return an error (because no widget is available for Iran).
+7.5.3 Money Transmitter Licence (MTL)
+Circle does not operate as a money transmitter because it never:
+Receives money from a user
+Holds user funds
+Sends money to another user on behalf of the sender
+Instead, all payments are direct peertopeer with the payment widget acting as a service provider (like PayPal or Stripe). This is the same model used by numerous platforms that embed thirdparty checkout.
+7.5.4 Age Restrictions
+Tipping disabled for users under 18: The widget provider is responsible for age verification (if required by law). Circle hides tipping buttons if the user’s selfdeclared age is under 18, or if the local law prohibits minors from tipping.
+No tipping for adult content: Circle does not host adult content. All videos are familyfriendly.
+7.6 Summary of Part 7
+Part 7 has detailed a comprehensive, legal, and zerocost monetisation ecosystem that allows Circle to compete with YouTube and other video platforms:
+Income Stream
+Circle’s Cost
+Who Pays
+Circle’s Role
+Legal Basis
+Nontargeted local video ads
+$0 (advertisers pay)
+Advertisers
+Display ads, take commission
+Standard ad sales
+Affiliate commissions
+$0 (merchants pay)
+Merchants
+Embed affiliate links
+Affiliate network T&C
+Creator premium subscriptions
+$0 (creators pay)
+Creators
+Provide access to bonus features
+Subscription processor
+Sponsored hashtags/trends
+$0 (sponsor pays)
+Brands
+Insert trending item
+Ad sales
+API access (freemium)
+$0 (users pay)
+Commercial API users
+Provide API gateway
+Subscription processor
+Brandfunded reward pools
+$0 (brands pay)
+Brands
+Administer reward distribution
+Contract with brand
+Noncustodial tipping referral fees
+$0 (widget provider pays)
+Widget provider (MoonPay, etc.)
+Embed widget, refer traffic
+Referral agreement
+Channel memberships referral fees
+$0 (subscription processor pays)
+Subscription processor
+Refer subscription signups
+Referral agreement
+Branded AR filters
+$0 (brand pays)
+Brands
+Distribute filters
+Ad sales
+IPFS storage rental (peertopeer)
+$0 (users rent to each other)
+Users renting storage
+Provide matching marketplace
+Marketplace T&C
+Community node sponsorship
+$0 (sponsor pays)
+Local businesses
+Display sponsor logo
+Sponsorship
+Fanfunded translation bounties
+$0 (fans pay)
+Fans
+Match bounty with translator
+Escrow via third party
+Every method costs Circle $0 because:
+Payment processing fees are borne by the payor (advertiser, brand, merchant, or fan)
+Infrastructure is communityhosted, selfhosted by creators, or donated
+The widget providers and subscription processors handle KYC/AML, tax withholding, and crossborder compliance – Circle simply refers traffic and earns a fee.
+And most importantly: Circle never holds user funds, never collects user billing details, and never requires a money transmitter licence. Users remain 100% free, forever.
+End of Part 7 (Regenerated & Expanded, English Only)
+8. Lamahat (لمحات) – Photos Module
+8.1 Overview
+Lamahat (English brand name Lamahat, US English Glimpses) is Circle’s photosharing module. It replaces Instagram, Snapchat, and Pinterest. Lamahat is built around three core concepts:
+Feed – chronological and algorithmic (ondevice personalised) views of photos from followed users, nearby, and trending.
+Stories – ephemeral photo/video posts that disappear after 24 hours.
+Moments – permanent posts that can be organised into collections and memories.
+All media is stored on IPFS with local caching. Sharing is P2P where possible. Privacy is paramount: users control who can see each post, and screenshot/forwarding consent applies.
+Key principles:

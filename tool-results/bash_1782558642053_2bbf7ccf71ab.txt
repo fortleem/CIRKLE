@@ -1,0 +1,300 @@
+Task: End-to-end verification of cinematic entrance + state-of-art UI upgrade + 3 new modules.
+
+Work Log:
+- Ran `bun run lint` → 0 errors, 0 warnings across the entire codebase.
+- Used Agent Browser to clear localStorage and replay the cinematic entrance from `?intro=1`:
+  - Act 0 (Breath): black void with gold pulse-dot + "INITIALISING" + "دواير" — verified.
+  - Act 1 (Logo Bloom): expanding rings + Circle logo bloom with spring rotation + "Circle" + "دواير" + "One soul, many voices. Bridges that never break." word-reveal — verified.
+  - Act 2 (Covenant): all 9 promises appear staggered with frost-cards + Arabic translations — verified.
+  - Act 3 (Module Orbit): 3D rotating ring of 12 module icons + reverse ring of 6 + centered Circle logo — verified.
+  - Act 4 (Stats): count-up animation showing 29 Modules, 190 Languages, 11+ Apps replaced, 0$ Cost — verified.
+  - Act 5 (Enter): "Welcome to Circle" kinetic text + "أهلاً بك في دواير" + gold CTA "Enter Circle" with shimmer-line — verified.
+  - Cinematic auto-dismisses and sets `circle.cinematic.seen.v1=1` so it doesn't replay on normal visits; `?intro=1` forces replay.
+  - Skip button + Esc/Enter/Space keyboard skip + progress dots (clickable to jump acts) + mute toggle for ambient audio — all verified.
+- Verified Home Dashboard v2 cinematic hero: 3D orbit (`orbit-3d` class), AI Core live card with breathing rings, 43 frost-cards, 33 liquid-borders, 11 pulse-dots, kinetic-text greeting, parallax mouse tracking.
+- Navigated to all 22 modules (original 19 + 3 new: Unique Features, Backup & Migration, Privacy v2) — **all 22 pass with zero runtime errors**:
+  - Unique Features: all 10 blueprint Part 26 features present (Smart Post Router, AI Memoir, Knowledge Circles, Offline Stash, Decentralised Tickets, Family Vault, Anonymous Help, Echoes, Bullet Comments, Smart Notifications) + 10 "Try it" dialogs.
+  - Backup & Migration: 4 methods (Local, IPFS, Trusted Circle M-of-N, Matrix Key), phone migration wizard, recovery flows, real `.circlebackup` Blob download.
+  - Privacy v2: Privacy Score gauge (animates to 87), Risk Simulation, Self-Audit, Dual Identity (UNLINKABLE divider), 12-row consent table, GDPR/CCPA/LGDP/COPPA/PIPL/Russia compliance, account deletion.
+- Verified sticky footer (`footerAtBottom: true`) and mobile bottom nav at 390×844.
+- Verified chat service (port 3003) still running; dev server (port 3000) returns HTTP 200.
+
+Stage Summary:
+- Phase 2 complete. The Circle platform now has:
+  - A 6-act cinematic entrance (Breath → Logo Bloom → Covenant → Module Orbit → Stats → Enter) with synthesised ambient audio, skip controls, and persistent seen-flag.
+  - A state-of-art design system with 20+ cinematic primitives (film grain, kinetic text, mesh gradient, aurora flow, liquid border, spotlight, parallax depth, shimmer, orbit 3D, pulse dot, frost card, etc.).
+  - An upgraded AppShell with dynamic module-accent theming (each module tints the sidebar + top bar in its brand color), glowing active-module rail, mesh-gradient Covenant card, liquid-border active buttons.
+  - A flagship Home Dashboard v2 with a cinematic hero (3D orbiting module ring + parallax mouse tracking), AI Core live card with breathing rings, and 11 upgraded sections.
+  - 3 new modules filling blueprint gaps: Unique Features (Part 26 — 10 features), Backup & Migration (Part 27 — 4 methods + migration wizard), Privacy v2 (Part 28 — full privacy command center).
+  - All 22 modules pass end-to-end with zero runtime errors.
+- The platform is production-ready for preview.
+
+---
+Task ID: 29
+Agent: full-stack-developer
+Task: Rebuild 10 overlays from source after accidental deletion.
+
+Work Log:
+- Read `/home/z/my-project/worklog.md` (Tasks 1–13 history) to understand the Circle platform context, brand palette (teal/gold/rose/steel/charcoal/cream), cinematic primitives in `globals.css` (`glass-strong`, `aurora-bg`, `bg-gradient-hero`, `bg-gradient-mesh`, `bg-gradient-gold`, `gradient-text-gold`, `shadow-float`, `animate-orb-float`, `animate-pulse-glow`, `animate-spin-slow`, `scrollbar-hide`), and the page.tsx integration pattern (overlays driven by `circle:*` CustomEvents + ⌘K + Escape).
+- Read all 10 source overlay files from `/tmp/circle-src-2/circle-your-connected-world-main/src/components/` (Vite + React versions): CommandPalette, AIAssistant, SettingsPanel, GovernanceCenter, Composer, CircleHub, CirclePulse, MashahdPlayer, LamahatViewer, MeshPresence.
+- Read all foundation files already in place: `src/lib/app-store.ts` (Zustand store: theme, locale, country, city, ghostMode, reducedMotion, contrast, textScale, dir, onboarded + setters that persist to localStorage), `src/lib/i18n.ts` (en/ar dict with palette.placeholder + ai.title/sub/placeholder), `src/lib/countries.ts` (COUNTRIES, COUNTRY_MAP, getCountry, getDefaultCountry), `src/lib/mock.ts` (commands, proposals, meshPeers, aiSeed, reels, spaces), `src/lib/tabs.ts` (TABS, TabId), `src/lib/mock-images.ts` (IMG, SCENES, AVATARS).
+- Read shadcn UI inventory: Sheet (right/bottom/top/left sides, full Radix Dialog), Switch, Slider, ToggleGroup, Select, Tabs, Dialog, Tooltip, Progress, Input, Button, ScrollArea — all from `@/components/ui/*`. Read `src/components/shell/top-bar.tsx`, `ai-orb.tsx`, `src/app/page.tsx` to confirm the exact prop signatures and event names the page expects (AIAssistant: `{open, onClose, onAction}` + `AIAction` type; CommandPalette/SettingsPanel/GovernanceCenter/CircleHub/CirclePulse: `{open, onClose}`; Composer: `{open, initialKind, initialText, onClose}`; MashahdPlayer: `{open, index, onClose}`; LamahatViewer: `{open, mode, index, onClose}`; MeshPresence: `{}`).
+- Verified the `@/screens/*` directory exists (created by another agent in parallel) and that the screens correctly import my overlays: `home-screen.tsx` imports MeshPresence, `lamahat-screen.tsx` imports LamahatViewer, `mashahd-screen.tsx` imports MashahdPlayer.
+
+Files produced (all in `/home/z/my-project/src/components/overlays/`):
+
+1. **command-palette.tsx** — `CommandPalette({open, onClose})`. ⌘K launcher (Escape wired in page.tsx). Search filters `commands` by label/group/hint. Groups results preserving order. Explicit ID→event mapping: cmd1→`circle:composer` (post), cmd2→`circle:navigate` wasl + toast, cmd3→`circle:navigate` pay + "Scan & Pay ready" toast, cmd4→`circle:navigate` rihla, cmd5/cmd9/cmd11→`circle:hub`, cmd6/cmd7→`circle:ai`, cmd8→`setGhostMode(true)` + "Ghost mode enabled" toast, cmd10→`circle:governance`, cmd12→`circle:pulse`. Keyboard nav: ↑/↓/Enter/ESC with active index tracking, auto-scroll into view, hover-syncs active. Empty state with "Ask Circle AI instead" fallback. Closes after executing. Uses `prevOpen`/`prevLen` derived-state pattern (no setState-in-effect).
+
+2. **ai-assistant.tsx** — `AIAssistant({open, onClose, onAction})` + `AIAction` type exported. Bottom sheet with orb header, scrollable message log, suggestion chips, voice + send buttons. Intent recognition (summarize/draft/post/poll/govern/ghost/pay/scan) returns canned chip responses; unknown queries POST to `/api/ai-ask` with `{message, country}` (country from `useApp`). Typing indicator with min 500ms delay. `onAction` callback for chips (open-composer, open-governance, navigate, scan-pay, toggle-ghost). ESC closes. Auto-scroll to bottom on new messages. Mic button fires a voice-input toast. Send disabled when input empty.
+
+3. **settings-panel.tsx** — `SettingsPanel({open, onClose})`. Right-side shadcn Sheet. Sections: Motion (Switch for `reducedMotion`), Contrast (Standard/High buttons → `setContrast`), Typography scale (Slider 0.9–1.3 → `setTextScale` with live preview), Theme (ToggleGroup Light/Dark → `toggleTheme`), Language (ToggleGroup EN/العربية → `toggleLocale`), Region (Country Select from COUNTRIES → `setCountry`, City Select from country.majorCities → `setCity`), Ghost mode (Switch → `setGhostMode`), About (privacy blurb + reset onboarding button that clears all `circle-*` localStorage keys + `circle.cinematic.seen.v1` then reloads).
+
+4. **governance-center.tsx** — `GovernanceCenter({open, onClose})`. Bottom Sheet with filter pills (all/voting/passed/draft). Lists `proposals` from mock — each with status pill, tags, title, summary, author, closes-in, animated vote bar (yes/no segments), and Yes/No/Abstain buttons that record vote in local state, update tally counts, disable after voting, toast confirmation. Shows "You voted: X" after voting. Transparency section with 6 mock finances (Treasury balance, Monthly burn, Audit trail, Paid ads sold, Trackers, User data sold). Covenant section with all 9 promises (Privacy by architecture, On-device AI, Zero cost, 200 languages, Offline-first, One human one account, Self-hostable, Non-targeted ads, Community governance) — each with icon, English label, Arabic translation, and verified badge. All safe-area-aware via `paddingBottom: max(env(safe-area-inset-bottom), 1.5rem)`.
+
+5. **composer.tsx** — `Composer({open, initialKind, initialText, onClose})`. Bottom Sheet with 3 modes (Post/Poll/Media) via pill tabs. **Post**: textarea + 280-char counter (color shifts at <30 chars left, accent at over-limit) + audience selector (Public/Friends/Close Friends/Workspace with descriptions) + toolbar (Photo/Poll/Voice/AI buttons) + "Post to Midan!" publish → toast + close. **Poll**: question textarea + 2–4 dynamic options (add/remove) + duration selector (1h/6h/24h/3d) + "Publish poll" → toast + close. **Media**: real `<input type="file" accept="image/*" multiple>` with FileReader preview (up to 6 photos, EXIF note) + caption + "Share media" → toast + close. Live preview panel shows the post as it will appear (avatar, name, body, media grid, poll options, hashtags, AI-verified badge). Publish disabled when over the char limit. Reset state on open via derived-state pattern.
+
+6. **circle-hub.tsx** — `CircleHub({open, onClose})`. Sheet with 18 pillars (Mail, ID, Verify, Mesh, Mini-Apps, Backup, Privacy, AI Safety, Translate, Maps, Ads, Workspaces, Education, Creators, Professional, Groups, Self-Learn, Federation). Search filters by name+tagline. Each pillar has a tinted gradient card with icon, badge, name, tagline, "Open →" hint. Click opens detail view with hero, metrics, feature rows (icon/title/body/tag), and "Open {name}" button. Open button: if pillar has a `tab` mapping (creators→mashahd, professional→wasl, groups→midan), dispatches `circle:navigate` + toast + close; otherwise fires "Launching {name}…" toast.
+
+7. **circle-pulse.tsx** — `CirclePulse({open, onClose})`. Sheet with 4-city selector (Riyadh/Jeddah/AlUla/NEOM). **Pulsing-dot biome grid** (8×8 = 64 dots with staggered delay + intensity per-position, infinite breathe animation). Biosignal wave (48 bars sine wave with tick animation). Vitals (Mood/Energy/Calm with progress bars). Strips (Soundscape/Weather/Air quality/Safety). **Live activity feed** from `meshPeers` — new item prepended every 3s via setInterval, framer-motion layout animations for enter/exit. Footer buttons: "Tune in to {city}" (toast), "Map" (Circle Maps toast), "Share" (dispatches `circle:composer` with draft). All safe-area-aware.
+
+8. **mashahd-player.tsx** — `MashahdPlayer({open, index, onClose})`. Full-screen overlay. Top bar (Close, Captions toggle, Translate toast, Settings popover). Video stage with image cover (from SCENES), click-to-play/pause, on-screen prev/next reel buttons (ChevronUp/Down, disabled at ends), captions overlay, progress bar (auto-advances 0.6% per 120ms, click-to-seek), controls (play/pause, mute, time, Clip toast, theater toggle). Settings popover with Quality (Auto/1080p/4K) + Speed (0.5x/1x/1.5x/2x). Side rail: title, creator, Follow button (toggle), action pills (ThumbsUp toggle, ThumbsDown toggle, Share, Save toggle, Tip, Comment count — all with toasts), AI Chapters (4 clickable chapters that seek), Up next list (clickable reels), comments section with input (real submit adds comment + toast) + like buttons on each comment. Keyboard: Space (play/pause), M (mute), T (theater), ArrowUp/Down (reels), Escape (close). Reset state on open/index change.
+
+9. **lamahat-viewer.tsx** — `LamahatViewer({open, mode, index, onClose})`. Full-screen overlay. **Story mode**: 9:16 card, framer-motion `drag="y"` for swipe-down-to-close (threshold 120px), auto-advance 5s (100ms tick, +2 = 50 ticks), 6 progress bars at top (one per scene), tap left/right zones to navigate, avatar + handle + timestamp, caption, reply input + heart reaction button (toggle) + send button (real submit + toast), "Swipe down to close" hint. **Post mode**: 2-column grid, large photo with prev/next chevrons + dot indicators, header (avatar, handle, location, Follow toggle, More), caption with hashtags, scrollable comments list (4 seeded + user-added) with like buttons on each, Remix button (toast), action bar (Like toggle, Comment focus, Share, Audio, Save toggle), like count + timestamp + comment input with emoji + Post submit. Keyboard: ArrowLeft/Right (navigate), Escape (close). Reset state on open/index change.
+
+10. **mesh-presence.tsx** — `MeshPresence()`. Inline component. Radar visual with 3 concentric pulsing rings + center mesh-gradient orb + 4 peer dots orbiting (spring-animated with pulse tick). Activity stream (3 peers, rotated every 3.5s with framer-motion layout enter/exit). "X peers nearby" badge with pulse-dot. Synced Spaces rail (each space clickable → toast with title + host + listeners). All peer items + dots clickable → toast with name + action + distance. Live indicator with key-based re-animation on each tick.
+
+Production-ready patterns across all 10 files:
+- Every file starts with `"use client"`.
+- Every button has a real action (no dead buttons): all close buttons call `onClose`, all action buttons dispatch events or fire toasts, all toggle buttons manage state.
+- Imports: `@/providers/AppProvider` → `@/lib/app-store`, `@/lib/mockImages` → `@/lib/mock-images`, `@/lib/mock` unchanged.
+- Plain `<img>` tags throughout (no Next.js Image).
+- No indigo/blue colors — strictly teal/gold/rose/steel/charcoal/cream + secondary/accent.
+- All overlays use the existing cinematic primitives (`glass-strong`, `aurora-bg`, `bg-gradient-hero`, `bg-gradient-mesh`, `bg-gradient-gold`, `gradient-text-gold`, `shadow-float`, `animate-orb-float`, `animate-pulse-glow`).
+- shadcn components used: Sheet + SheetContent/SheetHeader/SheetTitle (SettingsPanel), Switch (SettingsPanel), Slider (SettingsPanel), ToggleGroup + ToggleGroupItem (SettingsPanel), Select + SelectTrigger/SelectContent/SelectItem/SelectValue (SettingsPanel).
+- framer-motion: `motion`, `AnimatePresence` for entrances/exits, `layout` for list reordering, `drag` for swipe-down (LamahatViewer story), spring physics on bottom sheets.
+- `sonner` toast for all user feedback (success/error/info).
+- Safe-area-aware bottom padding on bottom sheets (`max(env(safe-area-inset-bottom), …)`).
+- Avoided `react-hooks/set-state-in-effect` lint errors by using the React-recommended "derived state during render" pattern (`prevKey`/`prevOpen` trackers) instead of `useEffect` for syncing props to state in Composer, LamahatViewer, MashahdPlayer, CommandPalette.
+- Avoided `react-hooks/immutability` lint error in CommandPalette by inlining the dispatch logic into a `dispatch(id)` function declared before the keyboard handler (no forward reference).
+- Accessibility: `role="dialog"`, `aria-label`, `aria-pressed`, `aria-label` on all icon-only buttons, semantic HTML throughout.
+- Mobile responsive: grids collapse, sheets are `w-[92vw]` on mobile, full-screen overlays adapt to viewport.
+
+Verification:
+- Ran `cd /home/z/my-project && bun run lint` → **0 errors, 0 warnings** (exit 0).
+- Checked `dev.log`: page compiles successfully (`✓ Compiled in 218ms`, `✓ Compiled in 184ms`) and serves `GET / 200` repeatedly, plus `GET /?tab=wasl 200`. No new errors after the overlay files were created. The earlier "Module not found: @/screens/*" errors in the log are stale (the screens directory now exists, created by a parallel agent).
+- Cross-referenced `src/app/page.tsx` to confirm all overlay exports match the expected prop signatures and event names (`circle:composer`, `circle:governance`, `circle:settings`, `circle:ai`, `circle:hub`, `circle:pulse`, `circle:navigate`).
+- Confirmed screens consume the remaining 3 overlays: `home-screen.tsx` uses `<MeshPresence />`, `lamahat-screen.tsx` uses `<LamahatViewer ... />`, `mashahd-screen.tsx` uses `<MashahdPlayer ... />`.
+
+Stage Summary:
+- Files produced:
+  - `src/components/overlays/command-palette.tsx` (NEW — ⌘K launcher, 12 commands, ↑/↓/Enter/ESC keyboard nav, ID-based event dispatch, empty state)
+  - `src/components/overlays/ai-assistant.tsx` (NEW — bottom-sheet AI chat, intent recognition, /api/ai-ask POST fallback, suggestion chips, AIAction type exported)
+  - `src/components/overlays/settings-panel.tsx` (NEW — right Sheet, Theme/Language ToggleGroups, Country/City Selects, Reduced motion/Ghost mode Switches, Text scale Slider, reset onboarding)
+  - `src/components/overlays/governance-center.tsx` (NEW — bottom Sheet, proposal voting with tally updates + disable-after-vote, Transparency finances, 9-promise Covenant)
+  - `src/components/overlays/composer.tsx` (NEW — bottom Sheet, Post/Poll/Media modes, 280-char counter, audience selector, real FileReader image upload, live preview, duration picker)
+  - `src/components/overlays/circle-hub.tsx` (NEW — Sheet, 18 pillars with search, detail view, navigate-or-toast Open button)
+  - `src/components/overlays/circle-pulse.tsx` (NEW — Sheet, 4-city selector, 64-dot pulsing biome grid, biosignal wave, vitals, strips, live meshPeers feed every 3s, View on Map toast)
+  - `src/components/overlays/mashahd-player.tsx` (NEW — full-screen cinema, play/pause, auto-advancing progress, prev/next reels, action pills with toggles, AI chapters, comments with real submit, settings popover, keyboard shortcuts)
+  - `src/components/overlays/lamahat-viewer.tsx` (NEW — full-screen, story mode with 5s auto-advance + swipe-down-to-close + tap zones, post mode with prev/next + comments + like/comment/share, keyboard nav)
+  - `src/components/overlays/mesh-presence.tsx` (NEW — inline radar with 3 pulsing rings + 4 orbiting peer dots, activity stream rotated every 3.5s, clickable synced spaces, "X peers nearby" badge)
+- All 10 overlays are fully interactive (every button does something), production-ready (safe-area-aware, accessible, mobile responsive), lint-clean (0 errors), and integrate correctly with `src/app/page.tsx` (events + props) and the `src/screens/*` (MeshPresence/LamahatViewer/MashahdPlayer consumers).
+
+---
+Task ID: 28
+Agent: full-stack-developer
+Task: Rebuild 8 screens from source after accidental deletion.
+
+Work Log:
+- Read `/home/z/my-project/worklog.md` (Tasks 1–13 history) and the 8 Vite source screens under `/tmp/circle-src-2/circle-your-connected-world-main/src/screens/` (HomeScreen, WaslScreen, MashahdScreen, LamahatScreen, MidanScreen, RihlaScreen, PayScreen, ProfileScreen).
+- Read foundation files already in place: `src/lib/mock.ts`, `src/lib/mock-images.ts` (SCENES/AVATARS/IMG), `src/lib/app-store.ts` (useApp hook: theme/locale/country/city/ghostMode/etc.), `src/lib/i18n.ts`, `src/lib/tabs.ts`, `src/lib/countries.ts`, `src/components/brand/circle-mark.tsx`, `src/components/shell/mesh-badge.tsx`, `src/app/globals.css` (glass, gradient-hero, gradient-gold, gradient-mesh, aurora-bg, shadow-float, scrollbar-hide, pulse-glow).
+- Verified `/api/feed` route exists (calls `generateFeed(country, city)` in `src/lib/ai.ts` with real Groq → OpenAI → ZAI fallback chain + Open-Meteo weather).
+- Discovered `src/app/page.tsx` had been rewritten by a previous agent to import 7 overlays from `@/components/overlays/*` (AIAssistant, CommandPalette, SettingsPanel, GovernanceCenter, Composer, CircleHub, CirclePulse) — but only 4 of them existed (composer, lamahat-viewer, mashahd-player, mesh-presence from the previous subagent, all with lint errors). Created the 3 missing overlays so `page.tsx` could compile:
+  - `src/components/overlays/ai-assistant.tsx` — full AI chat sheet that calls `POST /api/ai-ask` with the user's country context; framer-motion slide-up + spring; 4 suggestion chips + "Compose a post" + "Scan & pay" action chips that dispatch to `onAction`; animated typing dots while loading; auto-scroll-to-bottom on new messages; Enter-to-send.
+  - `src/components/overlays/command-palette.tsx` — ⌘K palette searching the `commands` mock; ↑/↓/Enter/Esc keyboard nav; per-command dispatch of `circle:composer` / `circle:navigate` / `circle:ai` / `circle:settings` / `circle:hub` / `circle:pulse` / `circle:governance` events.
+  - `src/components/overlays/settings-panel.tsx` — Sheet with Region & language (country + city Select bound to `setCountry`/`setCity`), Appearance (theme toggle, high-contrast Switch, reduce-motion Switch, text-scale slider), Privacy (Ghost mode Switch bound to `setGhostMode`, Privacy center button).
+  - `src/components/overlays/governance-center.tsx` — Sheet listing the 4 `proposals` from mock with yes/no/abstain vote buttons (toggle + toast), animated progress bar of yes/no votes, status badge, tags.
+  - `src/components/overlays/circle-hub.tsx` — Sheet with 8-pillar grid (each navigates via `circle:navigate` event) + 6 Circle services list (Mail, ID, Verify, Mesh, Mini apps, Maps).
+  - `src/components/overlays/circle-pulse.tsx` — Sheet showing weather hero card + 4 live metrics (Air/Humidity/UV/Mobility) + nearby-activity list with trend indicators.
+- Created the 8 screens (all `"use client"`, plain `<img src={...}>` tags, no next/image, no indigo/blue, no absolute URLs):
+
+  **`src/screens/home-screen.tsx`** — HomeScreen with live AI feed:
+  - `useCallback` `fetchFeed` hits `/api/feed?country=X&city=Y` on mount + whenever `country` or `effectiveCity` changes; `useEffect([fetchFeed])` re-runs the fetch.
+  - Loading skeletons for featured carousel, official updates, for-you, nearby, trending (5 separate `<Skeleton>` blocks).
+  - Error banner with "Retry" button; on failure falls back to mock data shaped like the live feed (uses `cInfo.newsSources` for official channels so each country shows its own).
+  - Country/city selector dropdown — opens on clicking the location chip; `select` bound to `setCountry` (re-seeds city) + `setCity`; toast confirmation.
+  - Real weather display in greeting line: `${tempC}°C · ${condition} ${icon}` from the feed payload.
+  - Refresh button (top-right, `RefreshCw` with `animate-spin` while loading) re-invokes `fetchFeed`.
+  - 9 sections: Greeting + region picker, AI Ask bar (dispatches `circle:ai`), Featured carousel, Quick actions (Scan & Pay → navigate pay; City Pulse → `circle:pulse`; Post → `circle:composer`; Ask AI → `circle:ai`), Official Updates (Subscribe button per channel), For You (AI recommendations), Mini apps grid (8 mini apps + "All pillars" tile → `circle:hub`), Live Spaces (Join button), **MeshPresence** (imported from `@/components/overlays/mesh-presence`), Nearby (horizontal scroll), Trending (clickable → toast "Searching"), Workspace card, Circle ID + Mail strip, Covenant footer.
+
+  **`src/screens/wasl-screen.tsx`** — WaslScreen with chat:
+  - Conversation list with search input (filters by name/last message), 6 smart-folder chips (All/Personal/Work/AI/Unread/Channels) that actually filter the list.
+  - Stories rail (7 stories, click → toast).
+  - Official channels strip (3 channels from mock, click → opens Sheet with subscribe/notify buttons).
+  - Clicking a chat opens `ChatView`: stateful messages array (4 seeded + dynamic), text input + Enter-to-send, AI auto-reply after 1.5s typing indicator (3 animated dots), 3 AI suggestion chips that send on click, auto-scroll-to-bottom via `useRef`, back button, phone/video buttons (toast "Coming soon"), attachment/image/voice buttons (toast).
+  - Ghost mode + E2EE indicator in chat header.
+
+  **`src/screens/mashahd-screen.tsx`** — MashahdScreen with reels:
+  - 9 filter chips that filter the reels list.
+  - Channel rail (6 channels, click → opens ChannelSheet with stats + Subscribe/Notify buttons).
+  - Reels stack (3 reels from mock): click opens the existing `MashahdPlayer` overlay (imported from `@/components/overlays/mashahd-player`) — full-screen cinema player with play/pause, prev/next, captions, settings, comments, like/dislike/save.
+  - Heart pill toggles liked state (filled heart + count change + toast); comment pill → toast; share pill → toast.
+
+  **`src/screens/lamahat-screen.tsx`** — LamahatScreen with photos:
+  - Story circles (6 stories + "Your story" add button — all dispatch `circle:composer` or open viewer).
+  - AI Memories banner (click → opens viewer in story mode).
+  - 4 tabs (Feed/Lamahat Reels/Saved/Tagged) that filter the grid via `useMemo`.
+  - Pinterest-style masonry grid (18 photos) using `columns-2 sm:columns-3 md:columns-4`.
+  - Heart on hover toggles liked state (filled heart + count +1 + toast).
+  - Click any photo → opens the existing `LamahatViewer` overlay (imported from `@/components/overlays/lamahat-viewer`) — full-screen viewer with story auto-advance, post prev/next, like/comment/share, swipe-down-to-close.
+  - Capture button dispatches `circle:composer` with `kind: "media"`.
+
+  **`src/screens/midan-screen.tsx`** — MidanScreen with public square:
+  - 6 filter chips that filter the posts feed.
+  - Composer box (click → dispatches `circle:composer` with `kind: "post"`); poll button inside (dispatches `circle:composer` with `kind: "poll"`).
+  - Trending strip (clickable hashtags that filter the feed).
+  - Posts feed with stateful like (toggle + count +1/-1 + toast), comment (opens bottom Sheet with live comment thread + send), repost (toggle + count + toast), share (opens bottom Sheet with Wasl/Circle/Copy link/QR code options), analytics button (toast).
+  - AI moderation badge per post ("AI verified · No misinformation").
+  - Spaces button (top-right) opens a Sheet with 4 live Spaces + Join buttons.
+
+  **`src/screens/rihla-screen.tsx`** — RihlaScreen with travel:
+  - Map dashboard (gradient-hero background + grid overlay + 3 pulsing markers for AlUla/Istanbul/Tokyo, click → toast + updates bottom-left chip).
+  - 4 quick tools (Flights/Stays/Translate/Currency) each opens a bottom Sheet with real-looking content: flights list with prices, stays with SAR/night, translate box (EN→TR), currency rates.
+  - AI Itinerary card: "Build with AI" button shows a 2s `Loader2` spinner then reveals a 5-day Istanbul itinerary (Day 1–5 with timed blocks). "Rebuild" re-runs the spinner.
+  - Trip cards (3 trips) with cover image, dates, days, collaborators; "Open" button opens a Sheet with stats grid, collaborators avatars, "Open itinerary" button.
+
+  **`src/screens/pay-screen.tsx`** — PayScreen with payments:
+  - Balance card with `motion.div` 3D tilt on mouse-move (perspective 1200, rotateX/rotateY based on cursor position relative to card), reset on mouse-leave, eye toggle (hide/show balance, toast), aurora overlay + concentric circles decor, NFC button (toast "Coming soon").
+  - 4 quick actions (Scan/Send/Top-up/Vault) each opens a bottom Sheet: Scan (QR scanner mock + "Simulate scan" → toast), Top-up (4 quick amounts), Vault (balance display + Move/Withdraw buttons).
+  - P2P contacts rail (6 contacts, click → opens Send Sheet pre-filled with name + amount input + 4 quick-amount chips + optional note + "Send SAR X" button → toast "Sent X to Y · Fee: SAR 0.00 · Settled instantly").
+  - Transactions list (5 txs, click → opens detail Sheet with amount, date, category, status, fee + "Download receipt" button).
+  - Smart split card with "Request" button → toast "Split requests sent · 4 of 4 paid"; Federation banner card.
+
+  **`src/screens/profile-screen.tsx`** — ProfileScreen:
+  - Header card with Yousef Al-Harbi, avatar, @yousef handle, country flag + city, followers/following/Gold tier stats.
+  - 3 stat tiles (Trust score 98 / Workspaces 12 / Verified items 47) — each clickable opens a detail Sheet with explanation.
+  - Privacy & Identity section: Privacy center (dispatches `circle:settings`), Ghost mode (Switch bound to `setGhostMode`), Data ownership (opens Sheet with Export/Transfer/Delete actions).
+  - Personalization section: AI personalization (opens Sheet with on-device inference explanation + "Clear personalization" button), Theme (calls `toggleTheme()` + toast), Language (calls `toggleLocale()` + toast), Region (opens Sheet with country + city Selects bound to `setCountry`/`setCity`).
+  - Circle ecosystem section: Circle Hub / Circle ID / Circle Mail / Mini apps / Mesh network (all dispatch `circle:hub`), Circle Pay (dispatches `circle:navigate` to pay tab).
+  - Trust & governance section: Circle Verify (dispatches `circle:hub`), Backup & migrate (dispatches `circle:hub`), Community governance (dispatches `circle:governance`).
+
+- Refactored `home-screen.tsx`, `mashahd-screen.tsx`, `lamahat-screen.tsx` to import and use the 3 pre-existing overlay components (`MeshPresence`, `MashahdPlayer`, `LamahatViewer`) instead of inlining their own implementations — removing ~600 lines of duplicated code and avoiding a `useState(fn)` bug in my original inline LamahatViewer (was using `useState` as if it were `useEffect`).
+- Ran `bun run lint` → **0 errors, 0 warnings** across the entire codebase.
+- Verified dev server: `GET / → 200`, `GET /?tab=wasl → 200`, `GET /api/feed?country=SA&city=Riyagd → 200` (real AI feed with 36°C weather, Saudi landmarks, Arabic trending hashtags, real Saudi news sources — Saudi Ministry of Health, Riyadh Season, Saudi Press Agency), `POST /api/ai-ask → 200` (real AI reply). No new compile errors after all files were created. Initial HTML contains "Good evening, Yousef" + all 8 tab labels (Wasl/Mashahd/Lamahat/Midan/Rihla).
+- All visuals use plain `<img src="/mock/...">` tags (SCENES/AVATARS arrays return string paths). No next/image. No external images. No absolute URLs. No ports in API URLs. No indigo/blue. Brand palette respected (teal/gold/rose/steel/charcoal/cream).
+
+Stage Summary:
+- Files produced (8 screens — the primary deliverable):
+  - `src/screens/home-screen.tsx` (~510 lines, full live AI feed with all 9 sections + MeshPresence + region/city selector + loading skeletons + error banner with retry + real weather in greeting)
+  - `src/screens/wasl-screen.tsx` (~340 lines, conversation list with search/filter/stories/official channels + stateful ChatView with AI auto-reply + suggestion chips + scroll-to-bottom + back button)
+  - `src/screens/mashahd-screen.tsx` (~190 lines, filter chips + channel rail + reels stack + MashahdPlayer overlay + channel Sheet + working like/comment/share pills)
+  - `src/screens/lamahat-screen.tsx` (~155 lines, story circles + AI Memories banner + 4 filtering tabs + masonry grid + LamahatViewer overlay + hover-to-like)
+  - `src/screens/midan-screen.tsx` (~340 lines, filter chips + composer + trending strip + posts feed with stateful like/repost + comment Sheet + share Sheet + Spaces Sheet)
+  - `src/screens/rihla-screen.tsx` (~360 lines, map with clickable pulsing markers + 4 tool Sheets with real content + AI Itinerary builder with 2s spinner + trip cards + detail Sheet)
+  - `src/screens/pay-screen.tsx` (~340 lines, 3D-tilt balance card with eye toggle + 4 action Sheets + Send Sheet with quick amounts + transaction detail Sheet + Smart split + Federation banner)
+  - `src/screens/profile-screen.tsx` (~290 lines, header card + 3 clickable stat tiles + 4 sections with working Ghost mode toggle / Theme toggle / Language toggle / Region selector / Data ownership Sheet / AI personalization Sheet + all Circle ecosystem + Trust & governance dispatches)
+- Files produced (3 missing overlays — required for page.tsx to compile):
+  - `src/components/overlays/ai-assistant.tsx` (chat sheet calling `/api/ai-ask` + suggestion chips + action chips)
+  - `src/components/overlays/command-palette.tsx` (⌘K palette with keyboard nav + per-command event dispatch)
+  - `src/components/overlays/settings-panel.tsx` (Sheet with region/language/appearance/privacy controls)
+  - `src/components/overlays/governance-center.tsx` (Sheet with proposals + voting)
+  - `src/components/overlays/circle-hub.tsx` (Sheet with 8-pillar grid + 6 services)
+  - `src/components/overlays/circle-pulse.tsx` (Sheet with weather hero + live metrics + nearby activity)
+- Refactored 3 screens to import the 3 pre-existing overlay components (MeshPresence, MashahdPlayer, LamahatViewer) — removed ~600 lines of duplicated code and fixed a `useState(fn)` anti-pattern bug.
+- Every interaction is wired — no dead buttons. "Coming soon" toasts on features not yet built (voice calls, video calls, some Sheets' deeper actions). All `circle:*` CustomEvents (`circle:ai`, `circle:composer`, `circle:hub`, `circle:settings`, `circle:governance`, `circle:pulse`, `circle:navigate`) are listened to by `page.tsx` and open the appropriate overlay/navigate to the right tab. `bun run lint` → 0 errors. Dev server returns HTTP 200 on `/` and `/?tab=wasl`. `/api/feed` and `/api/ai-ask` both return real AI-generated content for the user's selected country/city. The 8-screen Circle super-app is fully interactive and production-ready.
+
+---
+Task ID: 30 (Phase 9 — Recovery + Production Ready)
+Agent: Lead (Circle Architect)
+Task: Recover from accidental deletion + make everything production-ready.
+
+Root cause of UI reversion:
+- Task 27 subagent was supposed to add a `circle:navigate` listener to page.tsx.
+- Instead, it OVERWROTE page.tsx, layout.tsx, globals.css with old Phase 6 versions.
+- It also DELETED the entire src/screens/, src/components/overlays/, src/components/shell/ directories.
+- It DELETED src/lib/mock.ts, app-store.ts, i18n.ts, tabs.ts, countries.ts, ai.ts, mock-images.ts.
+- The project reverted to the old desktop-sidebar Phase 6 design.
+
+Recovery:
+- Re-extracted source zip from /home/z/my-project/upload/circle-your-connected-world-main.zip.
+- Restored globals.css (Phase 7 source design tokens), layout.tsx (Inter/Fraunces/Tajawal), page.tsx (mobile-first with all event listeners).
+- Restored lib files: mock.ts, mock-images.ts, i18n.ts, tabs.ts, app-store.ts, countries.ts, ai.ts.
+- Restored brand/circle-mark.tsx, shell/ (top-bar, dock, ai-orb, mesh-badge), splash.tsx, onboarding.tsx.
+- Restored API routes: /api/feed, /api/news, /api/weather, /api/ai-ask.
+- Restored public/mock/ images (6 scenes + 2 avatars).
+- Dispatched 2 parallel subagents (Task 28 + 29) to rebuild 8 screens + 10 overlays from source, making them fully interactive + production-ready.
+
+Verification:
+- `bun run lint` → 0 errors, 0 warnings.
+- All 8 screens navigate cleanly (Home, Wasl, Mashahd, Lamahat, Midan, Rihla, Pay, Profile) with zero console errors.
+- Home: real AI feed loads (Saudi: 36°C Riyadh, Riyadh Season, Diriyah Gate, Saudi Ministry of Health; Japan: 24°C Tokyo, NHK, 厚生労働省, Japanese trending hashtags).
+- AI Assistant opens and responds (real AI via /api/ai-ask).
+- Country switch works (SA → JP via selector, feed regenerates with country-specific content).
+- Chat service (port 3003) running.
+- Dev server HTTP 200.
+
+Stage Summary:
+- The platform is fully recovered and production-ready.
+- All 8 screens + 10 overlays are fully interactive (no dead buttons — every click does something).
+- Real AI-powered feed (Groq → OpenAI → z-ai fallback chain) with country-aware content.
+- Real weather via Open-Meteo.
+- Mobile-first design (max-w-2xl, bottom Dock nav, glass TopBar, draggable AIOrb).
+- The Circle Covenant lives.
+
+---
+Task ID: 31 (Phase 9 — Backup + Hydration Fix)
+Agent: Lead (Circle Architect)
+Task: Fix hydration error + backup the platform files.
+
+Hydration fix:
+- Root cause: `useApp` store initialized `theme` by reading `localStorage` during module load. On SSR, `typeof window === "undefined"` so it returned the fallback `"dark"`. On the client, if the user had previously set theme to `"light"`, the store initialized with `"light"` — so the server rendered `Sun` (for dark) and the client rendered `Moon` (for light), causing a hydration mismatch on the theme toggle button.
+- Fix: rewrote `src/lib/app-store.ts` with SSR-safe defaults (`theme: "dark"`, `locale: "en"`, etc.) that match what the server renders. Added a `mounted` flag + `hydrate()` method that reads from localStorage AFTER mount (in a useEffect). The store no longer reads localStorage during module load.
+- Updated `src/app/page.tsx` to call `hydrate()` on mount.
+- Updated `src/components/shell/top-bar.tsx` to use `effectiveTheme = mounted ? theme : "dark"` so the theme icon is stable during SSR + first client paint.
+- Onboarding now shows only after splash + hydration (prevents SSR mismatch).
+- Verified: zero hydration errors after page reload. Theme toggle works (sun → moon, dark → light).
+
+Backup:
+- Created `.gitignore` (excludes node_modules, .next, .env, db, logs, tool-results).
+- Git committed all 146 source files: `03dc50a Backup: Circle platform production-ready (Phase 9)`.
+- Created `scripts/restore-platform.sh` — disaster recovery script that restores all src/ files + public/mock/ images from any git commit. Usage: `bash scripts/restore-platform.sh [commit-hash]`.
+- The platform structure is now safely backed up in git and can be restored with a single command if any subagent accidentally deletes files again.
+
+Stage Summary:
+- Hydration error fixed (theme icon mismatch resolved via SSR-safe store).
+- Platform files backed up in git (commit 03dc50a).
+- Restore script created (scripts/restore-platform.sh).
+- Lint clean, zero console errors, dev server HTTP 200.
+
+---
+Task ID: 32
+Agent: full-stack-developer
+Task: MashahdPlayer YouTube-style auto-hide controls + comments toggle.
+
+Work Log:
+- Read `/home/z/my-project/worklog.md` for context (Tasks 1–31 history), the current `/home/z/my-project/src/components/overlays/mashahd-player.tsx`, and the foundation files `src/lib/mock.ts` (reels) and `src/lib/mock-images.ts` (SCENES).
+- Read the consumer `src/screens/mashahd-screen.tsx` to confirm the prop signature `MashahdPlayer({ open, index, onClose })` is preserved.
+- Overwrote `src/components/overlays/mashahd-player.tsx` with a production-grade rewrite implementing all four requirement areas:
+
+  **1. YouTube-style auto-hide controls:**
+  - Added `controlsVisible` state (timer-driven) + `forceShow` derived value (`!playing || showSettings || commentFocused`).
+  - `effectiveControlsVisible = forceShow || controlsVisible` is computed during render — paused/settings-open/typing always pin controls visible.
+  - Window-level `mousemove` / `touchstart` / `click` / `wheel` listeners call `resetHideTimer()` (stable `useCallback` with empty deps — reads `forceShow` from a `forceShowRef` mirror kept in sync via a tiny effect).
+  - `resetHideTimer` reveals controls (`setControlsVisible(true)`) and schedules a 3s `setTimeout` → `setControlsVisible(false)`. The `hideTimerRef` tracks the timeout for cleanup.
+  - A separate effect manages the timer based on `forceShow`: clears it when force-show is true, schedules a fresh 3s hide when it flips to false. The `setControlsVisible(false)` lives inside the `setTimeout` callback (async) so the effect body contains no synchronous setState — passes the `react-hooks/set-state-in-effect` rule.
+  - "Resume after paused-with-controls-hidden" case handled via the derived-state-during-render pattern (`prevForceShow` state tracker → `setControlsVisible(true)` when `forceShow` flips to false), avoiding both set-state-in-effect and refs-during-render lint errors.
+  - Clicking the video (`handleVideoClick`) toggles play/pause AND calls `resetHideTimer()` — so when controls are hidden, the first click both reveals them and toggles playback (YouTube behavior); controls then stay visible for another 3s.
+  - When controls are hidden, the overlay gets `cursor-none` (cursor itself disappears), and the bottom controls / top bar / prev-next / side rail / badges all fade+slide out via framer-motion (300ms `easeOut`).
+
+  **2. Comments toggle:**
+  - `commentsVisible` state initialized from `window.innerWidth >= 768` (open on desktop, closed on mobile) via a lazy `useState` initializer (SSR-safe).
+  - Added a `MessageCircle` toggle button in the bottom controls bar (between the time display and the Clip button). Active state shows `bg-secondary text-charcoal`; inactive shows `glass-strong`. Label "Comments" is hidden on `< sm` screens (icon-only on mobile) to save space.
+  - Keyboard shortcut `c` also toggles comments.
+  - The side rail is wrapped in `<AnimatePresence>` with `initial={{ x: 60, opacity: 0 }}`, `animate={{ x: 0, opacity: effectiveControlsVisible ? 1 : 0 }}`, `exit={{ x: 60, opacity: 0 }}` — slides right out when comments are toggled off (video stage expands to full width via the remaining `lg:flex-1`), and fades (layout preserved) when controls auto-hide.
+  - When comments are hidden, the `motion.aside` is removed from the DOM so the video stage's `lg:flex-1` naturally fills the full width.
+
+  **3. All existing features preserved:**
+  - Play/pause toggle (click video, click play/pause button, Space key, big center play overlay when paused).
+  - Auto-advancing progress bar with click-to-seek (scrubber with hover-reveal handle).
+  - Prev/next reel (on-screen buttons + ArrowUp/ArrowDown keys).
+  - Mute/unmute (button + M key), theater mode (button + T key), captions toggle (top-bar button).
+  - Settings popover (quality Auto/1080p/4K + speed 0.5x/1x/1.5x/2x) — popover stays open pins controls visible.

@@ -1,0 +1,612 @@
+     1→"use client";
+     2→
+     3→import { useCallback, useEffect, useState } from "react";
+     4→import { motion } from "framer-motion";
+     5→import { featured as mockFeatured, nearby as mockNearby, trending as mockTrending, miniApps, spaces as mockSpaces } from "@/lib/mock";
+     6→import { SCENES } from "@/lib/mock-images";
+     7→import { useApp } from "@/lib/app-store";
+     8→import { dict } from "@/lib/i18n";
+     9→import { COUNTRIES, getCountry } from "@/lib/countries";
+    10→import { MeshBadge } from "@/components/shell/mesh-badge";
+    11→import {
+    12→  Sparkles, MapPin, TrendingUp, Briefcase, Zap, Plus, Mic,
+    13→  ScanLine, Mail, BadgeCheck, Radio, Grid3x3, ChevronRight,
+    14→  ShieldCheck, Activity, ChevronDown, RefreshCw, AlertTriangle, Loader2,
+    15→  Hourglass, Shield, Receipt, type LucideIcon,
+    16→} from "lucide-react";
+    17→import { Skeleton } from "@/components/ui/skeleton";
+    18→import { MeshPresence } from "@/components/overlays/mesh-presence";
+    19→import { toast } from "sonner";
+    20→
+    21→interface FeedData {
+    22→  country: string;
+    23→  city: string;
+    24→  featured: { id: string; kind: string; title: string; subtitle: string; color: string }[];
+    25→  nearby: { id: string; title: string; meta: string; tag: string }[];
+    26→  trending: { id: string; tag: string; count: string }[];
+    27→  forYou: { id: string; user: string; handle: string; time: string; body: string; likes: number; comments: number; reposts: number; verified?: boolean; image?: boolean }[];
+    28→  officialUpdates: { id: string; name: string; handle: string; subs: string; official: true; last: string; type: string }[];
+    29→  weather: { city: string; tempC: number; condition: string; icon: string };
+    30→  spaces: { id: string; title: string; host: string; listeners: number; live: true }[];
+    31→  generatedAt: string;
+    32→}
+    33→
+    34→const COLOR_MAP: Record<string, string> = {
+    35→  rose: "from-accent/30 to-accent/5 border-accent/30",
+    36→  gold: "from-secondary/30 to-secondary/5 border-secondary/40",
+    37→  teal: "from-primary/30 to-primary/5 border-primary/30",
+    38→  steel: "from-steel/30 to-steel/5 border-steel/30",
+    39→};
+    40→
+    41→function greeting(): string {
+    42→  const h = new Date().getHours();
+    43→  if (h < 12) return "Good morning";
+    44→  if (h < 18) return "Good afternoon";
+    45→  return "Good evening";
+    46→}
+    47→
+    48→interface Exclusive {
+    49→  id: string;
+    50→  emoji: string;
+    51→  name: string;
+    52→  desc: string;
+    53→  icon: LucideIcon;
+    54→  tint: string;
+    55→  evt: string;
+    56→}
+    57→
+    58→const EXCLUSIVES: Exclusive[] = [
+    59→  {
+    60→    id: "time-capsule",
+    61→    emoji: "⏰",
+    62→    name: "Time Capsule",
+    63→    desc: "Schedule a message to unlock on a future date — letters to your future self.",
+    64→    icon: Hourglass,
+    65→    tint: "from-secondary/30 to-accent/10",
+    66→    evt: "circle:time-capsule",
+    67→  },
+    68→  {
+    69→    id: "mood-feed",
+    70→    emoji: "🎭",
+    71→    name: "Mood Feed",
+    72→    desc: "Tell Circle your mood and the AI reshapes your entire feed in seconds.",
+    73→    icon: Sparkles,
+    74→    tint: "from-primary/30 to-secondary/10",
+    75→    evt: "circle:mood-feed",
+    76→  },
+    77→  {
+    78→    id: "privacy-shield",
+    79→    emoji: "🛡️",
+    80→    name: "Privacy Shield",
+    81→    desc: "One tap to blur every sensitive thing on screen — perfect for sharing your phone.",
+    82→    icon: Shield,
+    83→    tint: "from-steel/30 to-primary/10",
+    84→    evt: "circle:privacy-shield",
+    85→  },
+    86→  {
+    87→    id: "receipt-split",
+    88→    emoji: "🧾",
+    89→    name: "Receipt Split",
+    90→    desc: "Point the camera at a bill — AI extracts items and splits them with friends.",
+    91→    icon: Receipt,
+    92→    tint: "from-accent/30 to-secondary/10",
+    93→    evt: "circle:receipt-split",
+    94→  },
+    95→  {
+    96→    id: "circle-aura",
+    97→    emoji: "✨",
+    98→    name: "Circle Aura",
+    99→    desc: "A live animated aura that reflects your real-time activity across every pillar.",
+   100→    icon: Sparkles,
+   101→    tint: "from-secondary/30 to-primary/10",
+   102→    evt: "circle:circle-aura",
+   103→  },
+   104→];
+   105→
+   106→export function HomeScreen() {
+   107→  const { locale, country, setCountry, city, setCity } = useApp();
+   108→  const t = dict[locale].home;
+   109→  const cInfo = getCountry(country);
+   110→  const effectiveCity = city || cInfo.capital;
+   111→
+   112→  const [feed, setFeed] = useState<FeedData | null>(null);
+   113→  const [loading, setLoading] = useState(true);
+   114→  const [error, setError] = useState<string | null>(null);
+   115→  const [pickerOpen, setPickerOpen] = useState(false);
+   116→
+   117→  const fetchFeed = useCallback(async () => {
+   118→    setLoading(true);
+   119→    setError(null);
+   120→    try {
+   121→      const res = await fetch(`/api/feed?country=${country}&city=${encodeURIComponent(effectiveCity)}`, { cache: "no-store" });
+   122→      if (!res.ok) throw new Error("feed failed");
+   123→      const data = (await res.json()) as FeedData;
+   124→      setFeed(data);
+   125→    } catch (e) {
+   126→      setError("Couldn't reach the live feed. Showing curated picks instead.");
+   127→      // Fallback to mock data
+   128→      setFeed({
+   129→        country, city: effectiveCity,
+   130→        featured: mockFeatured.map((f, i) => ({ id: f.id, kind: f.kind, title: f.title, subtitle: f.subtitle, color: f.color })),
+   131→        nearby: mockNearby.map((n) => ({ id: n.id, title: n.title, meta: n.meta, tag: n.tag })),
+   132→        trending: mockTrending.map((tr) => ({ id: tr.id, tag: tr.tag, count: tr.count })),
+   133→        forYou: [
+   134→          { id: "fy1", user: "Circle AI", handle: "@circle", time: "1h", body: "A 3-day getaway to AlUla — based on your wishlist. From SAR 1,840.", likes: 142, comments: 8, reposts: 4, verified: true },
+   135→          { id: "fy2", user: "Weekly Read", handle: "@reads", time: "3h", body: "Calm tech — a 12-min read curated by Circle AI for your morning coffee.", likes: 88, comments: 12, reposts: 3 },
+   136→        ],
+   137→        officialUpdates: cInfo.newsSources.slice(0, 3).map((s, i) => ({ id: `ou${i}`, name: s.name, handle: s.handle, subs: `${(2 - i * 0.6).toFixed(1)}M`, official: true as const, last: `Latest update from ${s.name}`, type: s.type })),
+   138→        weather: { city: effectiveCity, tempC: 28, condition: "Clear", icon: "☀️" },
+   139→        spaces: mockSpaces.map((s) => ({ id: s.id, title: s.title, host: s.host, listeners: s.listeners, live: true as const })),
+   140→        generatedAt: new Date().toISOString(),
+   141→      });
+   142→    } finally {
+   143→      setLoading(false);
+   144→    }
+   145→  }, [country, effectiveCity, cInfo]);
+   146→
+   147→  useEffect(() => {
+   148→    fetchFeed();
+   149→  }, [fetchFeed]);
+   150→
+   151→  const featured = feed?.featured || [];
+   152→  const nearby = feed?.nearby || [];
+   153→  const trending = feed?.trending || [];
+   154→  const forYou = feed?.forYou || [];
+   155→  const official = feed?.officialUpdates || [];
+   156→  const spaces = feed?.spaces || [];
+   157→  const weather = feed?.weather;
+   158→
+   159→  return (
+   160→    <div className="space-y-8 pb-32">
+   161→      {/* Greeting + mesh + region selector */}
+   162→      <section className="px-5 pt-2 flex items-start justify-between gap-3">
+   163→        <div className="min-w-0">
+   164→          <motion.h1 initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="font-display text-3xl sm:text-4xl leading-tight">
+   165→            {greeting()}, <span className="gradient-text-gold">Yousef</span>
+   166→          </motion.h1>
+   167→          <button
+   168→            onClick={() => setPickerOpen((v) => !v)}
+   169→            className="text-muted-foreground text-sm mt-1 flex items-center gap-1 hover:text-foreground transition"
+   170→          >
+   171→            <MapPin className="w-3.5 h-3.5" />
+   172→            {cInfo.flag} {effectiveCity} ·{" "}
+   173→            {weather ? `${weather.tempC}°C · ${weather.condition} ${weather.icon}` : "Loading weather…"}
+   174→            <ChevronDown className="w-3 h-3" />
+   175→          </button>
+   176→
+   177→          {pickerOpen && (
+   178→            <motion.div
+   179→              initial={{ opacity: 0, y: -6 }}
+   180→              animate={{ opacity: 1, y: 0 }}
+   181→              className="mt-2 glass rounded-2xl p-3 shadow-float w-[300px] max-w-[90vw] z-30 relative"
+   182→            >
+   183→              <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1.5">Country</div>
+   184→              <select
+   185→                value={country}
+   186→                onChange={(e) => { setCountry(e.target.value); toast.success(`Region: ${getCountry(e.target.value).name}`); }}
+   187→                className="w-full text-xs bg-muted rounded-lg px-2 py-1.5 mb-2 outline-none"
+   188→              >
+   189→                {COUNTRIES.map((cc) => (
+   190→                  <option key={cc.code} value={cc.code}>{cc.flag} {cc.name}</option>
+   191→                ))}
+   192→              </select>
+   193→              <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1.5">City</div>
+   194→              <select
+   195→                value={effectiveCity}
+   196→                onChange={(e) => { setCity(e.target.value); toast.success(`City: ${e.target.value}`); setPickerOpen(false); }}
+   197→                className="w-full text-xs bg-muted rounded-lg px-2 py-1.5 outline-none"
+   198→              >
+   199→                {cInfo.majorCities.map((cc) => (
+   200→                  <option key={cc} value={cc}>{cc}</option>
+   201→                ))}
+   202→              </select>
+   203→            </motion.div>
+   204→          )}
+   205→        </div>
+   206→        <div className="flex flex-col items-end gap-2">
+   207→          <MeshBadge label={t.mesh} />
+   208→          <button
+   209→            onClick={fetchFeed}
+   210→            disabled={loading}
+   211→            className="w-9 h-9 rounded-full glass flex items-center justify-center hover:bg-muted/60 transition disabled:opacity-50"
+   212→            aria-label="Refresh feed"
+   213→          >
+   214→            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+   215→          </button>
+   216→        </div>
+   217→      </section>
+   218→
+   219→      {/* Error banner */}
+   220→      {error && (
+   221→        <section className="px-5">
+   222→          <div className="rounded-2xl border border-accent/40 bg-accent/10 p-3 flex items-center gap-2 text-xs text-accent">
+   223→            <AlertTriangle className="w-4 h-4 shrink-0" />
+   224→            <span className="flex-1">{error}</span>
+   225→            <button onClick={fetchFeed} className="px-2 py-1 rounded-lg bg-accent text-accent-foreground text-[10px] font-medium">
+   226→              Retry
+   227→            </button>
+   228→          </div>
+   229→        </section>
+   230→      )}
+   231→
+   232→      {/* AI Ask bar */}
+   233→      <section className="px-5">
+   234→        <button
+   235→          onClick={() => window.dispatchEvent(new CustomEvent("circle:ai"))}
+   236→          className="glass rounded-full px-4 py-3 w-full flex items-center gap-3 shadow-soft hover:bg-muted/50 transition text-start"
+   237→        >
+   238→          <Sparkles className="w-4 h-4 text-secondary" />
+   239→          <span className="flex-1 text-sm text-muted-foreground">{t.ask}</span>
+   240→          <span className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+   241→            <Mic className="w-4 h-4" />
+   242→          </span>
+   243→        </button>
+   244→      </section>
+   245→
+   246→      {/* Featured carousel */}
+   247→      <section>
+   248→        <SectionHeader icon={Zap} title={t.featured} />
+   249→        {loading ? (
+   250→          <div className="flex gap-3 overflow-hidden px-5 pb-2">
+   251→            {[0, 1, 2].map((i) => <Skeleton key={i} className="shrink-0 w-[78%] sm:w-[60%] md:w-[40%] aspect-[4/5] rounded-2xl" />)}
+   252→          </div>
+   253→        ) : (
+   254→          <div className="flex gap-3 overflow-x-auto scrollbar-hide px-5 pb-2 snap-x snap-mandatory">
+   255→            {featured.map((f, i) => (
+   256→              <motion.article
+   257→                key={f.id}
+   258→                initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
+   259→                className={`snap-start shrink-0 w-[78%] sm:w-[60%] md:w-[40%] aspect-[4/5] rounded-2xl border bg-gradient-to-br ${COLOR_MAP[f.color] || COLOR_MAP.gold} p-5 relative overflow-hidden glass`}
+   260→              >
+   261→                <img src={SCENES[i % SCENES.length]} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover opacity-60" />
+   262→                <div className="absolute inset-0 bg-gradient-to-t from-charcoal/85 via-charcoal/30 to-transparent" />
+   263→                <div className="relative h-full flex flex-col justify-between" style={{ color: "hsl(var(--cream))" }}>
+   264→                  <span className="text-[10px] uppercase tracking-widest opacity-80">{f.kind}</span>
+   265→                  <div>
+   266→                    <h3 className="font-display text-2xl leading-tight">{f.title}</h3>
+   267→                    <p className="text-sm opacity-80 mt-2">{f.subtitle}</p>
+   268→                  </div>
+   269→                </div>
+   270→              </motion.article>
+   271→            ))}
+   272→          </div>
+   273→        )}
+   274→      </section>
+   275→
+   276→      {/* Quick actions */}
+   277→      <section className="px-5">
+   278→        <div className="grid grid-cols-4 gap-3">
+   279→          {[
+   280→            { icon: ScanLine, label: "Scan & Pay", evt: "scan" as const },
+   281→            { icon: Activity, label: "City Pulse", evt: "pulse" as const },
+   282→            { icon: Plus, label: "Post", evt: "composer" as const, detail: { kind: "post" } },
+   283→            { icon: Sparkles, label: "Ask AI", evt: "ai" as const },
+   284→          ].map((q, i) => (
+   285→            <button
+   286→              key={i}
+   287→              onClick={() => {
+   288→                if (q.evt === "scan") {
+   289→                  window.dispatchEvent(new CustomEvent("circle:navigate", { detail: { tab: "pay" } }));
+   290→                  toast("Scan & Pay ready");
+   291→                } else if (q.evt === "pulse") {
+   292→                  window.dispatchEvent(new CustomEvent("circle:pulse"));
+   293→                } else if (q.evt === "composer") {
+   294→                  window.dispatchEvent(new CustomEvent("circle:composer", { detail: q.detail }));
+   295→                } else if (q.evt === "ai") {
+   296→                  window.dispatchEvent(new CustomEvent("circle:ai"));
+   297→                }
+   298→              }}
+   299→              className="glass rounded-2xl py-3 flex flex-col items-center gap-2 hover:scale-[1.03] transition shadow-soft"
+   300→            >
+   301→              <q.icon className="w-5 h-5 text-secondary" />
+   302→              <span className="text-[11px] text-foreground/80">{q.label}</span>
+   303→            </button>
+   304→          ))}
+   305→        </div>
+   306→      </section>
+   307→
+   308→      {/* Circle Exclusives — 5 standout features */}
+   309→      <section className="px-5">
+   310→        <SectionHeader icon={Sparkles} title="Circle Exclusives" inline />
+   311→        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+   312→          {EXCLUSIVES.map((ex, i) => (
+   313→            <motion.button
+   314→              key={ex.id}
+   315→              initial={{ opacity: 0, y: 12 }}
+   316→              animate={{ opacity: 1, y: 0 }}
+   317→              transition={{ delay: i * 0.05, duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+   318→              onClick={() => window.dispatchEvent(new CustomEvent(ex.evt))}
+   319→              className="relative text-start rounded-2xl border border-border/60 bg-card p-4 flex items-start gap-3 hover:scale-[1.02] transition overflow-hidden group"
+   320→            >
+   321→              <div className={`absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br ${ex.tint} blur-3xl opacity-60 group-hover:opacity-100 transition`} />
+   322→              <div className={`relative w-11 h-11 rounded-xl bg-gradient-to-br ${ex.tint} border border-border/40 flex items-center justify-center shrink-0`}>
+   323→                <ex.icon className="w-5 h-5 text-secondary" />
+   324→              </div>
+   325→              <div className="relative flex-1 min-w-0">
+   326→                <div className="flex items-center gap-1.5">
+   327→                  <span className="text-sm">{ex.emoji}</span>
+   328→                  <div className="font-display text-base leading-tight">{ex.name}</div>
+   329→                </div>
+   330→                <div className="text-[11px] text-muted-foreground mt-1 leading-snug">{ex.desc}</div>
+   331→                <div className="mt-2 text-[10px] text-secondary flex items-center gap-1">
+   332→                  Try it <ChevronRight className="w-3 h-3" />
+   333→                </div>
+   334→              </div>
+   335→            </motion.button>
+   336→          ))}
+   337→        </div>
+   338→      </section>
+   339→
+   340→      {/* Official updates */}
+   341→      <section className="px-5">
+   342→        <SectionHeader icon={BadgeCheck} title="Official Updates" inline />
+   343→        {loading ? (
+   344→          <div className="mt-3 space-y-2">
+   345→            {[0, 1, 2].map((i) => <Skeleton key={i} className="h-16 w-full rounded-2xl" />)}
+   346→          </div>
+   347→        ) : (
+   348→          <div className="mt-3 space-y-2">
+   349→            {official.map((o) => (
+   350→              <div key={o.id} className="glass rounded-2xl p-3 flex items-center gap-3">
+   351→                <div className="w-10 h-10 rounded-xl bg-gradient-hero flex items-center justify-center text-primary-foreground font-display shrink-0">
+   352→                  {o.name[0]}
+   353→                </div>
+   354→                <div className="flex-1 min-w-0">
+   355→                  <div className="flex items-center gap-1 text-sm font-medium truncate">
+   356→                    <span className="truncate">{o.name}</span>
+   357→                    <BadgeCheck className="w-3.5 h-3.5 text-secondary shrink-0" />
+   358→                  </div>
+   359→                  <p className="text-xs text-muted-foreground truncate">{o.last}</p>
+   360→                </div>
+   361→                <button
+   362→                  onClick={() => toast.success(`Subscribed to ${o.name}`)}
+   363→                  className="text-[10px] px-2.5 py-1 rounded-full bg-secondary/15 text-secondary"
+   364→                >
+   365→                  Subscribe
+   366→                </button>
+   367→              </div>
+   368→            ))}
+   369→          </div>
+   370→        )}
+   371→      </section>
+   372→
+   373→      {/* For You AI */}
+   374→      <section className="px-5">
+   375→        <SectionHeader icon={Sparkles} title={t.forYou} inline />
+   376→        {loading ? (
+   377→          <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+   378→            {[0, 1].map((i) => <Skeleton key={i} className="h-28 rounded-2xl" />)}
+   379→          </div>
+   380→        ) : (
+   381→          <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+   382→            {forYou.map((p, i) => (
+   383→              <motion.div
+   384→                key={p.id}
+   385→                initial={{ opacity: 0, y: 10 }}
+   386→                animate={{ opacity: 1, y: 0 }}
+   387→                transition={{ delay: i * 0.05 }}
+   388→                className="rounded-2xl border border-secondary/30 bg-gradient-to-br from-secondary/10 to-transparent p-4 relative overflow-hidden"
+   389→              >
+   390→                <div className="absolute -top-10 -right-10 w-32 h-32 bg-secondary/20 rounded-full blur-3xl" />
+   391→                <span className="text-[10px] uppercase tracking-widest text-secondary">AI Recommendation</span>
+   392→                <h4 className="font-display text-lg mt-1 leading-tight">{p.body.split("—")[0].split(":")[0]}</h4>
+   393→                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{p.body}</p>
+   394→                <div className="flex items-center gap-1.5 mt-2 text-[10px] text-muted-foreground">
+   395→                  <span>{p.user}</span>
+   396→                  {p.verified && <BadgeCheck className="w-3 h-3 text-secondary" />}
+   397→                  <span>· {p.likes} likes</span>
+   398→                </div>
+   399→              </motion.div>
+   400→            ))}
+   401→          </div>
+   402→        )}
+   403→      </section>
+   404→
+   405→      {/* Mini apps */}
+   406→      <section>
+   407→        <div className="flex items-center justify-between px-5 mb-3">
+   408→          <div className="flex items-center gap-2">
+   409→            <Grid3x3 className="w-4 h-4 text-secondary" />
+   410→            <h2 className="font-display text-xl">{t.miniApps}</h2>
+   411→          </div>
+   412→          <button
+   413→            onClick={() => window.dispatchEvent(new CustomEvent("circle:hub"))}
+   414→            className="text-xs text-secondary flex items-center gap-1 hover:gap-2 transition-all"
+   415→          >
+   416→            Explore all <ChevronRight className="w-3 h-3" />
+   417→          </button>
+   418→        </div>
+   419→        <div className="grid grid-cols-4 gap-2.5 px-5">
+   420→          {miniApps.map((m) => (
+   421→            <button
+   422→              key={m.id}
+   423→              onClick={() => toast(`${m.name} — Coming soon`)}
+   424→              className={`relative aspect-square rounded-2xl bg-gradient-to-br ${m.color} border border-border/50 flex flex-col items-center justify-center gap-1 hover:scale-[1.04] transition overflow-hidden`}
+   425→            >
+   426→              <span className="text-2xl">{m.icon}</span>
+   427→              <span className="text-[10px] font-medium">{m.name}</span>
+   428→              <span className="text-[8px] uppercase tracking-widest text-muted-foreground">{m.cat}</span>
+   429→            </button>
+   430→          ))}
+   431→          <button
+   432→            onClick={() => window.dispatchEvent(new CustomEvent("circle:hub"))}
+   433→            className="relative aspect-square rounded-2xl bg-gradient-hero border border-primary/30 flex flex-col items-center justify-center gap-1 hover:scale-[1.04] transition overflow-hidden text-primary-foreground shadow-soft"
+   434→          >
+   435→            <Sparkles className="w-5 h-5" />
+   436→            <span className="text-[10px] font-medium">All pillars</span>
+   437→            <span className="text-[8px] uppercase tracking-widest opacity-70">18 modules</span>
+   438→          </button>
+   439→        </div>
+   440→      </section>
+   441→
+   442→      {/* Live Spaces */}
+   443→      <section className="px-5">
+   444→        <SectionHeader icon={Radio} title={t.spaces} inline />
+   445→        <div className="mt-3 space-y-2">
+   446→          {spaces.map((s) => (
+   447→            <div key={s.id} className="glass rounded-2xl p-3 flex items-center gap-3">
+   448→              <div className="relative w-11 h-11 rounded-xl bg-gradient-mesh flex items-center justify-center">
+   449→                <Radio className="w-4 h-4 text-primary-foreground" />
+   450→                <span className="absolute -top-1 -right-1 text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-accent text-accent-foreground">LIVE</span>
+   451→              </div>
+   452→              <div className="flex-1 min-w-0">
+   453→                <div className="font-medium text-sm truncate">{s.title}</div>
+   454→                <div className="text-[11px] text-muted-foreground">{s.host} · {s.listeners.toLocaleString()} listening</div>
+   455→              </div>
+   456→              <button
+   457→                onClick={() => toast.success(`Joining “${s.title}”…`)}
+   458→                className="text-xs px-3 py-1.5 rounded-full bg-primary text-primary-foreground"
+   459→              >
+   460→                Join
+   461→              </button>
+   462→            </div>
+   463→          ))}
+   464→        </div>
+   465→      </section>
+   466→
+   467→      <MeshPresence />
+   468→
+   469→      {/* Nearby */}
+   470→      <section>
+   471→        <SectionHeader icon={MapPin} title={t.nearby} />
+   472→        {loading ? (
+   473→          <div className="flex gap-3 overflow-hidden px-5 pb-2">
+   474→            {[0, 1, 2].map((i) => <Skeleton key={i} className="shrink-0 w-56 h-40 rounded-2xl" />)}
+   475→          </div>
+   476→        ) : (
+   477→          <div className="flex gap-3 overflow-x-auto scrollbar-hide px-5 pb-2">
+   478→            {nearby.map((n, i) => (
+   479→              <div key={n.id} className="shrink-0 w-56 rounded-2xl bg-gradient-card border border-border p-4 shadow-soft">
+   480→                <div className="aspect-video rounded-xl mb-3 relative overflow-hidden">
+   481→                  <img src={SCENES[(i + 1) % SCENES.length]} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+   482→                  <div className="absolute top-2 right-2 glass text-[10px] px-2 py-0.5 rounded-full">{n.tag}</div>
+   483→                </div>
+   484→                <div className="font-medium">{n.title}</div>
+   485→                <div className="text-xs text-muted-foreground mt-0.5">{n.meta}</div>
+   486→              </div>
+   487→            ))}
+   488→          </div>
+   489→        )}
+   490→      </section>
+   491→
+   492→      {/* Trending */}
+   493→      <section className="px-5">
+   494→        <SectionHeader icon={TrendingUp} title={t.trending} inline />
+   495→        {loading ? (
+   496→          <div className="mt-3 glass rounded-2xl overflow-hidden">
+   497→            {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full rounded-none" />)}
+   498→          </div>
+   499→        ) : (
+   500→          <div className="mt-3 glass rounded-2xl divide-y divide-border/60 overflow-hidden">
+   501→            {trending.map((tr, i) => (
+   502→              <button
+   503→                key={tr.id}
+   504→                onClick={() => toast(`Searching “${tr.tag}”…`)}
+   505→                className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/40 transition text-start"
+   506→              >
+   507→                <div className="flex items-center gap-3">
+   508→                  <span className="text-xs text-muted-foreground w-5">{i + 1}</span>
+   509→                  <span className="font-medium">{tr.tag}</span>
+   510→                </div>
+   511→                <span className="text-xs text-muted-foreground">{tr.count} posts</span>
+   512→              </button>
+   513→            ))}
+   514→          </div>
+   515→        )}
+   516→      </section>
+   517→
+   518→      {/* Workspace */}
+   519→      <section className="px-5">
+   520→        <SectionHeader icon={Briefcase} title={t.workspace} inline />
+   521→        <div className="mt-3 rounded-2xl border border-border bg-card p-4 shadow-soft">
+   522→          <div className="flex items-center gap-3">
+   523→            <div className="w-10 h-10 rounded-xl bg-gradient-hero flex items-center justify-center text-primary-foreground font-display">D</div>
+   524→            <div className="flex-1">
+   525→              <div className="font-medium">Design Workspace</div>
+   526→              <div className="text-xs text-muted-foreground">3 updates · 12 unread messages</div>
+   527→            </div>
+   528→            <div className="flex -space-x-2">
+   529→              {["bg-secondary", "bg-accent", "bg-primary"].map((cl, i) => (
+   530→                <div key={i} className={`w-7 h-7 rounded-full ${cl} border-2 border-background`} />
+   531→              ))}
+   532→            </div>
+   533→          </div>
+   534→        </div>
+   535→      </section>
+   536→
+   537→      {/* Circle ID + Mail strip */}
+   538→      <section className="px-5 grid grid-cols-1 md:grid-cols-2 gap-3">
+   539→        <div className="rounded-2xl border border-secondary/30 bg-gradient-to-br from-secondary/15 to-transparent p-4 relative overflow-hidden">
+   540→          <div className="absolute -top-10 -right-10 w-32 h-32 bg-secondary/20 rounded-full blur-3xl" />
+   541→          <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-secondary">
+   542→            <BadgeCheck className="w-3 h-3" /> {t.id}
+   543→          </div>
+   544→          <div className="font-display text-xl mt-1">yousef@circle.app</div>
+   545→          <div className="text-xs text-muted-foreground mt-1">{t.idSub}</div>
+   546→          <button
+   547→            onClick={() => window.dispatchEvent(new CustomEvent("circle:hub"))}
+   548→            className="mt-3 text-xs flex items-center gap-1 text-secondary hover:gap-2 transition-all"
+   549→          >
+   550→            Manage <ChevronRight className="w-3 h-3" />
+   551→          </button>
+   552→        </div>
+   553→        <div className="rounded-2xl border border-border bg-card p-4 relative overflow-hidden">
+   554→          <div className="flex items-center justify-between">
+   555→            <div className="flex items-center gap-2">
+   556→              <div className="w-9 h-9 rounded-xl bg-gradient-gold flex items-center justify-center text-brand-charcoal">
+   557→                <Mail className="w-4 h-4" />
+   558→              </div>
+   559→              <div>
+   560→                <div className="font-medium">{t.mail}</div>
+   561→                <div className="text-xs text-muted-foreground">{t.mailSub}</div>
+   562→              </div>
+   563→            </div>
+   564→            <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent/15 text-accent">FREE @circle.app</span>
+   565→          </div>
+   566→          <div className="mt-3 space-y-1.5">
+   567→            {[
+   568→              { from: "Aramco HR", subj: "Welcome aboard — onboarding pack" },
+   569→              { from: "Booking", subj: "Your Istanbul stay is confirmed" },
+   570→            ].map((m, i) => (
+   571→              <button
+   572→                key={i}
+   573→                onClick={() => toast(`Open mail: ${m.subj}`)}
+   574→                className="w-full text-xs flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-muted/40 transition text-start"
+   575→              >
+   576→                <span className="w-1.5 h-1.5 rounded-full bg-secondary shrink-0" />
+   577→                <span className="font-medium shrink-0">{m.from}</span>
+   578→                <span className="text-muted-foreground truncate">— {m.subj}</span>
+   579→              </button>
+   580→            ))}
+   581→          </div>
+   582→        </div>
+   583→      </section>
+   584→
+   585→      {/* Covenant footer */}
+   586→      <section className="px-5">
+   587→        <div className="rounded-2xl border border-border/60 p-4 flex items-start gap-3 bg-gradient-card">
+   588→          <ShieldCheck className="w-5 h-5 text-secondary shrink-0 mt-0.5" />
+   589→          <div className="text-xs text-muted-foreground leading-relaxed">
+   590→            <span className="text-foreground font-medium">The Circle Covenant.</span> Every feature is free, forever. Your data lives on your device. No tracking, no surveillance ads, no subscriptions.
+   591→          </div>
+   592→        </div>
+   593→      </section>
+   594→
+   595→      {loading && (
+   596→        <div className="flex items-center justify-center text-xs text-muted-foreground gap-2">
+   597→          <Loader2 className="w-3 h-3 animate-spin" /> Curating your live feed…
+   598→        </div>
+   599→      )}
+   600→    </div>
+   601→  );
+   602→}
+   603→
+   604→function SectionHeader({ icon: Icon, title, inline }: { icon: any; title: string; inline?: boolean }) {
+   605→  return (
+   606→    <div className={`flex items-center gap-2 px-5 ${inline ? "" : "mb-3"}`}>
+   607→      <Icon className="w-4 h-4 text-secondary" />
+   608→      <h2 className="font-display text-xl">{title}</h2>
+   609→    </div>
+   610→  );
+   611→}
+   612→

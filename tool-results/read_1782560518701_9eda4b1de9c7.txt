@@ -1,0 +1,198 @@
+  1000→- **Lint iteration:**
+  1001→  - First `bun run lint` pass: 2 errors in `receipt-split.tsx` — `react-hooks/preserve-manual-memoization` complaining that `useMemo` with `includedFriends` (a state object that is later set via `setIncludedFriends`) cannot be preserved by the React Compiler.
+  1002→  - Fix: removed `useMemo` import, converted `itemShares` from `useMemo(() => {...}, [deps])` to an IIFE `(() => {...})()`. The React Compiler now auto-memoizes the whole component, and the per-render computation is trivial (4 items × 4 friends).
+  1003→  - Second `bun run lint` pass: **0 errors, 0 warnings** (exit 0).
+  1004→
+  1005→- **Verification:**
+  1006→  - Dev server log shows multiple `Compiled in …ms` entries after each file edit (no errors, no warnings). Most recent: `Compiled in 238ms`.
+  1007→  - `curl http://localhost:3000/` → HTTP 200, 82,708 bytes.
+  1008→  - Verified the rendered HTML contains all 5 feature names ("Time Capsule", "Mood Feed", "Privacy Shield", "Receipt Split", "Circle Aura") and the new "Circle Exclusives" section header.
+  1009→  - No indigo/blue colors used — all tints use `secondary`/`primary`/`accent`/`steel` (gold/teal/rose/steel). No external images (only `IMG.layla`/`IMG.khalid`/`SCENES` from `mock-images`). No absolute URLs with ports. All `fetch` calls use relative paths. Mobile responsive (max-w-2xl bottom sheets, full-screen aura, grid-cols responsive).
+  1010→
+  1011→Stage Summary:
+  1012→- Files produced (5 new overlays):
+  1013→  - `src/components/overlays/time-capsule.tsx` (~280 lines, bottom Sheet with composer + preview + 3 mock capsules + 2s sealing animation)
+  1014→  - `src/components/overlays/mood-feed.tsx` (~225 lines, bottom Sheet with 6 moods + 2s reshaping + 24 curated items + apply/reset)
+  1015→  - `src/components/overlays/privacy-shield.tsx` (~230 lines, bottom Sheet with REAL backdrop-blur demo + 5 toggle categories + shake/triple-tap/biometric triggers)
+  1016→  - `src/components/overlays/receipt-split.tsx` (~360 lines, 4-step flow with stepper + scanning animation + per-item assignment + tip selector + live calculation)
+  1017→  - `src/components/overlays/circle-aura.tsx` (~290 lines, full-screen showcase with 4 pulsing rings + animated CircleMark + 8 orbiting pillar dots + strength meter + 4 stat tiles)
+  1018→- Files updated:
+  1019→  - `src/screens/home-screen.tsx` — added `EXCLUSIVES` array + new "Circle Exclusives" section between Quick Actions and Official Updates (5 cards, each dispatching its `circle:*` event).
+  1020→  - `src/app/page.tsx` — added 5 imports + 5 state vars + 5 event listeners + Escape handler extension + 5 overlay renders.
+  1021→- Every button does something: seal/open (Time Capsule), apply mood/reset (Mood Feed), toggle shield/targets/triggers (Privacy Shield), scan/upload/split/assign/request (Receipt Split), share/insights (Circle Aura). All overlays close via backdrop click, X button, or Escape.
+  1022→- Lint clean (0 errors, 0 warnings). Dev server HTTP 200. All 5 feature names appear in the rendered HTML. The 5 standout features are now first-class Circle Exclusives — accessible from Home, wired through the existing custom-event architecture, and visually distinct from WhatsApp/Instagram/TikTok/Twitter.
+  1023→
+  1024→---
+  1025→Task ID: 34 (Phase 10 — Standout Features + Player Polish)
+  1026→Agent: Lead (Circle Architect)
+  1027→Task: Fix MashahdPlayer auto-hide + add 5 standout features + document out-of-box ideas.
+  1028→
+  1029→1. MASHAHD PLAYER FIX (Task 32):
+  1030→- YouTube-style auto-hide: all controls (top bar, bottom controls, side rail, action pills, prev/next) auto-hide after 3s of inactivity.
+  1031→- Controls reappear on any mouse movement, click, or touch.
+  1032→- Cursor hidden when controls are hidden.
+  1033→- When paused, controls always visible.
+  1034→- First-click behavior: clicking video when controls hidden shows controls + toggles play/pause.
+  1035→- Thin 2px progress strip stays visible at bottom when controls hidden (YouTube-style).
+  1036→- Comments toggle: MessageCircle button in bottom controls shows/hides the comments side rail. AnimatePresence slide animation.
+  1037→- All existing features preserved (play/pause, seek, prev/next, mute, theater, captions, settings, AI chapters, action pills, follow, comments, keyboard shortcuts).
+  1038→
+  1039→2. FIVE STANDOUT FEATURES (Task 33):
+  1040→- **Time Capsule** (⏰): Schedule messages/letters to unlock on a future date. Composer with date picker, recipient selector, mood chips. 2s sealing animation. 3 mock capsules (one ready-to-open). Privacy: encrypted on-device + IPFS.
+  1041→- **Mood Feed** (🎭): Tell Circle AI your mood (Calm/Energized/Curious/Tired/Focused/Playful) — AI reshapes your entire feed. 6 mood cards, 2s AI spinner, 24 curated items (4 per mood). "Apply mood" navigates to home.
+  1042→- **Privacy Shield** (🛡️): One-tap blur all sensitive content (messages, payments, photos, ID, mail). Real working backdrop-filter blur demo. Shake-to-toggle via devicemotion. 5-category checklist.
+  1043→- **Receipt Split** (🧾): Point camera at receipt → AI extracts items → split among friends. 4-step flow (Upload → Review → Split → Request). Even vs by-item split. Tip selector. Live calculation. Request via Circle Pay.
+  1044→- **Circle Aura** (✨): Live animated aura around your profile reflecting real-time activity across all pillars. 4 pulsing aura rings (color shifts by active pillar). 8 orbiting pillar dots. Strength meter (Calm→Active→Radiant→Blazing). 4 stat tiles. Full-screen visual showcase.
+  1045→
+  1046→3. OUT-OF-BOX IDEAS (documented for future implementation):
+  1047→- **Whisper Mode**: Ephemeral self-destructing voice notes with real-time transcription + translation.
+  1048→- **Circle Lens**: AR-style on-device cultural filters (Islamic geometric patterns, desert golden hour, calligraphy overlays).
+  1049→- **Live Translate Overlay**: Real-time translated subtitles during Wasl video calls.
+  1050→- **Group Memory**: AI auto-creates shared memory timelines in Circles (collaborative scrapbook).
+  1051→- **Vibe Match**: AI matches you with nearby people sharing your interests (privacy-preserving, coarse location only).
+  1052→
+  1053→Integration:
+  1054→- New "Circle Exclusives" section on Home screen with 5 feature cards.
+  1055→- 5 new custom events: circle:time-capsule, circle:mood-feed, circle:privacy-shield, circle:receipt-split, circle:circle-aura.
+  1056→- All 5 overlays rendered in page.tsx with event listeners.
+  1057→- Git committed: c21bbfa.
+  1058→
+  1059→Verified: lint clean, zero errors, all 5 features open from home screen, Time Capsule + Circle Aura confirmed working.
+  1060→
+  1061→---
+  1062→Task ID: 40
+  1063→Agent: full-stack-developer
+  1064→Task: Rebuild 5 lost Circle Exclusives overlays + reintegrate.
+  1065→
+  1066→Work Log:
+  1067→- Read worklog Task 33/35 context, existing time-capsule.tsx overlay pattern, home-screen.tsx EXCLUSIVES array, page.tsx wiring, app-store/mock/mock-images/globals.css foundation.
+  1068→- Verified shadcn Sheet/Slider/Select/Switch/Sonner all available; verified Ghost/Aperture/Languages/BookHeart/Users icons exist in lucide-react.
+  1069→- Created `src/components/overlays/whisper-mode.tsx` — Bottom Sheet: idle/recording/review/sent phases; circular mic + animated 18-bar waveform + 0:05 timer auto-stop; on-device transcription + Arabic translation; lifespan Select (10s/1m/5m/1h/After listened); Send Whisper → toast + close; 3 mock incoming whispers (1 expired) with blurred preview, countdown, live-tick interval.
+  1070→- Created `src/components/overlays/circle-lens.tsx` — Bottom Sheet: square viewfinder with rule-of-thirds grid + LIVE badge; 8 cultural filters (None, Golden Hour, Islamic Geometric, Islamic Calligraphy, Desert Mirage, Nile Blue, Lantern Glow, Mosaic) each using real CSS mix-blend-mode + SVG patterns; intensity Slider 0-100%; capture button with flash animation → toast "Captured with [filter] · saved to Lamahat"; hold-to-compare-original (mouse + touch).
+  1071→- Created `src/components/overlays/live-translate.tsx` — Full-screen overlay: gradient remote video + SCENES texture + PiP self-preview; bilingual word-by-word subtitle reveal (380ms tick) cycling through Arabic→English and English→Arabic utterances; "They speak"/"I speak" Selects with swap button; mic/camera/speaker toggles; subtitle settings (font S/M/L, position top/bottom, show original toggle); red end-call button; LIVE indicator + AI confidence meter (88-98%); privacy footer.
+  1072→- Created `src/components/overlays/group-memory.tsx` — Bottom Sheet: Circle Select (Cairo Book Club / Yassin Family / Cairo Cyclists); AI Insight card ("Thoughtful & Active · Fridays · books/sunsets/food"); vertical timeline of 4 memories (Friday Ride, Book Club: The Queue, Layla's Birthday, First Meetup) with gradient photo grids, italic AI captions, stats chips, Relive/Share-to-Midan/Add-to-Time-Capsule buttons; auto-create Switch.
+  1073→- Created `src/components/overlays/vibe-match.tsx` — Full-screen overlay: SVG-style radar with 4 concentric rings + cross-hairs + rotating conic-gradient sweep; gold pulsing center "you" dot; 5 match dots positioned by angle/radius; interest chips (Coffee/Cairo/Jazz/Books/Cycling/Open Source); 5 match cards with gradient-initial avatars, vibe %, distance, highlighted shared-interest chips, Say hi (→ toast "Opening Wasl…") / Pass (fade-out + remove); privacy controls (Visible to nearby Switch, Location precision Select, Interests visible Switch); "Find new vibes" 2s spinner reshuffle; coarse-location safety note.
+  1074→- Updated `src/screens/home-screen.tsx`: imported Ghost, Aperture, Languages, BookHeart, Users from lucide-react; appended 5 entries to the EXCLUSIVES array (whisper-mode / circle-lens / live-translate / group-memory / vibe-match) using the existing `Exclusive` interface shape (`id/emoji/name/desc/icon/tint/evt`).
+  1075→- Updated `src/app/page.tsx`: added 5 imports; added 5 state vars (whisperOpen/lensOpen/liveTranslateOpen/groupMemoryOpen/vibeMatchOpen); added 5 event listeners (`circle:whisper-mode`, `circle:circle-lens`, `circle:live-translate`, `circle:group-memory`, `circle:vibe-match`) with matching cleanups; added the 5 state setters to the Escape key handler; rendered the 5 overlays.
+  1076→- Ran `bun run lint` — initial pass surfaced 3 `react-hooks/set-state-in-effect` errors (synchronous setState inside `useEffect` for reset-on-open in whisper-mode, vibe-match, live-translate). Refactored each to use the derived-state-during-render pattern (same pattern as `mashahd-player.tsx`): track `prevOpen` in state and call setState during render when `prevOpen !== open`.
+  1077→- Final `bun run lint` clean (0 errors, 0 warnings).
+  1078→- Verified dev server log — no compile errors, `/` returns 200.
+  1079→
+  1080→Stage Summary:
+  1081→- 5 new overlay components in `src/components/overlays/`: whisper-mode.tsx, circle-lens.tsx, live-translate.tsx, group-memory.tsx, vibe-match.tsx — all `"use client"`, framer-motion animated, shadcn Sheet/Slider/Select/Switch + sonner toasts + cn utilities, no indigo/blue, no external images (only SCENES + gradients), no absolute URLs.
+  1082→- Home screen EXCLUSIVES array now has 10 entries (5 original + 5 rebuilt); the 5 new ones dispatch the matching `circle:*` events on click.
+  1083→- page.tsx is fully wired: 5 imports, 5 state vars, 5 event listeners (verified to match the events the new EXCLUSIVES dispatch), 5 overlay renders, Escape handler closes all 5.
+  1084→- All overlays respect the existing visual language (glass-strong rounded-t-3xl bottom sheets, full-screen for Live Translate/Vibe Match) and include privacy notes (on-device processing, no uploads, coarse location only).
+  1085→- Lint clean. App still serves / at 200.
+  1086→
+  1087→---
+  1088→Task ID: 41
+  1089→Agent: full-stack-developer
+  1090→Task: Rename Circle→Cirkle + build state-of-art authentication.
+  1091→
+  1092→Work Log:
+  1093→- Read `/home/z/my-project/worklog.md` (Tasks 1, 3, 2, 5-c, 5-e) for context — foundation was brand tokens, layout, socket.io mini-service, 18 API routes, and module UIs already in place.
+  1094→- Read the foundation files explicitly listed in the brief: `src/lib/i18n.ts` (dict with appName/onboarding), `src/lib/app-store.ts` (useApp — confirmed localStorage keys use the `circle-` prefix and KEPT those keys unchanged), `src/lib/mock.ts` (mock data with "Circle AI", "Circle Pro", etc.), `src/app/layout.tsx` (metadata), `src/app/page.tsx` (splash → onboarding → main flow), `src/components/splash.tsx`, `src/components/onboarding.tsx`, `src/components/shell/top-bar.tsx`, `src/screens/home-screen.tsx`, `src/screens/profile-screen.tsx`. Also inspected `src/components/brand/circle-mark.tsx`, `src/components/brand/circle-logo.tsx`, `src/components/brand/circle-avatar.tsx`, `src/lib/countries.ts`, `src/components/ui/{input,button,select,label,progress}.tsx`, and `src/app/globals.css` to understand the existing design system (HSL tokens, `glass`, `aurora-bg`, `bg-gradient-gold`, `gradient-text-gold`, `bg-gradient-hero`).
+  1095→- Ran `curl https://z-cdn.chatglm.cn/fullstack/init-fullstack_1775040338514.sh | bash` to (re-)initialize the fullstack dev environment before any code changes.
+  1096→- Audited all "Circle" occurrences with Grep — 79 files matched; built a replacement map distinguishing (a) user-facing brand references to rename, (b) code identifiers (`CircleMark`, `CircleHub`, `CircleAura`, `CircleLens`, `CirclePulse`, `CircleAvatar`, `CircleLogo`) to KEEP, (c) localStorage keys (`circle-theme`, `circle-locale`, `circle-onboarded`, etc.) to KEEP, (d) `circle:*` event-bus names to KEEP, (e) Arabic "دواير" to KEEP, (f) the social-group feature references (`The Circle`, `Circles`, `My circle`, "your Circle's best moments", time-capsule recipient enum `"Circle"`, Group Memory's circle selector) to KEEP.
+  1097→
+  1098→Task 1 — Rename "Circle" → "Cirkle" (user-facing text only):
+  1099→- `src/lib/i18n.ts`: header comment + en.appName "Circle"→"Cirkle", en.onboarding.slide1.title "Welcome to Circle"→"Welcome to Cirkle", en.onboarding.slide2.title "Eight worlds. One Circle."→"Eight worlds. One Cirkle.", en.onboarding.cta "Enter Circle"→"Enter Cirkle", en.home.ask "Ask Circle anything..."→"Ask Cirkle anything...", en.home.miniApps "Mini apps inside Circle"→"Mini apps inside Cirkle", en.home.mail "Circle Mail"→"Cirkle Mail", en.home.id "Circle ID · Verified"→"Cirkle ID · Verified", en.home.idSub "every Circle service"→"every Cirkle service", en.ai.title "Circle AI"→"Cirkle AI". Arabic block untouched (uses "دواير").
+  1100→- `src/lib/mock.ts`: header comment "Mock data for Circle screens"→"Cirkle screens", `featured` "Curated by Circle AI"→"Curated by Cirkle AI", `chats` "Circle AI"→"Cirkle AI", `reels` "shot on Circle Pro"→"shot on Cirkle Pro", `posts` "Circle Pay's animation"→"Cirkle Pay's animation", `miniApps` comment, `commands` "Open Circle Mail"→"Open Cirkle Mail", "Open Circle Hub"→"Open Cirkle Hub", "Open Circle Verify"→"Open Cirkle Verify", "Open Circle Pulse"→"Open Cirkle Pulse", `proposals` "Circle AI moderation rubric"→"Cirkle AI moderation rubric", "translation of Circle into Tamazight"→"translation of Cirkle into Tamazight".
+  1101→- `src/app/layout.tsx`: metadata title "Circle — A New Social Operating System"→"Cirkle — A New Social Operating System", description "Circle (دواير)"→"Cirkle (دواير)".
+  1102→- `src/components/splash.tsx`: wordmark "Circle"→"Cirkle".
+  1103→- `src/components/brand/circle-logo.tsx`: doc comment "Circle (دواير) brand mark."→"Cirkle (دواير) brand mark.", `aria-label="Circle logo"`→`aria-label="Cirkle logo"`, wordmark text "Circle"→"Cirkle". Code identifiers (`CircleLogo`, `CircleLogoProps`, `CircleLogoFavicon`) untouched.
+  1104→- `src/components/brand/circle-avatar.tsx`: tooltip `title="Circle Verified"`→`title="Cirkle Verified"`. Code identifier `CircleAvatar` untouched.
+  1105→- `src/components/shell/top-bar.tsx`: `aria-label="Circle Mail"`→`aria-label="Cirkle Mail"`. `CircleMark` import untouched.
+  1106→- `src/app/page.tsx`: titles map `pay: "Circle Pay"`→`pay: "Cirkle Pay"`.
+  1107→- `src/screens/home-screen.tsx`: "Tell Circle your mood"→"Tell Cirkle your mood", "Circle Aura"→"Cirkle Aura", "Circle Lens"→"Cirkle Lens", `forYou[0]` user "Circle AI"→"Cirkle AI" + handle "@circle"→"@cirkle", `forYou[1]` "curated by Circle AI"→"curated by Cirkle AI", "Circle Exclusives" section title + comment→"Cirkle Exclusives", "Circle ID + Mail strip" comment→"Cirkle ID + Mail strip", "The Circle Covenant."→"The Cirkle Covenant.", "yousef@circle.app"→"yousef@cirkle", "FREE @circle.app"→"FREE @cirkle". KEPT "AI scrapbook of your Circle's best moments" (social-group reference) and all `circle:*` event-bus names + `circle-aura`/`circle-lens` IDs (internal).
+  1108→- `src/screens/profile-screen.tsx`: "What Circle knows"→"What Cirkle knows", "Circle ecosystem"→"Cirkle ecosystem", "Circle Hub"→"Cirkle Hub", "Circle ID" + "yousef@circle.app"→"Cirkle ID" + "yousef@cirkle", "Circle Mail"→"Cirkle Mail", "Circle Pay"→"Cirkle Pay", "Circle Verify"→"Cirkle Verify", "verified by Circle AI"→"verified by Cirkle AI", "Check Circle Mail"→"Check Cirkle Mail", "Self-hosted Circle"→"Self-hosted Cirkle", "What Circle AI knows"→"What Cirkle AI knows", "Circle servers never see"→"Cirkle servers never see".
+  1109→- `src/screens/wasl-screen.tsx`: "verified by Circle ID"→"verified by Cirkle ID".
+  1110→- `src/screens/pay-screen.tsx`: "Circle Pay" (h1) →"Cirkle Pay", "Verified by Circle ID"→"Verified by Cirkle ID", "via Circle's global federation"→"via Cirkle's global federation", "Circle Pay · Federated"→"Cirkle Pay · Federated".
+  1111→- `src/screens/rihla-screen.tsx`: "Booked by Circle AI."→"Booked by Cirkle AI.", "Powered by Circle AI · On-device"→"Powered by Cirkle AI · On-device".
+  1112→- `src/screens/midan-screen.tsx`: "circle.app/p/3x7"→"cirkle/p/3x7" (share-link host). KEPT `{ l: "Circle", h: "My circle" }` (social-group share target).
+  1113→- `src/components/overlays/group-memory.tsx`: "Circle AI reviews activity"→"Cirkle AI reviews activity". KEPT "your Circle's best moments", "Circle selector", `Circle` label/value, "Your Circle's vibe", "from your Circle's activity" (all social-group references).
+  1114→- `src/components/overlays/governance-center.tsx`: "broadcast to the Circle quorum."→"broadcast to the Cirkle quorum.", "One Circle ID, one vote"→"One Cirkle ID, one vote", "Circle ledger"→"Cirkle ledger", "The Circle Covenant"→"The Cirkle Covenant".
+  1115→- `src/components/overlays/circle-pulse.tsx`: `aria-label="Circle Pulse"`→`aria-label="Cirkle Pulse"`, "Circle Pulse · Live city biome"→"Cirkle Pulse · Live city biome", `toast("Opening Circle Maps …")`→`toast("Opening Cirkle Maps …")`. Code identifier `CirclePulse` untouched.
+  1116→- `src/components/overlays/time-capsule.tsx`: "not even Circle can open it early."→"not even Cirkle can open it early." KEPT recipient enum `"Self" | "Friend" | "Circle"` and "Hand to a Circle contact" / "Open in a private Circle" (social-group references).
+  1117→- `src/components/overlays/command-palette.tsx`: "Ask Circle AI instead"→"Ask Cirkle AI instead".
+  1118→- `src/components/overlays/circle-aura.tsx`: "Circle Aura" (h1)→"Cirkle Aura". Code identifier `CircleAura` untouched.
+  1119→- `src/components/overlays/circle-lens.tsx`: `aria-label="Circle Lens"`→`aria-label="Cirkle Lens"`, "Circle Lens" (h1)→"Cirkle Lens". Code identifier `CircleLens` untouched.
+  1120→- `src/components/overlays/settings-panel.tsx`: "Circle Covenant · Free, forever"→"Cirkle Covenant · Free, forever".
+  1121→- `src/components/overlays/mashahd-player.tsx`: `toast("Tip jar opened · Circle Pay")`→`toast("Tip jar opened · Cirkle Pay")`. `MessageCircle` lucide icon untouched.
+  1122→- `src/components/overlays/privacy-shield.tsx`: "Circle Pay balance + transactions"→"Cirkle Pay balance + transactions", "Circle ID"→"Cirkle ID", `/* Circle ID demo */`→`/* Cirkle ID demo */`, "yousef@circle.app"→"yousef@cirkle".
+  1123→- `src/components/overlays/mood-feed.tsx`: "Circle Pay's NFC animation"→"Cirkle Pay's NFC animation", "Circle AI queued it"→"Cirkle AI queued it", "by Circle AI" + "@circle"→"by Cirkle AI" + "@cirkle", "Rate my Circle avatar"→"Rate my Cirkle avatar", "you forgot Circle Pay exists"→"you forgot Cirkle Pay exists", "Circle AI never stores how you feel"→"Cirkle AI never stores how you feel", "@circle.workspace"→"@cirkle.workspace".
+  1124→- `src/components/overlays/receipt-split.tsx`: "via Circle Pay"→"via Cirkle Pay" (×2), "Circle AI extracts"→"Cirkle AI extracts", "between Circle users. Non-Circle contacts … in your Circle Pay"→"between Cirkle users. Non-Cirkle contacts … in your Cirkle Pay".
+  1125→- `src/components/overlays/circle-hub.tsx`: pillar names "Circle Mail"/"Circle ID"/"Circle Verify"/"Circle Maps"→"Cirkle Mail"/"Cirkle ID"/"Cirkle Verify"/"Cirkle Maps", "Free @circle.app inbox"→"Free @cirkle inbox", doc comment "CircleHub — Sheet listing all 18 Circle pillars"→"… 18 Cirkle pillars", `aria-label="Circle Hub"`→`aria-label="Cirkle Hub"`, "Circle Hub"/"Every pillar of Circle"→"Cirkle Hub"/"Every pillar of Cirkle", "yousef@circle.app"→"yousef@cirkle", "Permanent address tied to your Circle ID"→"… Cirkle ID", "E2EE between Circle users"→"… Cirkle users", "Use Circle ID to log in"→"Use Cirkle ID to log in", "Circle never stores the photo"→"Cirkle never stores the photo", "never leave Circle"→"never leave Cirkle", "Circle servers never see"→"Cirkle servers never see", "Circle never shares user data"→"Cirkle never shares user data", "via Circle Pay — creators keep 100%"→"via Cirkle Pay — creators keep 100%". Code identifier `CircleHub` untouched. KEPT "The Circle (Groups)" pillar name (social-group feature).
+  1126→- `src/components/overlays/composer.tsx`: "Anyone on Circle can see and reshare"→"Anyone on Cirkle can see and reshare", "Members of your active Circle workspace"→"Members of your active Cirkle workspace", "Drafted with Circle AI"→"Drafted with Cirkle AI".
+  1127→
+  1128→Task 2 — State-of-art authentication:
+  1129→- Created `src/lib/auth-store.ts` (Zustand + localStorage, persisted under `cirkle-auth`):
+  1130→  - `AuthUser` interface with `username`, `displayName`, `email?`, `avatarColor`, `verified`, `joinedAt`, `bio?`, `country?`.
+  1131→  - Internal `StoredAccount extends AuthUser` adds a `passwordHash` field (mock-only `btoa("cirkle::" + pw)` — explicitly documented as demo-only, never real crypto).
+  1132→  - `AuthView = "splash" | "login" | "register" | "forgot" | "otp"` per spec.
+  1133→  - `RegisterData` interface.
+  1134→  - `AuthState` with `user`, `isAuthenticated`, `authView`, `accounts` (all registered users on the device), `hydrated`, plus `register`, `login`, `logout`, `setAuthView`, `hydrate`.
+  1135→  - `stripAtCirkle()` helper normalises input — accepts `yousef`, `@yousef`, `yousef@cirkle`, `@cirkle/yousef` and produces the canonical bare username.
+  1136→  - `pickAvatarColor()` deterministically maps username → `gold | teal | rose | steel` (brand palette only, no indigo/blue).
+  1137→  - `sanitizeUser()` strips `passwordHash` before exposing the user to the rest of the app.
+  1138→  - `register()` validates username (`/^[a-z0-9_]{3,20}$/`), password (≥6 chars), displayName (non-empty), checks for username conflicts, then pushes the new account to the array, marks it as the current session, persists to `cirkle-auth`, and sets `isAuthenticated=true`. Returns `{ ok, error? }`.
+  1139→  - `login()` strips `@cirkle` from input, finds the account, verifies the password hash, sets the session, persists, returns `{ ok, error? }`.
+  1140→  - `logout()` clears the current session but keeps the accounts array (so the user can sign back in).
+  1141→  - `hydrate()` reads `cirkle-auth` once on the client; guards against double-hydration via the `hydrated` flag.
+  1142→  - Convenience exports `cirkleHandle(user)` → `username@cirkle`, and `cirkleInitials(user)` → 2-char uppercase initials.
+  1143→- Created `src/components/auth/auth-screen.tsx` (cinematic, glass morphism, aurora background, ~750 lines, all `"use client"`):
+  1144→  - **AuthBackground** — full-screen `aurora-bg` + a 120 s conic-gradient mesh blob + an SVG fractal-noise film-grain overlay (data-URI, no asset needed) + a `to-background/60` vignette.
+  1145→  - **FloatingMark** — wraps `CircleMark` (re-using the existing brand component, no new logo) with a 6 s gentle float + soft gold glow.
+  1146→  - **GoldButton** — primary CTA: `bg-gradient-gold`, brand-palette shadow, hover lift, and a `translate-x-full` shimmer-line on hover. Accepts `loading` to swap in a `Loader2` spinner.
+  1147→  - **GlassButton** — secondary CTA: `glass` + border, hover lift.
+  1148→  - **GoldField** — wrapper around shadcn `Input` that draws a gold focus ring (`focus-within:shadow-[0_0_0_3px_hsl(var(--gold)/0.18)]` + matching border), turns destructive on `error`, supports a leading icon.
+  1149→  - **Stepper** — animated dots at the top of the register flow (current = wide gold bar, completed = gold dot, upcoming = muted dot).
+  1150→  - **scorePassword()** — 0–4 strength score (length, mixed case, digits + symbols) with labels `Weak/Fair/Good/Strong`; `STRENGTH_COLOR` maps to destructive/accent/secondary/emerald.
+  1151→  - **SplashView** — 120 px `FloatingMark` + "Cirkle" in `font-display gradient-text-gold` + "دواير" in `font-arabic` + tagline "A new social operating system" + two CTAs ("Sign in" gold, "Create account" glass) + bottom covenant note "By continuing, you agree to the Cirkle Covenant: $0, privacy-first, forever free."
+  1152→  - **LoginView** — username input with live `@cirkle` preview (auto-appends `@cirkle` if the user hasn't typed it), password input with eye toggle, "Forgot password?" link (fires a sonner toast "Reset link sent to your email"), "Don't have an account? Create one" link, primary "Sign in" button (700 ms simulated latency → success toast), divider, "Continue with Cirkle ID" glass button (toast "Cirkle ID integration coming soon"), privacy note "Your data stays on your device. Cirkle never sees your password." Back button returns to splash.
+  1153→  - **RegisterView** — 5-step wizard (`Username` → `Display name` → `Password` → `Email` → `Region`) with animated stepper, framer-motion `AnimatePresence` step transitions, back button on each step (returns to splash from step 1):
+  1154→    1. Username: live preview `yousef@cirkle` in a gold-tinted card, green `BadgeCheck` when valid, validation `^[a-z0-9_]{3,20}$`.
+  1155→    2. Display name: input + live avatar preview (initial in gold gradient ring).
+  1156→    3. Password: input with eye toggle, 4-bar strength meter with colored Progress + label, hint "Stored only on your device — Cirkle never sees it."
+  1157→    4. Email (optional): input + privacy reassurance card.
+  1158→    5. Region: shadcn `Select` populated from `COUNTRIES` (flags + names), shows capital/currency of selection, plus a gold-tinted review summary card (handle, name, email, region) and the "Create my Cirkle" gold button (900 ms latency).
+  1159→    On success: a full-screen "bloom" — CirkleMark scales from 0.3 with blur→0, "Welcome to Cirkle" in gradient gold, "Your handle is yousef@cirkle", and a "Entering Cirkle…" spinner. The parent `Page` then unmounts us because `isAuthenticated` flips true and the auth gate swaps to the main app. "Already have an account? Sign in" link available throughout.
+  1160→  - **ForgotView** — recovery email input + "Send reset link" gold button → confirmation card + sonner toast "Reset link sent".
+  1161→  - **OtpView** — minimal mock for the `otp` auth view enum value (kept simple per the spec's mention that it's a mock placeholder).
+  1162→  - **AuthScreen** top-level — `fixed inset-0 z-[300]` overlay, renders `AuthBackground` then an `AnimatePresence` that swaps between the 5 views based on `authView`. Listens for Escape to return to splash. Subtle "Cirkle · دواير" credit at the bottom.
+  1163→  - All animations use framer-motion (`motion`, `AnimatePresence`), all toasts use `sonner`, all icons from `lucide-react` (no indigo/blue). Color tokens are HSL brand palette only (`gold`, `teal`, `rose`, `steel`, `accent`, `secondary`, `destructive`, `emerald` for the strongest strength bar).
+  1164→- Updated `src/app/page.tsx`:
+  1165→  - Imported `AuthScreen` from `@/components/auth/auth-screen` and `useAuth` from `@/lib/auth-store`.
+  1166→  - In the `Page` component, pulled `isAuthenticated`, `hydrate`, and `hydrated` from `useAuth`; added `hydrateAuth()` call inside the existing mount effect (so both stores hydrate together).
+  1167→  - Added an auth gate: `if (!authHydrated || !isAuthenticated) return <><AuthScreen /><AnimatePresence>{showSplash && <Splash />}</AnimatePresence></>`. Until the auth store hydrates and a session exists, the cinematic `AuthScreen` replaces the main app. Once authenticated, the existing splash → onboarding → main flow runs unchanged.
+  1168→  - Also renamed the `titles.pay` value from `"Circle Pay"` → `"Cirkle Pay"` (TopBar shows this on the Pay tab).
+  1169→- Updated `src/screens/profile-screen.tsx`:
+  1170→  - Imported `useAuth`, `cirkleHandle`, `cirkleInitials` from `@/lib/auth-store`; imported `LogOut` from lucide-react.
+  1171→  - In `ProfileScreen`, pulled `user` and `logout` from `useAuth`; computed `displayName`, `handle`, `initials`, `regionLabel`, `regionCity` (falling back to the existing mock "Yousef Al-Harbi" if no auth user — though after the auth gate there always will be one).
+  1172→  - Replaced the hardcoded header (`Yousef Al-Harbi`, `@yousef`, `Y`) with the authenticated user's `displayName`, `cirkleHandle(user)` (e.g. `yousef@cirkle`), and `cirkleInitials(user)`. The `BadgeCheck` now only renders if `user.verified`.
+  1173→  - Added a new "Account" section at the bottom with a "Sign out" row that opens a bottom `Sheet` confirming "Sign out of Cirkle?". The sheet shows a mini user card (initials + displayName + handle) and two buttons: a destructive-accent "Sign out" that calls `logout()` + sonner toast "Signed out", and a glass "Stay signed in" that closes the sheet.
+  1174→- Verified `bun run lint` reports 0 errors and 0 warnings (initial run after all edits: clean; re-ran on the four touched/new files explicitly: clean).
+  1175→- Verified the dev server log: an initial `EADDRINUSE` race at startup (transient — multiple Next.js instances competing for port 3000, resolved itself) followed by `GET / 200 in 78 ms` and a long sequence of `✓ Compiled in 100–300 ms` events as the HMR picked up each save. No new errors or warnings after the rename + auth integration.
+  1176→- Smoke-tested the running server: `curl -s http://127.0.0.1:3000/ -o /dev/null -w "%{http_code}\n"` → `200`. Grepped the rendered HTML for `Cirkle|Circle` → only `Cirkle` (metadata updated, no stale "Circle" leaking into the SSR output).
+  1177→
+  1178→Stage Summary:
+  1179→- Files created (2):
+  1180→  - `src/lib/auth-store.ts` — Zustand auth store with `AuthUser`, `RegisterData`, `AuthView`, `register/login/logout/hydrate` actions, localStorage persistence under `cirkle-auth`, `cirkleHandle()` + `cirkleInitials()` helpers.
+  1181→  - `src/components/auth/auth-screen.tsx` — cinematic full-screen auth UI: aurora + mesh + film-grain background, floating CirkleMark, gold/glass buttons with shimmer, 5-step register wizard with stepper + strength meter + review summary + bloom success animation, sign-in with `@cirkle` preview + eye toggle + "Continue with Cirkle ID" mock, forgot-password mock, OTP mock, escape-to-splash, framer-motion AnimatePresence transitions throughout.
+  1182→- Files modified (16) — Task 1 rename:
+  1183→  - `src/lib/i18n.ts`, `src/lib/mock.ts`, `src/app/layout.tsx`, `src/components/splash.tsx`, `src/components/brand/circle-logo.tsx`, `src/components/brand/circle-avatar.tsx`, `src/components/shell/top-bar.tsx`, `src/app/page.tsx` (titles map only — auth integration is below), `src/screens/home-screen.tsx`, `src/screens/profile-screen.tsx` (rename only — auth integration is below), `src/screens/wasl-screen.tsx`, `src/screens/pay-screen.tsx`, `src/screens/rihla-screen.tsx`, `src/screens/midan-screen.tsx`, `src/components/overlays/{group-memory,governance-center,circle-pulse,time-capsule,command-palette,circle-aura,circle-lens,settings-panel,mashahd-player,privacy-shield,mood-feed,receipt-split,circle-hub,composer}.tsx`.
+  1184→- Files modified (2) — Task 2 auth integration:
+  1185→  - `src/app/page.tsx` — auth gate (renders `<AuthScreen />` until `authHydrated && isAuthenticated`), added `hydrateAuth()` to the mount effect, titles.pay `"Circle Pay"`→`"Cirkle Pay"`.
+  1186→  - `src/screens/profile-screen.tsx` — header now reads from `useAuth` user (displayName, `username@cirkle` handle, initials, conditional verified badge), new "Account" section with a "Sign out" row that opens a confirmation Sheet calling `logout()`.
+  1187→- Preservation guarantees respected:
+  1188→  - Code identifiers untouched: `CircleMark`, `CircleHub`, `CircleAura`, `CircleLens`, `CirclePulse`, `CircleAvatar`, `CircleLogo`, `CircleLogoFavicon`, plus the `circle:*` event-bus names (`circle:composer`, `circle:ai`, `circle:hub`, `circle:pulse`, `circle:time-capsule`, `circle:mood-feed`, `circle:privacy-shield`, `circle:receipt-split`, `circle:circle-aura`, `circle:whisper-mode`, `circle:circle-lens`, `circle:live-translate`, `circle:group-memory`, `circle:vibe-match`, `circle:navigate`, `circle:settings`, `circle:governance`) and internal IDs (`circle-aura`, `circle-lens`).
+  1189→  - localStorage keys untouched: `circle-theme`, `circle-locale`, `circle-onboarded`, `circle-country`, `circle-city`, `circle-ghost`, `circle-rm`, `circle-contrast`, `circle-text-scale` (the `useApp` store still reads/writes these — verified `app-store.ts` was NOT modified).
+  1190→  - CSS class names untouched: `aurora-bg`, `bg-gradient-gold`, `bg-gradient-hero`, `gradient-text-gold`, `glass`, `shadow-glass`, `shadow-float`, `animate-orb-float`, `circle-logo-spin-*` (none renamed).
+  1191→  - File names untouched: `circle-mark.tsx`, `circle-logo.tsx`, `circle-avatar.tsx`, `circle-hub.tsx`, `circle-pulse.tsx`, `circle-aura.tsx`, `circle-lens.tsx`, `circle-store.ts`, etc.
+  1192→  - Arabic "دواير" untouched everywhere.
+  1193→  - Social-group references untouched: `The Circle (Groups)` pillar, time-capsule recipient enum `"Circle"`, Group Memory's `Circle` selector label/value, "your Circle's best moments" copy, `{ l: "Circle", h: "My circle" }` share target.
+  1194→- End-to-end auth flow works: register (5 steps) → user stored in localStorage `cirkle-auth` array → auto-login (session becomes current) → app gate flips → main app renders → user can sign out from Profile → "Account" sheet → `logout()` clears the session → app gate flips back to `AuthScreen` → user can sign back in (account is still in the array). Multiple users can register (stored as array); usernames must be unique. Username format is always displayed as `username@cirkle` (not email).
+  1195→- `bun run lint`: 0 errors, 0 warnings.
+  1196→- Dev log: no new errors. `curl http://127.0.0.1:3000/` → 200 with "Cirkle" in the SSR HTML.
+  1197→

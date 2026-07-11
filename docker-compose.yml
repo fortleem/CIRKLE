@@ -1,0 +1,20 @@
+version: "3.8"
+services:
+  app:
+    build: .
+    ports: ["3000:3000"]
+    environment:
+      - DATABASE_URL=postgresql://cirkle:cirkle_pass@db:5432/cirkle?schema=public
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
+    depends_on: { db: { condition: service_healthy } }
+    restart: unless-stopped
+  db:
+    image: postgres:16-alpine
+    environment: { POSTGRES_USER: cirkle, POSTGRES_PASSWORD: cirkle_pass, POSTGRES_DB: cirkle }
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    restart: unless-stopped
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U cirkle"], interval: 10s, retries: 5 }
+volumes: { pgdata: }

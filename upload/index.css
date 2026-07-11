@@ -1,0 +1,249 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Circle (دواير) — Premium Design System
+   All colors HSL. No ad-hoc colors in components.
+*/
+
+@layer base {
+  :root {
+    /* Brand */
+    --gold: 39 45% 57%;          /* #C2A060 */
+    --teal: 195 56% 23%;          /* #1A4A5A */
+    --rose: 351 41% 56%;          /* #C06070 */
+    --steel: 211 30% 42%;         /* #4A6A8A */
+    --charcoal: 60 8% 9%;         /* #1A1A14 */
+    --cream: 40 50% 98%;          /* #FDFCF9 */
+
+    /* Semantic — Light */
+    --background: 40 50% 98%;
+    --foreground: 60 8% 9%;
+    --surface: 40 35% 96%;
+    --surface-elevated: 0 0% 100%;
+    --card: 0 0% 100%;
+    --card-foreground: 60 8% 9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 60 8% 9%;
+
+    --primary: 195 56% 23%;
+    --primary-foreground: 40 50% 98%;
+    --secondary: 39 45% 57%;
+    --secondary-foreground: 60 8% 9%;
+    --accent: 351 41% 56%;
+    --accent-foreground: 40 50% 98%;
+    --muted: 40 25% 92%;
+    --muted-foreground: 60 6% 35%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 40 50% 98%;
+
+    --border: 40 20% 88%;
+    --input: 40 20% 88%;
+    --ring: 195 56% 23%;
+    --radius: 1.25rem;
+
+    /* Glass */
+    --glass-bg: 0 0% 100% / 0.55;
+    --glass-border: 40 30% 85% / 0.6;
+
+    /* Gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(195 56% 23%) 0%, hsl(211 30% 42%) 50%, hsl(351 41% 56%) 100%);
+    --gradient-gold: linear-gradient(135deg, hsl(39 45% 67%) 0%, hsl(39 45% 47%) 100%);
+    --gradient-aurora: radial-gradient(ellipse at top left, hsl(351 41% 56% / 0.35), transparent 50%),
+                       radial-gradient(ellipse at bottom right, hsl(195 56% 33% / 0.4), transparent 55%),
+                       radial-gradient(ellipse at center, hsl(39 45% 57% / 0.2), transparent 60%);
+    --gradient-mesh: conic-gradient(from 180deg at 50% 50%, hsl(195 56% 23%), hsl(351 41% 56%), hsl(39 45% 57%), hsl(211 30% 42%), hsl(195 56% 23%));
+    --gradient-card: linear-gradient(160deg, hsl(0 0% 100% / 0.8), hsl(40 35% 96% / 0.4));
+
+    /* Shadows */
+    --shadow-soft: 0 2px 10px -2px hsl(60 8% 9% / 0.06), 0 8px 30px -10px hsl(60 8% 9% / 0.08);
+    --shadow-glow: 0 0 40px hsl(39 45% 57% / 0.4);
+    --shadow-glass: 0 8px 32px hsl(195 56% 23% / 0.12);
+    --shadow-float: 0 20px 50px -15px hsl(60 8% 9% / 0.25);
+
+    /* Motion */
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 60 8% 6%;
+    --foreground: 40 50% 98%;
+    --surface: 60 8% 9%;
+    --surface-elevated: 60 8% 12%;
+    --card: 60 8% 10%;
+    --card-foreground: 40 50% 98%;
+    --popover: 60 8% 10%;
+    --popover-foreground: 40 50% 98%;
+
+    --primary: 39 45% 57%;
+    --primary-foreground: 60 8% 9%;
+    --secondary: 195 56% 33%;
+    --secondary-foreground: 40 50% 98%;
+    --accent: 351 41% 56%;
+    --accent-foreground: 40 50% 98%;
+    --muted: 60 6% 16%;
+    --muted-foreground: 40 15% 65%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 40 50% 98%;
+
+    --border: 60 6% 18%;
+    --input: 60 6% 18%;
+    --ring: 39 45% 57%;
+
+    --glass-bg: 60 8% 10% / 0.55;
+    --glass-border: 39 45% 57% / 0.15;
+
+    --gradient-hero: linear-gradient(135deg, hsl(195 56% 18%) 0%, hsl(211 30% 25%) 50%, hsl(351 41% 36%) 100%);
+    --gradient-aurora: radial-gradient(ellipse at top left, hsl(351 41% 56% / 0.25), transparent 50%),
+                       radial-gradient(ellipse at bottom right, hsl(195 56% 43% / 0.3), transparent 55%),
+                       radial-gradient(ellipse at center, hsl(39 45% 57% / 0.15), transparent 60%);
+    --gradient-card: linear-gradient(160deg, hsl(60 8% 14% / 0.8), hsl(60 8% 8% / 0.4));
+
+    --shadow-soft: 0 2px 10px -2px hsl(0 0% 0% / 0.4), 0 8px 30px -10px hsl(0 0% 0% / 0.5);
+    --shadow-glow: 0 0 50px hsl(39 45% 57% / 0.35);
+    --shadow-glass: 0 8px 32px hsl(0 0% 0% / 0.4);
+    --shadow-float: 0 20px 50px -15px hsl(0 0% 0% / 0.6);
+
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  :root { --text-scale: 1; }
+  * { @apply border-border; }
+  html { -webkit-font-smoothing: antialiased; font-size: calc(16px * var(--text-scale)); }
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "ss01", "cv11";
+  }
+  h1, h2, h3, .font-display { font-family: 'Fraunces', 'Cormorant Garamond', Georgia, serif; letter-spacing: -0.02em; }
+
+  html[data-reduced-motion="true"] *,
+  html[data-reduced-motion="true"] *::before,
+  html[data-reduced-motion="true"] *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+
+  html[data-contrast="high"] {
+    --border: 60 8% 35%;
+    --muted-foreground: 60 8% 15%;
+    --foreground: 60 12% 4%;
+  }
+  html[data-contrast="high"].dark {
+    --border: 40 30% 70%;
+    --muted-foreground: 40 30% 88%;
+    --foreground: 40 50% 100%;
+  }
+
+  .aurora-bg, .animate-orb-float, .animate-spin-slow { will-change: transform, opacity; }
+}
+
+@layer components {
+  .glass {
+    background: hsl(var(--glass-bg));
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid hsl(var(--glass-border));
+  }
+  .glass-strong {
+    background: hsl(var(--glass-bg));
+    backdrop-filter: blur(40px) saturate(200%);
+    -webkit-backdrop-filter: blur(40px) saturate(200%);
+    border: 1px solid hsl(var(--glass-border));
+  }
+  .gradient-text {
+    background: var(--gradient-hero);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .gradient-text-gold {
+    background: var(--gradient-gold);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .aurora-bg {
+    background-image: var(--gradient-aurora);
+  }
+  .ring-glow { box-shadow: var(--shadow-glow); }
+  .shadow-float { box-shadow: var(--shadow-float); }
+  .shadow-glass { box-shadow: var(--shadow-glass); }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { scrollbar-width: none; }
+
+  .arabesque {
+    background-image:
+      radial-gradient(circle at 0 50%, hsl(var(--gold) / 0.08) 0, transparent 12%),
+      radial-gradient(circle at 100% 50%, hsl(var(--gold) / 0.08) 0, transparent 12%),
+      radial-gradient(circle at 50% 0, hsl(var(--gold) / 0.08) 0, transparent 12%),
+      radial-gradient(circle at 50% 100%, hsl(var(--gold) / 0.08) 0, transparent 12%);
+    background-size: 40px 40px;
+  }
+}
+
+@layer utilities {
+  .animate-shimmer {
+    background: linear-gradient(110deg, transparent 30%, hsl(var(--foreground) / 0.08) 50%, transparent 70%);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+  @keyframes shimmer {
+    to { background-position: -200% 0; }
+  }
+  .animate-orb-float {
+    animation: orbFloat 6s ease-in-out infinite;
+  }
+  @keyframes orbFloat {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-12px) scale(1.05); }
+  }
+  .animate-pulse-glow {
+    animation: pulseGlow 2.5s ease-in-out infinite;
+  }
+  @keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.5); }
+    50% { box-shadow: 0 0 0 16px hsl(var(--primary) / 0); }
+  }
+  .animate-fade-up {
+    animation: fadeUp 0.6s var(--ease-out-expo) both;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-blur-in {
+    animation: blurIn 0.7s var(--ease-out-expo) both;
+  }
+  @keyframes blurIn {
+    from { opacity: 0; filter: blur(20px); }
+    to { opacity: 1; filter: blur(0); }
+  }
+  .animate-spin-slow { animation: spin 20s linear infinite; }
+}

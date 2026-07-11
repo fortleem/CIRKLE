@@ -1,0 +1,93 @@
+// Localization dictionary for Cirkle (دواير)
+export const dict = {
+  en: {
+    appName: "Cirkle",
+    tagline: "A new social operating system",
+    onboarding: {
+      slide1: { title: "Welcome to Cirkle", body: "One app. Every conversation, video, photo, payment and journey — beautifully unified." },
+      slide2: { title: "Eight worlds. One Cirkle.", body: "Wasl, Mashahd, Lamahat, Midan, Rihla, Pay, Mail and your AI co-pilot. All free, forever." },
+      slide3: { title: "Privacy is the product", body: "Your data lives on your device. Ghost mode, end-to-end encryption, and on-device AI by default." },
+      slide4: { title: "Works without internet", body: "Mesh networking over Bluetooth and Wi-Fi Direct keeps you connected in tunnels, deserts and crowds." },
+      slide5: { title: "Designed for you", body: "Pick a language, a vibe, and step inside. You can change anything later." },
+      cta: "Enter Cirkle",
+      skip: "Skip",
+      next: "Continue",
+    },
+    nav: {
+      home: "Home", wasl: "Wasl", mashahd: "Mashahd", lamahat: "Lamahat",
+      midan: "Midan", rihla: "Rihla", pay: "Pay", profile: "You",
+    },
+    home: {
+      hello: "Good evening",
+      featured: "Featured",
+      nearby: "Nearby happenings",
+      forYou: "For you",
+      trending: "Trending in your city",
+      workspace: "Workspace updates",
+      ask: "Ask Cirkle anything...",
+      miniApps: "Mini apps inside Cirkle",
+      mail: "Cirkle Mail",
+      mailSub: "3 new · 1 needs a reply",
+      id: "Cirkle ID · Verified",
+      idSub: "One identity across every Cirkle service",
+      mesh: "Mesh online · 4 peers nearby",
+      spaces: "Live spaces",
+    },
+    ai: {
+      title: "Cirkle AI",
+      sub: "On-device · Private by design",
+      placeholder: "Ask, plan, translate, summarize...",
+      send: "Send",
+      examples: ["Summarize today", "Plan my Istanbul trip", "Reply to Layla in my tone", "Draft a polite no"],
+    },
+    palette: {
+      placeholder: "Search anything, run any command",
+    },
+  },
+  ar: {
+    appName: "دواير",
+    tagline: "نظام تشغيل اجتماعي جديد",
+    onboarding: {
+      slide1: { title: "مرحبًا بك في دواير", body: "تطبيق واحد. كل محادثاتك ومقاطعك وصورك ومدفوعاتك ورحلاتك — بأناقة موحّدة." },
+      slide2: { title: "ثمانية عوالم. دائرة واحدة.", body: "وصل، مشاهد، لمحات، ميدان، رحلة، دفع، بريد ومساعدك الذكي. مجاناً للأبد." },
+      slide3: { title: "الخصوصية هي المنتج", body: "بياناتك تبقى على جهازك. وضع الشبح، تشفير طرفي، وذكاء على الجهاز افتراضياً." },
+      slide4: { title: "يعمل بلا إنترنت", body: "شبكة لاسلكية عبر البلوتوث وواي-فاي مباشر تُبقيك متصلًا في الأنفاق والصحارى والحشود." },
+      slide5: { title: "مصمم لك", body: "اختر لغتك ومزاجك، وتفضّل بالدخول. كل شيء قابل للتغيير لاحقًا." },
+      cta: "ادخل إلى دواير",
+      skip: "تخطي",
+      next: "متابعة",
+    },
+    nav: {
+      home: "الرئيسية", wasl: "وصل", mashahd: "مشاهد", lamahat: "لمحات",
+      midan: "ميدان", rihla: "رحلة", pay: "دفع", profile: "أنت",
+    },
+    home: {
+      hello: "مساء الخير",
+      featured: "مميز",
+      nearby: "بالقرب منك",
+      forYou: "مختار لك",
+      trending: "الرائج في مدينتك",
+      workspace: "تحديثات العمل",
+      ask: "اسأل دواير أي شيء...",
+      miniApps: "تطبيقات مصغّرة داخل دواير",
+      mail: "بريد دواير",
+      mailSub: "٣ جديدة · واحدة تحتاج رداً",
+      id: "هوية دواير · موثّقة",
+      idSub: "هوية واحدة عبر كل خدمات دواير",
+      mesh: "شبكة لاسلكية · ٤ أجهزة بالقرب",
+      spaces: "غرف صوتية مباشرة",
+    },
+    ai: {
+      title: "ذكاء دواير",
+      sub: "على الجهاز · خاص بطبيعته",
+      placeholder: "اسأل، خطط، ترجم، لخّص...",
+      send: "إرسال",
+      examples: ["لخّص يومي", "خطط رحلتي لإسطنبول", "رد على ليلى بنبرتي", "اكتب اعتذاراً مهذباً"],
+    },
+    palette: {
+      placeholder: "ابحث عن أي شيء، أو نفّذ أمراً",
+    },
+  },
+} as const;
+
+export type Locale = keyof typeof dict;

@@ -1,0 +1,156 @@
+   142→---
+   143→Task ID: 5-c
+   144→Agent: full-stack-developer
+   145→Task: Lamahat (Photos) + Mashahd (Video) modules.
+   146→
+   147→Work Log:
+   148→- Read worklog.md + foundation files (page.tsx router, ModuleHeader, CircleAvatar, modules.ts, types.ts, mock-data.ts, circle-store.ts) and audited the shadcn/ui surface area before writing any code.
+   149→- Implemented LamahatModule (src/components/modules/lamahat/lamahat-module.tsx, ~1540 lines): rose-colored header with Following/For You/Nearby/Trending tabs; 10-story rail with rose-gradient rings and "Your Story" + overlay; right-Sheet story viewer with per-slide progress bars, 5s requestAnimationFrame auto-advance, pause-on-pointer-down, prev/next tap zones, Wasl reply + heart react footer; coverToGradient(cover) helper mapping mediaCover → conic/radial/linear CSS gradients (brand palette only, no external images); CSS-columns masonry (2/3/4/5 cols, break-inside-avoid — no jank); per-card author row + verified badge + 3-line clamped caption + location Tooltip ("Coarse geohash only — precise location never shared") + animated heart (spring scale) / comment / share / bookmark; NSFW blur toggle on a mature mock post; floating Visual Search button → Dialog with CLIP progress animation + 6-result grid; Nearby tab with distance labels + privacy banner; Following tab with "You follow" tags; Trending tab sorted by engagement velocity (likes + comments·2 + shares·3 over hours) with flame badge; Capture Glimpse FAB → composer Dialog with caption, location-precision Select (None/City/Neighborhood/Precise), visibility Select (Public/Followers/Friends/Anonymous), tags Input.
+   150→- Implemented MashahdModule (src/components/modules/mashahd/mashahd-module.tsx, ~1100 lines): teal-colored header with For You/Subscriptions/Trending/Live/Shorts tabs; hero featured video (16:9 gradient + play overlay + channel + verified + views + duration + Watch Party/Save/Share + peer-seeder footer); 9 category chips filtering the grid; responsive video grid (1/2/3-4 cols) with gradient thumbnails, duration or LIVE+viewers badges, rose watch-progress bar, channel-avatar overlap, 2-line clamped title, hover-revealed Watch Party/Add-to-playlist/three-dot menu; horizontal Shorts row of 9:16 cards; Live tab with larger pulsing cards; full vertical Shorts feed tab (max-width 420px, 9:16 gradient cards with caption + Arabic, right-side heart/comment/share rail, Follow button); Watch Party flow — Dialog with video preview + invitee search + check-toggle list → on start, right-Sheet with video player, Sync: ✓ indicator, participant avatar strip, and a synced Wasl chat sidebar (E2EE badge, pre-seeded messages, Enter-to-send, auto-scroll); Upload Video FAB → Dialog with drop zone, title, description, visibility (Public/Unlisted/Circle), category dropdown, "Publish to IPFS + PeerTube" button with simulated progress (Uploading 0→100% → Pinning to community node → Live! CID: Qm…).
+   151→- Both modules: only brand palette (teal/gold/rose/steel/charcoal/cream), NO indigo/blue, NO external images (all media is CSS gradients), framer-motion for fade/hover/spring, CircleAvatar for every avatar, ModuleHeader at top, shadcn/ui components reused (Dialog, Sheet, DropdownMenu, Tooltip, Select, ScrollArea, Badge, Button, Card, Input, Textarea, Label), fully client-side with local React state (no /api calls, no ports).
+   152→- Ran `bun run lint`: 0 errors, 0 warnings in both new files (2 pre-existing warnings in wasl-module.tsx are not mine). Verified dev server: GET / → 200, no new errors in dev.log after edits.
+   153→
+   154→Stage Summary:
+   155→- Files produced:
+   156→  - src/components/modules/lamahat/lamahat-module.tsx (stub → full implementation)
+   157→  - src/components/modules/mashahd/mashahd-module.tsx (stub → full implementation)
+   158→- Key features: Lamahat delivers a complete photo-sharing experience (stories, masonry feed, NSFW blur, on-device visual search, 4 tab modes, composer with privacy controls). Mashahd delivers a complete video experience (hero, category-filtered grid, shorts row + full shorts feed, live tab, end-to-end Watch Party with synced chat, IPFS/PeerTube upload simulation). Both render without crashing and are reachable from the sidebar.
+   159→
+   160→---
+   161→Task ID: 5-e
+   162→Agent: full-stack-developer
+   163→Task: Circle Verify + Circle Payments + Circle Travel (Rihla) modules.
+   164→
+   165→Work Log:
+   166→- Read worklog.md, page.tsx, module-header, brand/circle-avatar, brand/circle-logo, lib/circle/{modules,types,mock-data}, stores/circle-store, lib/circle/ai, and shadcn ui/* to absorb the foundation.
+   167→- Ran the fullstack init script (`curl …/init-fullstack_1775040338514.sh | bash`) before any code changes.
+   168→- Created three API routes:
+   169→  - `/api/payments/send` — mock non-custodial settlement with ~900 ms latency, returns the Transaction object.
+   170→  - `/api/ai/itinerary` — wraps `aiItinerary` (Rihla planner) with 600 ms artificial latency and a built-in fallback itinerary so the UI never breaks.
+   171→  - `/api/ai/translate` — wraps `aiTranslate` (NLLB-200) with 200 ms latency, echoes input on AI failure.
+   172→  - Note: pre-existing route files from another concurrent agent overwrote my Write calls for these three routes; the live route handlers are equivalent (use the same `aiItinerary`/`aiTranslate` helpers) and I made the module frontends robust to either response shape (`{ok, transaction}` vs raw transaction; `{translated}` vs `{translation}`).
+   173→- Implemented `VerifyModule` (gold) — two-pane layout:
+   174→  - Left: 5-step wizard (vertical stepper, top progress bar, framer-motion step transitions):
+   175→    1. Scan ID — Passport/National ID/Driver's Licence selector, gradient camera zone with animated corner brackets + scan-line, capture → ONNX OCR redacted fields (first/last 2 chars + ••••), teal privacy note.
+   176→    2. Liveness — animated emoji frames (👁️ → 😊 → 👈 → 👉), MobileNetV2 15 MB confirmation.
+   177→    3. Face Match — side-by-side comparison with progress bar, mobilefacenet 5 MB confidence = 98.7 %.
+   178→    4. Attestation Generation — toggleable claim chips (over_18, nationality_EG, unique_human, professional_engineer), signing progress, Matrix `m.identity.attestation` confirmation, then uniqueness check card with sha256(••••):a3f9…b21c.
+   179→    5. Complete — gold ring badge, issued-claims chips, "run wizard again" reset.
+   180→  - Right: "Your Verified Claims" pane with `VERIFY_CLAIMS` cards (type icon, label, verified badge, attestor, issued date, Share + Revoke buttons) → Share consent dialog (third-party app + Allow/Deny + zero-knowledge note) → Revoke confirm dialog → Privacy Audit card (0 bytes, ONNX OCR, MobileNetV2, mobilefacenet badges) → Circle Covenant on Identity (3 bullets).
+   181→- Implemented `PaymentsModule` (gold) — three sections:
+   182→  1. Balance hero card with gold gradient + radial accents, three balances (EGP 4,820 / USDC 142.50 / EUR 38), Send/Request/Scan QR buttons, non-custodial teal note.
+   183→  2. Quick-send rail — 6 recent contacts (CircleAvatar) + Add new tile; clicking pre-fills and opens the Send dialog.
+   184→  3. Two-column body:
+   185→     - Left (60 %): Activity ledger with All/Sent/Received/Pending filter chips, motion-list rows (direction icon, CircleAvatar, counterparty, method badge, memo + relative time, amount colored, fee column = 0, status pill Settled/Pending/Failed), optimistic insert on send.
+   186→     - Right (40 %): Send Money form (counterparty with lookup-spinner hint, amount + currency selector, method radio grid, memo, Review & Send → confirm dialog → 3-second Settling progress → Done); Payment Methods card (region-aware list of active rails via `useCircleStore().regionCode`); Circle Covenant on Money (4 bullets).
+   187→  - Successful send fires a sonner toast: "Sent 240 EGP to Nadia via InstaPay · Fee: 0".
+   188→  - The card-form and the hero-dialog both hit `POST /api/payments/send` and push the returned Transaction to the top of the ledger optimistically.
+   189→- Implemented `TravelModule` (rose) — five header tabs (Plan Trip / Itineraries / Documents / Maps (Offline) / Translate), default Plan Trip:
+   190→  - Plan Trip: Trip Builder form (40 %) — destination autocomplete with suggestion chips (Cairo/Aswan/Luxor/Alexandria/Giza/Sharm El-Sheikh), date range pickers, travelers stepper, budget selector, interests multi-select chips, language selector (auto-detect hint), rose-gradient Generate button → calls `/api/ai/itinerary`. Loading state shows shimmer skeleton day cards with "✨ Rihla AI is planning your trip…". Itinerary display (60 %) — vertical timeline with day markers, per-day blocks (time + kind icon 🏨/🍽/🎯/🚗), Add to Calendar button per day, Book button on stay/transport blocks (opens Sheet with mock booking options + Book → Circle Pay toast). Bottom row: Save to Documents Vault / Share via Wasl / Print-Export PDF.
+   191→  - Itineraries: grid of 3 saved trips with destination gradient header, dates, day count badge, interest chips, Open + Delete buttons.
+   192→  - Documents: Encrypted Document Vault — 5 doc cards (Passport, Visa, Hotel, Flight, Insurance) with type icon, expiry, AES-256-GCM Encrypted badge, View/Share/Delete buttons, Upload Document button, per-document consent privacy note.
+   193→  - Maps (Offline): stylized SVG map with abstract street grid + main roads + river, tool buttons (Routes/Search/Places), region badge, mock dashed route line with start/end pins, region selector list (Cairo 480 MB / Aswan 220 MB / Alexandria 310 MB / Luxor not-downloaded) with Download new region button, "TileServer GL + Nominatim + OSRM" privacy/feature note.
+   194→  - Translate: source/target language selectors (10 NLLB-200 languages), swap button, text area, rose-gradient Translate button → calls `/api/ai/translate`, RTL-aware result box for Arabic output, "On-device NLLB-200 · 200 languages" badge, Copy/Save actions.
+   195→- Fixed lint errors as they appeared:
+   196→  - Payments: refactored `methodIcon(method)` helper (which ESLint flagged as creating components during render) into a `<MethodIcon method=… />` component.
+   197→  - Travel: replaced `Passport` (not exported by lucide-react) with `IdCard`, removed the `ShieldCheck as Shield` alias in favor of the native `Shield` icon.
+   198→  - Made the payments + travel fetch handlers tolerant of both `{ok, transaction/translated}` and the raw `{transaction/translation/itinerary}` response shapes so the frontends work regardless of which route file is live on disk.
+   199→- Verified `bun run lint` reports zero errors and zero warnings across the whole project.
+   200→- Verified `GET /` returns 200, `POST /api/payments/send` returns 201 with a Transaction body, `POST /api/ai/translate` returns 200, `POST /api/ai/itinerary` returns 200 (with fallback when the upstream AI hits 429).
+   201→
+   202→Stage Summary:
+   203→- Files produced/overwritten:
+   204→  - `src/app/api/payments/send/route.ts` (mock non-custodial send)
+   205→  - `src/app/api/ai/itinerary/route.ts` (Rihla AI planner)
+   206→  - `src/app/api/ai/translate/route.ts` (NLLB-200 translation)
+   207→  - `src/components/modules/verify/verify-module.tsx` — full VerifyModule (gold, 5-step wizard + verified claims + privacy audit + covenant)
+   208→  - `src/components/modules/payments/payments-module.tsx` — full PaymentsModule (gold, balance hero + quick-send rail + ledger + send form + methods + covenant)
+   209→  - `src/components/modules/travel/travel-module.tsx` — full TravelModule (rose, 5 tabs: Plan Trip / Itineraries / Documents / Maps (Offline) / Translate)
+   210→- Key features: zero-knowledge identity wizard with on-device OCR/liveness/face-match claims, non-custodial 0 %-fee payments with optimistic ledger updates and 3-second settlement progress, Rihla AI itinerary generation with offline maps + encrypted document vault + 200-language translation. All visuals use only teal/gold/rose/steel/charcoal/cream tokens — no indigo, no blue, no external images. All AI/payment calls use relative paths only.
+   211→
+   212→---
+   213→Task ID: 5-d
+   214→Agent: full-stack-developer
+   215→Task: Midan (Square microblog) + The Circle (Groups) modules.
+   216→
+   217→Work Log:
+   218→- Read `/home/z/my-project/worklog.md` (Tasks 1, 2, 3, 5-c foundation) plus the foundation files: `page.tsx` (router), `module-header.tsx`, `circle-avatar.tsx`, `modules.ts`, `types.ts`, `mock-data.ts` (POSTS, CIRCLE_GROUPS), `circle-store.ts`, the shadcn/ui inventory (44 components), `app-shell.tsx`, `circle-footer.tsx`, `globals.css` (brand tokens + utilities), and the existing `/api/posts` + `/api/ai/summarize` routes already produced by Task 2 (they accept the exact body shapes the spec requires, so no route changes were needed).
+   219→- Implemented `MidanModule` in `src/components/modules/midan/midan-module.tsx` (~1460 lines, brand color steel):
+   220→  - Header with the five spec tabs (Following · For You · Local Trending · News · Anonymous), default "For You"; subtitle calls out ActivityPub + Fediverse federation.
+   221→  - Three-column desktop layout: left 260px sticky (Trends widget, Who-to-Follow, Promoted Cairo Cyclists Circle card with Join button) — collapses to a horizontal "Cairo Trends" strip on mobile; center max-640px (composer + feed); right 320px sticky hidden on mobile (Cairo Trending widget with inline SVG sparkline showing 12-hour post/hour velocity, Circle Covenant reminder, Sponsored non-targeted Cairo Book Fair ad).
+   222→  - Composer: CircleAvatar, "What's happening, Layla?" input that expands on focus to reveal a visibility dropdown (🌍 Public / 👥 Followers / 🔒 Circle / 🕶️ Anonymous), image/GIF/poll/emoji buttons (disabled but styled), live 280-char counter that turns amber under 20 and destructive under 0, "Post to Midan" button. On submit, optimistically prepends the new post to local state AND fires `POST /api/posts` with `{body, module, authorName, authorHandle, visibility, tags}`. Anonymous-tab mode shows "Posting as: Anonymous Albatross 🦅 — your identity is hidden, content is still moderated" and forces the visibility to anonymous.
+   223→  - Feed filters per tab: For You → all `module:midan` posts (with one synthesised BBC Arabic + two Anonymous posts so every tab has content); Following → only ahmed/yara/karim; Local Trending → sorted by `likes + comments + shares` desc; News → only verified authors; Anonymous → only `visibility:"anonymous"` posts, with the author masked to a deterministic Anonymous Albatross/Sphinx/Falcon/Nile Crocodile identity derived from the post id hash.
+   224→  - PostCard: author row with avatar, name, Circle Verify badge (gold ✓), @handle, ·, formatted timestamp (s/m/h/d), `...` dropdown (Bookmark/Copy link/Mute/Report), body with hashtag + mention highlighting in steel, optional Arabic secondary body, gradient media placeholder keyed by `media.cover`, mock quote-post embed inside p2, location line, action row with reply (opens thread Sheet), boost (increments shares + toast), like (heart fills rose, count updates), bookmark (fills gold), share. "Show N replies" button opens the thread Sheet.
+   225→  - Thread Sheet (right side, 2xl width): original post + AI Summarize card (gold-bordered, calls `POST /api/ai/summarize` with the thread posts as a `posts: string[]` array, renders the returned bullets in a `<pre>` block, has Summarise / Re-summarise button with loading state — gracefully handles the SDK 429 fallback) + replies list (3 mock replies per parent) + reply composer with avatar + Input + Reply button (toast on submit).
+   226→  - TrendsWidget (6 Cairo hashtags with post counts + 🔥 velocity badges), WhoToFollowWidget (3 accounts with Follow/Following toggle), PromotedCircleCard (Cairo Cyclists with gradient cover + Join/Joined toggle), CairoTrendingWidget (top-5 hashtags + custom inline SVG sparkline), CovenantReminderCard, SponsoredAdCard (Cairo Book Fair). All visuals use brand gradients only — no external images.
+   227→  - Used `framer-motion` for card enter/exit + composer expand, `sonner` for toasts, `recharts` deliberately avoided in favour of a hand-rolled SVG sparkline (lighter, no version risk), all icons from `lucide-react` (replaced the deprecated `Gif` export with `Film`).
+   228→- Implemented `CircleGroupsModule` in `src/components/modules/circle-groups/circle-groups-module.tsx` (~1390 lines, brand color gold):
+   229→  - Header with "Create Circle" gold-gradient action button; no tabs (per spec, grid-first).
+   230→  - Top action bar: All / My Circles / Discover / Anonymous filter chips + right-aligned Search input (filters by name/description/arabicName).
+   231→  - Grid of Circles (responsive 1/2/3 cols) rendered from `CIRCLE_GROUPS` plus any locally-created circles. Each CircleCard has a gradient cover keyed by `avatarColor`, large `CircleAvatar` (ring), name (display) + arabicName, mode badge (Private/Public/Anonymous with icon), 2-line clamped description, stats (members / online / category), role badge (Owner/Admin/Moderator/Member/Creator), unread gold dot with count, upcoming-event card, and an "Open Circle" button.
+   232→  - CircleDetail workspace: back button + cover + avatar + name + mode + role badges; Tabs with 7-8 tabs (Audit only visible to Owner/Admin):
+   233→    - **Chat** — simplified Wasl-style group chat (E2EE badge, member/online counts, scrollable message list with avatars + names + timestamps + you/sender bubbles, message composer that appends to the local list with Enter-to-send, auto-scroll-to-bottom on new messages). 70vh height with internal scroll.
+   234→    - **Feed** — Lamahat-style photo feed scoped to the Circle: composer row at top, then a 2-col grid of mock posts with gradient covers (keyed by the Circle's color), author row, body, like/comment counts with a working heart toggle.
+   235→    - **Events** — list of 3 upcoming events with date/time/location/attendees, RSVP buttons (Going/Interested/Not Going — the chosen one highlights) and an iCal export button that synthesises a real VCALENDAR/VEVENT blob client-side and triggers a download.
+   236→    - **Polls** — 2 active polls: unvoted state shows a `RadioGroup` of options with vote counts; after voting, switches to a results view with per-option `Progress` bars + percentages + "you voted" indicator.
+   237→    - **Wiki** — grid of 3 markdown pages (Visiting the Pyramids, Book Club Guidelines, Meeting Notes 2026-04); clicking opens a right-Sheet with the rendered markdown (`react-markdown` with custom components for h1/h2/p/ul/ol/li/blockquote/strong/code/a/input-checkbox — styled with the brand palette).
+   238→    - **Files** — grid of 6 IPFS-pinned files with type-specific icons (image/pdf/doc/zip), name, size, uploader, Download button.
+   239→    - **Members** — list of 8 mock members with avatars, names, role badges, online dots; role-gated dropdown for Owner/Admin with Message + Promote + Remove actions; non-moderators get a simple Message button.
+   240→    - **Audit Log** (Owner/Admin only) — 5 recent events (member joined, role changed, message deleted, poll created, description updated) with icon + actor + action + timestamp.
+   241→  - Create Circle Dialog: name + description + mode radio (Private/Public/Anonymous) + searchable Switch + invite-by-Circle-ID input + Create button; on create, optimistically prepends a new CircleGroup with `role:"owner"`, `members:1`, random brand color, computed initials, shows a success toast, and resets the form.
+   242→  - All visuals use brand gradients only (no external images), `framer-motion` for card hover/enter, `sonner` for toasts, `react-markdown` for the Wiki, every avatar via `CircleAvatar`, no absolute URLs with ports, mobile-safe (responsive grid, scrollable TabsList).
+   243→- Side fixes (needed for the app to compile and render my modules): the home `page.tsx` statically imports every module, so any module compile error breaks all modules including mine. Found and patched:
+   244→  - `src/components/modules/midan/midan-module.tsx`: replaced the deprecated `lucide-react` `Gif` export with `Film` (lint error: "Export Gif doesn't exist in target module").
+   245→- Final `bun run lint`: 0 errors, 0 warnings across all files I produced.
+   246→- Dev log: `GET / → 200` repeatedly after edits; `POST /api/posts` returns 201 (real Prisma insert); `POST /api/ai/summarize` returns 200 with `{summary}` (real z-ai-web-dev-sdk call when available, falls back to a 3-bullet placeholder on upstream 429). No new compile errors introduced.
+   247→
+   248→Stage Summary:
+   249→- Files produced:
+   250→  - `src/components/modules/midan/midan-module.tsx` (stub → full implementation, ~1460 lines)
+   251→  - `src/components/modules/circle-groups/circle-groups-module.tsx` (stub → full implementation, ~1390 lines)
+   252→- Key features delivered:
+   253→  - Midan: Twitter/X-style three-column microblog with 5 tabs (Following/For You/Local Trending/News/Anonymous), expandable composer with 4 visibility levels + 280-char counter + optimistic posting, hashtag/mention highlighting, like/boost/bookmark/share actions, quote-post embed, thread Sheet with AI Summarize (calls `/api/ai/summarize`), anonymous-tab identity masking (Albatross/Sphinx/Falcon/Nile Crocodile), Cairo Trends sparkline, Covenant reminder, non-targeted sponsored ad.
+   254→  - The Circle: gold-themed Circles grid with filter chips + search; rich CircleCard (cover, avatar, mode + role badges, stats, unread, upcoming event); full workspace with 7-8 tabs — Chat (with E2EE + composer), Feed (Lamahat-style), Events (with RSVP + iCal export), Polls (with RadioGroup vote → Progress bars), Wiki (3 markdown pages via `react-markdown` in a Sheet), Files (IPFS-pinned grid), Members (role-gated), Audit Log (Owner/Admin only); Create Circle Dialog with optimistic insert.
+   255→- Both modules render without crashing (verified via `GET / → 200` after every edit, since `page.tsx` statically imports both).
+   256→- Lint clean. Brand palette respected (teal/gold/rose/steel/charcoal/cream only, NO indigo/blue). All media are CSS gradients — no external images. Mobile responsive (grid collapses, right widget column hidden, left column becomes a trends strip).
+   257→
+   258→---
+   259→Task ID: 5-a & 5-b
+   260→Agent: full-stack-developer
+   261→Task: Home Dashboard (9 sections) + Wasl real-time chat module.
+   262→
+   263→Work Log:
+   264→- Read all foundation files: app-shell, module-header, circle-avatar, circle-logo, modules.ts, types.ts, mock-data.ts, circle-store.ts, ai.ts, use-circle-socket.ts (already built by Task 3), chat-service mini-service (already running on :3003), and the smart-reply API route (already created by Task 2).
+   265→- Verified that `useCircleSocket`, the socket.io mini-service on port 3003, and `/api/ai/smart-reply` all exist and operate.
+   266→- Built `/src/components/modules/home/home-dashboard.tsx` — a full 9-section dashboard:
+   267→  1. Greeting bar (Arabic + English date, sunny 28°C Cairo weather, "0 bytes left device today" badge) + AI Core mini-card (142 events learned, 3 new interests, 0 bytes left device, training progress bar).
+   268→  2. Top carousel with framer-motion AnimatePresence — 5 auto-rotating hero cards (5s interval) with gradient backgrounds, eyebrow, title, subtitle, CTA, dots, prev/next chevrons.
+   269→  3. Quick Actions — horizontal-scroll row of 8 pill buttons (New Message, Post to Midan, Capture Glimpse, Watch Party, Plan Trip, Send Money, Translate, Verify Identity) navigating via `setActiveModule`.
+   270→  4. Happening Nearby — 4 gradient cards (Cairo Cyclists Friday Ride, Maadi Farmers Market, Nile Folklore Night, Citadel Photo Walk) with distance + time + category, plus a privacy note ("Coarse city/geohash only. Your precise location never leaves the device").
+   271→  5. For You — 2-col grid of 4 PostCards from POSTS with avatar/name/handle/body/optional gradient media/like+comment+share+view stats + View button + On-device matrix factorization badge + sparkles icon.
+   272→  6. Trending in Cairo — ranked list of 5 hashtags (#Cairo 12.4k, #Rihla 8.2k, #FalafelGate 4.1k, #OpenSource 3.8k, #CircleV12 2.9k) as clickable pills with on-device note.
+   273→  7. Official Updates — 3 cards from OFFICIAL_CHANNELS showing latestUpdate.body, verified badge, subscriber count, category pill.
+   274→  8. Your Workspaces — 2 cards (Jozour Engineering, Cairo International School) with member count + online indicator + Open Workspace button.
+   275→  9. Sponsored Banner — clearly labeled "Sponsored · Non-targeted · Cairo only" card with Felfela Restaurant 15%-off-Fridays offer + "No profile data used" privacy badge + gradient promo strip.
+   276→  10. Upcoming in Your Circles — rows for every CIRCLE_GROUPS entry that has upcomingEvent, with date tile, Circle avatar, event title, attendees, Going/Interested RSVP buttons.
+   277→  Plus a footer Covenant badge.
+   278→- Built `/src/components/modules/wasl/wasl-module.tsx` — a real-time two-pane chat:
+   279→  - Left pane (320px, scrollable): search input with clear button, filter pills (All / Unread / Circles / Channels), conversation rows with CircleAvatar, name (honors `nameStyle`), last message preview with sender prefix, timestamp (relative), unread badge (rose), pinned/muted/channel/circle glyphs, presence dot. Connection status footer (Live / Reconnecting + E2EE badge).
+   280→  - Right pane: header with avatar, name, "E2EE" badge with lock icon, presence dot + status, participant count, voice/video/info icon buttons, PrivacyMenu dropdown (Disable screenshots / Disappearing messages 24h / Forwarding consent required / Block contact). Ghost Mode banner (rose) when ghostMode is on. Encryption notice ("Messages are end-to-end encrypted. No one outside this chat — not even Circle — can read them."). Messages area with framer-motion slide-in bubbles, sender-grouped avatars, sender color gradients, status ticks (✓ sent, ✓✓ delivered, ✓✓ read in gold), attachment rendering (payment → gold card with amount + fee 0; file → steel card with IPFS badge; location → rose card), reply preview with quoted original, per-message hover reply button, system ephemeral pill. Auto-scroll to bottom on new messages. TypingDots component with framer-motion y/opacity animation. Smart replies row above composer — calls POST /api/ai/smart-reply on last incoming change (debounced 400ms, AbortController cancelled on unmount), with "✨ AI" label + "On-device" badge; clicking a chip sends it. Composer: emoji button (popover of 16 quick emoji), attach DropdownMenu (Photo, File, Location, Payment, Contact), text input, Send button (gradient teal). Enter to send, Shift+Enter for newline.
+   281→  - Empty state when no conversation selected: animated Circle logo, "Wasl — وصل" wordmark, tagline, E2EE/Smart-replies/Ghost-mode badges.
+   282→  - Empty state for list search: "No conversations match '{search}'" with Clear button.
+   283→  - Realtime via useCircleSocket (already on port 3003): joins conversation room on select, leaves previous, emits typing:start/stop while drafting, emits message:send on send. Receives message:received / presence:update / typing:update / message:status via a window-bus bridge + refs (so the once-mounted listener always sees fresh state). Own messages match a pending local copy (by body + senderId + status==="pending") and get upgraded to delivered; others' messages are appended if not already present. Read receipts are emitted (and suppressed under Ghost Mode). Auto-reply bot: after sending, schedules a typing indicator (~600ms) and a canned reply (2-4s) from the simulated other participant ("👍", "Got it!", "Sounds good 💛", "I'll check and get back to you", etc.).
+   284→  - Mobile: collapses to single-pane via `useIsMobile()` + `activeConversationId` — list OR conversation, never both. Back button in conversation header.
+   285→  - Privacy controls dropdown saved per-conversation in local state.
+   286→- Fixed two pre-existing compile blockers in other modules so the page would build:
+   287→  - `src/components/modules/midan/midan-module.tsx` imported `Gif` from lucide-react, which doesn't exist in 0.525.0 — replaced with `Film`.
+   288→  - `src/components/modules/mesh/mesh-module.tsx` had a raw `<20 KB` in JSX text causing a parse error — escaped to `&lt;20 KB`.
+   289→- Ran `bun run lint` — clean (0 errors, 0 warnings).
+   290→- Verified dev server (`GET /` → 200, "Compiled in Nms") and that all 9 home-dashboard section headings are present in the SSR output. Verified `/api/ai/smart-reply` returns 3 reply strings.
+   291→
+   292→Stage Summary:
+   293→- `/src/components/modules/home/home-dashboard.tsx` — full 9-section Home Dashboard with greeting bar, AI Core mini-card, framer-motion carousel, quick actions, nearby events (with privacy note), For-You post feed (on-device badge), trending tags, official updates, workspaces, sponsored (non-targeted) banner, upcoming circle events. Uses only teal/gold/rose/steel/charcoal tokens, fully responsive 12-col grid.
+   294→- `/src/components/modules/wasl/wasl-module.tsx` — full real-time Wasl chat: two-pane layout with conversation list (search + filters + presence), active conversation view with E2EE notice, sender-colored bubbles, status ticks, payment/file/location attachments, reply preview bar, smart replies from `/api/ai/smart-reply`, typing indicator, emoji + attach menus, Ghost Mode banner + suppressed read receipts, per-conversation PrivacyMenu (screenshots / disappearing / forwarding / block), mobile single-pane with back button, empty states for both panes. Realtime via the existing `useCircleSocket` hook + socket.io mini-service on :3003, with auto-reply bot simulation.
+   295→- Side-fixes: replaced non-existent `Gif` icon in midan-module.tsx with `Film`; escaped `<` in mesh-module.tsx JSX text so `bun run lint` passes clean.
+   296→- `bun run lint` → 0 errors, 0 warnings. Dev server compiles and serves `GET /` 200 with all sections present in SSR.
+   297→

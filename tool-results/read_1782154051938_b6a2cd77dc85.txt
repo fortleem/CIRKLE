@@ -1,0 +1,602 @@
+  1000→As user base grows, more community nodes appear, and P2P efficiency increases, cost per user trends to $0.001 or less.
+  1001→3.11 Self-Hosting Everything – Single Script for Advanced Users
+  1002→Circle provides a unified self-host script for those who want to run the entire stack on their own hardware:
+  1003→bash
+  1004→curl -sSL https://circle.app/self-host-all.sh | bash
+  1005→This script deploys:
+  1006→Synapse + Postgres
+  1007→Ory Hydra
+  1008→PeerTube
+  1009→ntfy
+  1010→MinIO (optional S3-compatible storage)
+  1011→TileServer GL + Nominatim + OSRM
+  1012→Mailcow
+  1013→A reverse proxy (Caddy) with automatic HTTPS
+  1014→3.12 Summary of Part 3
+  1015→Part 3 established that Circle’s technology stack is not only free to use but also free to operate:
+  1016→✅ Federation, P2P, and community hosting eliminate central cloud costs.
+  1017→✅ On-device AI and free tiers of Hugging Face / GROQ cover all intelligent features.
+  1018→✅ Self-hosting scripts empower organizations to run their own infrastructure.
+  1019→✅ Transparent cost model – less than $0.01 per active user per month.
+  1020→The architecture is production-ready, scalable, and respects the core promise: $0 for users, near-zero for operators.
+  1021→End of Part 3 (Regenerated & Expanded, English Only)
+  1022→4. Dynamic Regional Engine & Multi-Data-Plane Compliance
+  1023→4.1 Overview
+  1024→Circle operates in a world of conflicting national laws, censorship regimes, and payment systems. Instead of building separate apps or requiring users to choose a “region,” Circle includes a Dynamic Regional Engine (DRE) . The DRE fetches a JSON configuration file based on the user’s IPderived country (or manually selected preference) and instantly adapts every module – from chat encryption to payment methods to content filtering – without requiring an app update.
+  1025→This design allows Circle to:
+  1026→Comply with local laws (e.g., China’s realname requirements, EU’s GDPR)
+  1027→Federate where permitted, or operate as a closed network where required
+  1028→Show only relevant payment methods and cultural features
+  1029→Block or modify features in sanctioned regions (e.g., Iran) without breaking core functionality
+  1030→4.2 Global Data Planes
+  1031→Circle defines six major data planes, each with its own infrastructure, legal framework, and feature set.
+  1032→Data Plane
+  1033→Jurisdiction
+  1034→Characteristics
+  1035→Infrastructure
+  1036→Global
+  1037→International (default)
+  1038→Federation enabled, no censorship, full E2EE, all features available.
+  1039→Community nodes worldwide; default homeserver matrix.circle.app.
+  1040→China
+  1041→People’s Republic of China
+  1042→Alibaba Cloud China hosting, ICPfiled, realname via CTID, keyword filters, WeChat Pay/Alipay, data never leaves China.
+  1043→matrix.circle.cn, peertube.circle.cn, no federation with Global plane.
+  1044→Russia
+  1045→Russian Federation
+  1046→Local hosting (Yandex Cloud or local ISPs), VPN detection, local payment methods (Mir, SBP), content filters per Roskomnadzor.
+  1047→matrix.circle.ru, federation limited to approved instances.
+  1048→Iran
+  1049→Islamic Republic of Iran
+  1050→Sanctionscompliant (no US/EU services), local hosting, payment via local gateways (Shetab, Zarinpal). No crypto.
+  1051→matrix.circle.ir, no international federation.
+  1052→Vietnam
+  1053→Socialist Republic of Vietnam
+  1054→Local hosting, content filters (cybersecurity law), payment via VietQR, Momo, ZaloPay.
+  1055→matrix.circle.vn, limited federation.
+  1056→EU
+  1057→European Union (GDPR)
+  1058→Data retention limited to 30 days, right to deletion, explicit consent for any data processing, no crossborder data transfer without adequacy.
+  1059→matrix.circle.eu (hosted in Germany or Ireland).
+  1060→4.3 Configuration File Structure & Delivery
+  1061→On first launch (and every 24 hours thereafter), the Circle app requests:
+  1062→text
+  1063→https://config.circle.app/v1/region?ip=<user_ip>
+  1064→The server returns a JSON object based on the IP’s country. The app caches this configuration and applies it immediately.
+  1065→Example: Egypt (Global plane, but with local customizations)
+  1066→json
+  1067→{
+  1068→  "country": "EG",
+  1069→  "region": "global",               // data plane
+  1070→  "language": {
+  1071→    "default": "ar",
+  1072→    "fallback": "en",
+  1073→    "rtl": true
+  1074→  },
+  1075→  "features": {
+  1076→    "voip_calling": true,
+  1077→    "local_mesh": true,
+  1078→    "screenshot_protection": true,
+  1079→    "anonymous_posting": true,
+  1080→    "payment_methods": ["fawry_voucher", "vodafone_cash", "instapay"],
+  1081→    "nfc_payments": true,
+  1082→    "qr_payments": true,
+  1083→    "cultural_events": ["ramadan", "eid"],
+  1084→    "emergency_alerts": true
+  1085→  },
+  1086→  "compliance": {
+  1087→    "data_retention_days": 0,      // no forced deletion
+  1088→    "real_name_required": false,
+  1089→    "content_filtering": false
+  1090→  },
+  1091→  "homeserver": "matrix.circle.app",
+  1092→  "peertube_instance": "https://peertube.circle.app",
+  1093→  "ntfy_server": "https://ntfy.circle.app",
+  1094→  "maps_tile_server": "https://tiles.circle.eg",
+  1095→  "models_source": "huggingface",
+  1096→  "blocked_domains": []
+  1097→}
+  1098→Example: China (Data plane = china)
+  1099→json
+  1100→{
+  1101→  "country": "CN",
+  1102→  "region": "china",
+  1103→  "language": {
+  1104→    "default": "zh",
+  1105→    "fallback": "en",
+  1106→    "rtl": false
+  1107→  },
+  1108→  "features": {
+  1109→    "voip_calling": true,
+  1110→    "local_mesh": true,
+  1111→    "screenshot_protection": false,   // Chinese law allows screenshot monitoring
+  1112→    "anonymous_posting": false,       // realname required
+  1113→    "payment_methods": ["wechat_pay", "alipay"],
+  1114→    "nfc_payments": true,
+  1115→    "qr_payments": true,
+  1116→    "cultural_events": ["spring_festival", "mid_autumn"],
+  1117→    "emergency_alerts": true
+  1118→  },
+  1119→  "compliance": {
+  1120→    "data_retention_days": 180,
+  1121→    "real_name_required": true,
+  1122→    "content_filtering": true,
+  1123→    "icp_filed": true,
+  1124→    "ctid_integration": true
+  1125→  },
+  1126→  "homeserver": "matrix.circle.cn",
+  1127→  "peertube_instance": "https://peertube.circle.cn",
+  1128→  "ntfy_server": "https://ntfy.circle.cn",
+  1129→  "maps_tile_server": "https://tiles.circle.cn",
+  1130→  "models_source": "modelscope",
+  1131→  "blocked_domains": ["facebook.com", "twitter.com", "youtube.com", "instagram.com"]
+  1132→}
+  1133→Example: Germany (EU data plane)
+  1134→json
+  1135→{
+  1136→  "country": "DE",
+  1137→  "region": "eu",
+  1138→  "language": {
+  1139→    "default": "de",
+  1140→    "fallback": "en",
+  1141→    "rtl": false
+  1142→  },
+  1143→  "features": {
+  1144→    "voip_calling": true,
+  1145→    "local_mesh": true,
+  1146→    "screenshot_protection": true,
+  1147→    "anonymous_posting": true,
+  1148→    "payment_methods": ["sepa", "paypal", "giropay"],
+  1149→    "nfc_payments": true,
+  1150→    "qr_payments": false,
+  1151→    "cultural_events": ["oktoberfest", "christmas_markets"],
+  1152→    "emergency_alerts": true
+  1153→  },
+  1154→  "compliance": {
+  1155→    "data_retention_days": 30,
+  1156→    "gdpr_applies": true,
+  1157→    "right_to_be_forgotten": true,
+  1158→    "data_export_available": true
+  1159→  },
+  1160→  "homeserver": "matrix.circle.eu",
+  1161→  "peertube_instance": "https://peertube.circle.eu",
+  1162→  "ntfy_server": "https://ntfy.circle.eu",
+  1163→  "maps_tile_server": "https://tiles.circle.eu",
+  1164→  "models_source": "huggingface",
+  1165→  "blocked_domains": []
+  1166→}
+  1167→4.4 Data Plane Routing Logic (Flutter Implementation)
+  1168→The app uses a simple but extensible router to select the correct homeserver, PeerTube instance, and other endpoints based on the region field.
+  1169→dart
+  1170→// lib/data_plane/data_plane_router.dart
+  1171→enum DataPlane { global, china, russia, iran, vietnam, eu }
+  1172→class DataPlaneRouter {
+  1173→  static DataPlane getPlaneFromCountry(String countryCode) {
+  1174→    switch (countryCode) {
+  1175→      case 'CN':
+  1176→        return DataPlane.china;
+  1177→      case 'RU':
+  1178→        return DataPlane.russia;
+  1179→      case 'IR':
+  1180→        return DataPlane.iran;
+  1181→      case 'VN':
+  1182→        return DataPlane.vietnam;
+  1183→      case 'DE': case 'FR': case 'ES': case 'IT': case 'NL': case 'BE': case 'AT': case 'FI': case 'SE': case 'PL':
+  1184→        // All EU member states
+  1185→        return DataPlane.eu;
+  1186→      default:
+  1187→        return DataPlane.global;
+  1188→    }
+  1189→  }
+  1190→  static String getHomeserverUrl(DataPlane plane, {String? custom}) {
+  1191→    if (custom != null) return custom;
+  1192→    switch (plane) {
+  1193→      case DataPlane.china:
+  1194→        return 'https://matrix.circle.cn';
+  1195→      case DataPlane.russia:
+  1196→        return 'https://matrix.circle.ru';
+  1197→      case DataPlane.iran:
+  1198→        return 'https://matrix.circle.ir';
+  1199→      case DataPlane.vietnam:
+  1200→        return 'https://matrix.circle.vn';
+  1201→      case DataPlane.eu:
+  1202→        return 'https://matrix.circle.eu';
+  1203→      default:
+  1204→        return 'https://matrix.circle.app';
+  1205→    }
+  1206→  }
+  1207→  static String getPeerTubeInstance(DataPlane plane) {
+  1208→    switch (plane) {
+  1209→      case DataPlane.china:
+  1210→        return 'https://peertube.circle.cn';
+  1211→      case DataPlane.russia:
+  1212→        return 'https://peertube.circle.ru';
+  1213→      case DataPlane.iran:
+  1214→        return 'https://peertube.circle.ir';
+  1215→      case DataPlane.vietnam:
+  1216→        return 'https://peertube.circle.vn';
+  1217→      case DataPlane.eu:
+  1218→        return 'https://peertube.circle.eu';
+  1219→      default:
+  1220→        return 'https://peertube.circle.app';
+  1221→    }
+  1222→  }
+  1223→}
+  1224→4.5 Compliance Features by Data Plane
+  1225→Each data plane enforces specific compliance rules at the client and server levels.
+  1226→4.5.1 China Data Plane (CN)
+  1227→Requirement
+  1228→Implementation
+  1229→Realname verification
+  1230→Integration with CTID (China Trusted Identity) – user must scan ID card; ondevice OCR sends only hashed ID to governmentapproved server.
+  1231→Keyword filtering
+  1232→The Matrix homeserver (matrix.circle.cn) runs a filter plugin using a governmentprovided keyword list. Messages containing blocked words are rejected or stripped.
+  1233→Data localisation
+  1234→All servers are on Alibaba Cloud (Beijing or Shanghai region). No data replication outside China.
+  1235→No federation with global
+  1236→Federation ports (8448) are closed. Chinese users can only see other Chinese users.
+  1237→App store compliance
+  1238→The Circle APK distributed via Chinese app stores includes only the China data plane by default; users cannot switch to Global plane without sideloading.
+  1239→AI models
+  1240→All models are sourced from ModelScope (domestic). No Hugging Face API calls.
+  1241→4.5.2 Russia Data Plane (RU)
+  1242→Requirement
+  1243→Implementation
+  1244→Local hosting
+  1245→Servers on Yandex Cloud or Selectel. Data stored within Russia.
+  1246→VPN detection
+  1247→If the user’s IP is a known VPN endpoint, the app shows a warning and may limit some features (e.g., no anonymous posting).
+  1248→Payment methods
+  1249→Mir card, SBP (Fast Payment System), YooMoney.
+  1250→Content filtering
+  1251→Roskomnadzor blocklist is applied to public posts (Midan, Mashahd). Private chats remain E2EE.
+  1252→User data retention
+  1253→6 months as required by local law.
+  1254→4.5.3 EU Data Plane (GDPR)
+  1255→Requirement
+  1256→Implementation
+  1257→Right to deletion
+  1258→Users can request full deletion of all data (including backups) within 30 days. A “Delete my account” button permanently wipes data from the EU homeserver.
+  1259→Data portability
+  1260→“Export my data” provides a machinereadable JSON file (ActivityPub format for public content, Matrix export for chat).
+  1261→Limited retention
+  1262→Server logs and metadata are automatically deleted after 30 days.
+  1263→Explicit consent
+  1264→Before any optional data processing (e.g., federated learning), a consent dialog is shown.
+  1265→No crossborder transfer
+  1266→Data never leaves EU data centres unless the user explicitly initiates a chat with someone outside the EU (then a warning is shown).
+  1267→4.6 Dynamic Feature Toggling (ClientSide)
+  1268→Beyond regionspecific infrastructure, the DRE also toggles UI elements and optional features. For example, in China the “Anonymous Posting” button is removed; in Egypt, “Fawry Voucher” appears as a payment option.
+  1269→dart
+  1270→class FeatureManager {
+  1271→  static late RegionConfig _config;
+  1272→  static Future<void> loadConfig() async {
+  1273→    final response = await http.get(Uri.parse('https://config.circle.app/v1/region'));
+  1274→    _config = RegionConfig.fromJson(jsonDecode(response.body));
+  1275→  }
+  1276→  static bool isFeatureEnabled(String featureName) {
+  1277→    return _config.features[featureName] ?? false;
+  1278→  }
+  1279→  static List<String> getPaymentMethods() {
+  1280→    return List<String>.from(_config.features['payment_methods'] ?? []);
+  1281→  }
+  1282→}
+  1283→// Usage:
+  1284→if (FeatureManager.isFeatureEnabled('anonymous_posting')) {
+  1285→  // Show anonymous toggle
+  1286→}
+  1287→4.7 Handling Travelers (Roaming Users)
+  1288→When a user travels from Egypt to China, the DRE reevaluates the configuration every 24 hours (or on network change). However, the user’s home data plane remains their primary identity. For example:
+  1289→An Egyptian user (@ahmed:matrix.circle.app) travels to Shanghai.
+  1290→The app detects a Chinese IP but does not force him onto the China plane. Instead:
+  1291→He continues using matrix.circle.app (may be slow due to Great Firewall).
+  1292→The app offers to “temporarily use local relay” – a VPNlike tunnel via a community node in Hong Kong.
+  1293→Payment methods: He can still use Vodafone Cash (if roaming agreements allow) or switch to Alipay for local payments.
+  1294→For Chinese citizens abroad, the opposite happens: they stay on matrix.circle.cn and continue to obey Chinese laws, even while in Europe.
+  1295→4.8 Configuration Caching & Fallback
+  1296→To ensure the app works offline or if the config server is down:
+  1297→dart
+  1298→class ConfigCache {
+  1299→  static Future<RegionConfig> getConfig() async {
+  1300→    try {
+  1301→      final fresh = await _fetchFromServer();
+  1302→      await _saveToLocalCache(fresh);
+  1303→      return fresh;
+  1304→    } catch (e) {
+  1305→      final cached = await _loadFromLocalCache();
+  1306→      if (cached != null) return cached;
+  1307→      return RegionConfig.defaultConfig(); // Global plane with conservative defaults
+  1308→    }
+  1309→  }
+  1310→}
+  1311→4.9 ZeroImplementation Cost for New Regions
+  1312→Adding a new data plane (e.g., India) requires:
+  1313→Setup of Matrix homeserver, PeerTube, ntfy on local cloud providers.
+  1314→Creation of a new configuration JSON.
+  1315→Listing the country code in the DRE switch.
+  1316→No code change in the mobile app. This allows Circle to expand to any country within hours.
+  1317→4.10 Security & Integrity of Configuration
+  1318→The configuration JSON is signed using Circle’s private key (Ed25519). The app verifies the signature before applying any changes. This prevents maninthemiddle attacks that could force a user into a rogue data plane.
+  1319→dart
+  1320→bool _verifySignature(String jsonString, String signature) {
+  1321→  final publicKey = base64Decode('circle_public_key_here');
+  1322→  return Ed25519.verify(utf8.encode(jsonString), base64Decode(signature), publicKey);
+  1323→}
+  1324→4.11 Example: Advertiser Compliance Across Regions
+  1325→An advertiser (e.g., CocaCola) can run the same campaign globally, but the DRE ensures:
+  1326→In China: Ad content is reviewed; no alcohol ads (if prohibited).
+  1327→In EU: “We use cookies” disclaimer is shown (GDPR).
+  1328→In Iran: Ad is served from local mirror; no USbrand imagery that violates sanctions.
+  1329→All without modifying the ad creative or writing regionspecific code.
+  1330→4.12 Summary of Part 4
+  1331→Part 4 demonstrates that Circle is legally ready for any jurisdiction:
+  1332→✅ Dynamic configuration enables instant compliance without app updates.
+  1333→✅ Six data planes cover major regulatory regimes (China, Russia, Iran, Vietnam, EU, Global).
+  1334→✅ Clientside feature toggling respects local censorship and privacy laws.
+  1335→✅ Roaming support keeps users on their home plane while abroad.
+  1336→✅ Signed configurations prevent tampering.
+  1337→The Dynamic Regional Engine is a core enabler of Circle’s promise: one app, any country, fully compliant, zero extra cost.
+  1338→End of Part 4 (Regenerated & Expanded, English Only)
+  1339→5. Home Dashboard
+  1340→5.1 Overview
+  1341→The Home Dashboard is the user’s launchpad into Circle. It is the first screen shown after authentication and is designed to be informative, glanceable, and actionable without overwhelming the user. The dashboard combines realtime updates, local events, personalized recommendations, and system announcements – all while respecting privacy (no cloudbased profiling).
+  1342→Key principles:
+  1343→Local first: Content is prioritized by city/region (derived from IP with user override).
+  1344→Ondevice personalization: The “For You” section uses a local matrix factorization model; no data leaves the device.
+  1345→Glanceable: Each section is a horizontal scrollable row or a compact card.
+  1346→Offline capable: Recently fetched content is cached; offline indicators are shown when data is stale.
+  1347→5.2 Dashboard Sections
+  1348→The dashboard is divided into vertical sections. Each section is optional; users can reorder or hide sections via “Customize Dashboard” (settings). The default order is as follows:
+  1349→Section
+  1350→Content
+  1351→Refresh Interval
+  1352→Example
+  1353→Top Carousel
+  1354→Featured events, urgent PSAs, emergency alerts.
+  1355→Realtime (push via ntfy)
+  1356→“Cairo Jazz Festival – April 15” with image and “RSVP” button.
+  1357→Quick Actions
+  1358→Iconbased shortcuts: Scan to Pay, New Post, Go Live, Create Circle.
+  1359→Static (never changes)
+  1360→Four rounded rectangle icons with labels.
+  1361→Happening Nearby
+  1362→Concerts, meetups, exhibitions within 10 km of user’s current location (or saved home city).
+  1363→15 minutes
+  1364→“Live Oud Night at Sufi Café (0.8 km)” with event time.
+  1365→For You
+  1366→Ondevice personalized recommendations of Circles, channels, events, or Midan posts.
+  1367→30 minutes (background refresh)
+  1368→“Startup Grind Cairo – Tomorrow 7 PM” (based on user’s past interest in entrepreneurship).
+  1369→Trending in [City]
+  1370→Popular Midan posts and hashtags in user’s city (aggregated from public ActivityPub feeds).
+  1371→1 hour
+  1372→“#كشري trending in Cairo” with top post preview.
+  1373→Official Updates
+  1374→Recent announcements from Official Channels the user follows (e.g., Ministry of Health).
+  1375→Realtime
+  1376→“MOH: Vaccination campaign for children starts April 20.”
+  1377→Your Workspaces
+  1378→Announcements or tasks from user’s educational or professional workspaces (e.g., school homework, company announcements).
+  1379→Realtime
+  1380→“Grade 10: Exam schedule posted” with link to Workspace.
+  1381→Sponsored Banner
+  1382→Local ad, citylevel only, nontargeted.
+  1383→Per campaign (usually 7 days)
+  1384→“Ahmed’s Bakery – New Branch in Maadi. 10% off.” (no user tracking).
+  1385→Upcoming in Your Circles
+  1386→Events from Circles the user has joined (RSVP’d or not).
+  1387→Realtime
+  1388→“Book Club: April 20, 7 PM – ‘The Cairo Trilogy’ discussion.”
+  1389→5.3 Detailed Section Specifications
+  1390→5.3.1 Top Carousel
+  1391→Height: 200 dp (adaptive).
+  1392→Number of items: 3–5, horizontally scrollable.
+  1393→Content sources:
+  1394→Emergency alerts (pushed via ntfy with high priority) – always shown first, with red alert background.
+  1395→Featured events sponsored by Official Channels (e.g., citysponsored festival).
+  1396→PSAs from government (e.g., “Road closure on April 16”).
+  1397→Interaction: Tap to open event details, or call an emergency number.
+  1398→Data structure:
+  1399→json
+  1400→{
+  1401→  "id": "carousel_123",
+  1402→  "type": "event", // "emergency", "psa", "featured"
+  1403→  "title": "Cairo Jazz Festival",
+  1404→  "subtitle": "April 15, 7 PM – Cairo Opera House",
+  1405→  "image_url": "ipfs://QmXo...",
+  1406→  "action": {
+  1407→    "type": "open_event",
+  1408→    "event_id": "ev_456"
+  1409→  },
+  1410→  "priority": 10 // higher = earlier in carousel
+  1411→}
+  1412→5.3.2 Quick Actions
+  1413→Layout: 4 fixed icons, 80×80 dp, with labels below.
+  1414→Actions:
+  1415→Scan to Pay – Opens QR/NFC scanner for payments.
+  1416→New Post – Opens post composer with smart routing (Mashahd, Lamahat, or Midan).
+  1417→Go Live – Starts live video stream in Mashahd.
+  1418→Create Circle – Opens group creation flow.
+  1419→Customization: Users can replace actions from a list of 8 (e.g., “Check In”, “My Events”).
+  1420→5.3.3 Happening Nearby
+  1421→Privacy: Uses device location (coarse, citylevel precision) or userselected home city. Precise location never sent to server – only city name or geohash (level 5, ~4.9 km).
+  1422→Data source: Communityrun event aggregator that pulls from Official Channels, public Circles, and Midan posts with location tags.
+  1423→Display: Each card shows event name, distance, time, and a “Interested” button (RSVP).
+  1424→Refresh: Every 15 minutes when app is foregrounded; manual pulltorefresh.
+  1425→Local query example (pseudo) :
+  1426→dart
+  1427→Future<List<NearbyEvent>> fetchNearbyEvents() async {
+  1428→  final city = await LocationService.getCurrentCity(); // "Cairo"
+  1429→  final now = DateTime.now();
+  1430→  final events = await db.query(
+  1431→    'events',
+  1432→    where: 'city = ? AND start_time > ? AND start_time < ?',
+  1433→    whereArgs: [city, now, now.add(Duration(days: 7))],
+  1434→    orderBy: 'start_time ASC',
+  1435→    limit: 10,
+  1436→  );
+  1437→  return events.map((e) => NearbyEvent.fromJson(e)).toList();
+  1438→}
+  1439→5.3.4 For You – OnDevice Personalization (Expanded)
+  1440→This is the core of Circle’s privacypreserving recommendation engine.
+  1441→Model Architecture
+  1442→A matrix factorization model is trained entirely on the device. Each user has a user vector (size 64). Each item (event, Circle, channel, post) has a fixed item vector (computed globally and downloaded once). Recommendations are ranked by cosine similarity between the user vector and item vectors, updated incrementally.
+  1443→Lifecycle
+  1444→Initialisation: New user starts with a random user vector (or zeros). No coldstart problem because popular items are shown initially.
+  1445→Interaction tracking: Each time the user likes, shares, watches, RSVPs, or joins, an interaction event is stored locally (max 10,000 events).
+  1446→Training: When the device is idle and charging, a background process runs a single epoch of stochastic gradient descent on the last 1000 interactions.
+  1447→Inference: When requesting “For You”, the app computes similarity between current user vector and all candidate items (cached from server, filtered by city, recency, etc.). Top 20 returned.
+  1448→Code Example
+  1449→dart
+  1450→// lib/recommendation/engine.dart
+  1451→import 'dart:math';
+  1452→import 'package:vector_math/vector_math.dart' as vm;
+  1453→class RecommendationEngine {
+  1454→  static const int embeddingDim = 64;
+  1455→  static const double learningRate = 0.01;
+  1456→  late vm.Vector2 _userVector; // Actually a list of doubles, but we use Vector for convenience
+  1457→  List<ItemEmbedding> _itemEmbeddings = [];
+  1458→  Future<void> loadUserVector() async {
+  1459→    final stored = await storage.read('user_vector');
+  1460→    if (stored != null) {
+  1461→      _userVector = vm.Vector64.fromList(stored.cast<double>());
+  1462→    } else {
+  1463→      _userVector = vm.Vector64.random(Random(), min: 0, max: 0.01);
+  1464→    }
+  1465→  }
+  1466→  void updateUserVector(List<Interaction> interactions) {
+  1467→    for (final interaction in interactions) {
+  1468→      final item = _itemEmbeddings.firstWhere((i) => i.id == interaction.itemId);
+  1469→      // Simple gradient ascent for positive interactions
+  1470→      final similarity = dot(_userVector, item.vector);
+  1471→      final gradient = item.vector * (1 - similarity);
+  1472→      _userVector += gradient * learningRate;
+  1473→    }
+  1474→    // Normalise to unit length
+  1475→    _userVector = _userVector.normalized();
+  1476→    _saveUserVector();
+  1477→  }
+  1478→  List<Item> getRecommendations(List<Item> candidates, int limit) {
+  1479→    final scored = candidates.map((item) {
+  1480→      final itemVec = _itemEmbeddings.firstWhere((i) => i.id == item.id).vector;
+  1481→      final score = dot(_userVector, itemVec);
+  1482→      return MapEntry(item, score);
+  1483→    }).toList();
+  1484→    scored.sort((a, b) => b.value.compareTo(a.value));
+  1485→    return scored.take(limit).map((e) => e.key).toList();
+  1486→  }
+  1487→  double dot(vm.Vector64 a, vm.Vector64 b) {
+  1488→    double sum = 0;
+  1489→    for (int i = 0; i < embeddingDim; i++) sum += a[i] * b[i];
+  1490→    return sum;
+  1491→  }
+  1492→}
+  1493→Privacy Guarantee
+  1494→User vector never leaves the device.
+  1495→Interactions are stored only locally; no analytics sent to Circle.
+  1496→Item embeddings are public (downloaded from https://cdn.circle.app/embeddings.json).
+  1497→5.3.5 Trending in [City]
+  1498→Data source: Aggregated from public Midan posts and hashtags across all federated instances that are tagged with a city (userprovided location or IP inference). The aggregation is performed by a community server that publishes a daily trending JSON.
+  1499→Privacy: Only public posts (no private Circles) are considered. No peruser tracking.
+  1500→Display: A horizontal scroll of 5–10 trending hashtags or posts, each with a short preview.
+  1501→Example JSON from community node:
+  1502→json
+  1503→{
+  1504→  "city": "Cairo",
+  1505→  "updated_at": "2026-04-15T12:00:00Z",
+  1506→  "trending": [
+  1507→    {
+  1508→      "type": "hashtag",
+  1509→      "name": "#كشري",
+  1510→      "post_count": 1250,
+  1511→      "sample_post": "Just had the best koshari in Abdeen! #كشري"
+  1512→    },
+  1513→    {
+  1514→      "type": "post",
+  1515→      "post_id": "https://mastodon.circle.eg/@user/123",
+  1516→      "content": "The new bridge opens today...",
+  1517→      "engagement": 450
+  1518→    }
+  1519→  ]
+  1520→}
+  1521→5.3.6 Official Updates
+  1522→Source: Matrix rooms for Official Channels that the user has followed. Each update is a message in the channel room.
+  1523→Display: Only the latest message from each channel is shown, with the channel name and avatar.
+  1524→5.3.7 Your Workspaces
+  1525→Source: Matrix rooms belonging to the user’s workspaces (company or school). Only rooms marked as “announcements” or “dashboardvisible” appear here.
+  1526→Example: A school workspace might have a #announcements room; any message posted there appears in this dashboard section.
+  1527→5.3.8 Sponsored Banner
+  1528→Format: Static image or short video (15 seconds max), 300×100 dp, with a “Learn More” button.
+  1529→Targeting: Citylevel only (e.g., “Cairo”). No user profiling, no retargeting.
+  1530→Inventory: Sold via selfserve portal. Advertiser pays per impression (CPM $0.50).
+  1531→Frequency cap: One banner per session maximum 3 times per day.
+  1532→5.3.9 Upcoming in Your Circles
+  1533→Source: Calendar events from Circles the user has joined (private or public). Events are stored in each Circle’s Matrix room as state events.
+  1534→Display: Shows next 3 events with date, time, and “RSVP” button.
+  1535→5.4 Dashboard Layout Code (Flutter)
+  1536→A simplified version of the dashboard widget:
+  1537→dart
+  1538→class HomeDashboard extends StatelessWidget {
+  1539→  @override
+  1540→  Widget build(BuildContext context) {
+  1541→    return Scaffold(
+  1542→      body: CustomScrollView(
+  1543→        slivers: [
+  1544→          SliverAppBar(title: Text('Circle'), floating: true),
+  1545→          SliverToBoxAdapter(child: TopCarousel()),
+  1546→          SliverToBoxAdapter(child: QuickActions()),
+  1547→          SliverToBoxAdapter(child: HappeningNearby()),
+  1548→          SliverToBoxAdapter(child: ForYouSection()),
+  1549→          SliverToBoxAdapter(child: TrendingSection()),
+  1550→          SliverToBoxAdapter(child: OfficialUpdates()),
+  1551→          SliverToBoxAdapter(child: WorkspacesSection()),
+  1552→          SliverToBoxAdapter(child: SponsoredBanner()),
+  1553→          SliverToBoxAdapter(child: UpcomingEvents()),
+  1554→        ],
+  1555→      ),
+  1556→    );
+  1557→  }
+  1558→}
+  1559→5.5 Offline & Caching Behavior
+  1560→Section
+  1561→Offline Behavior
+  1562→Top Carousel
+  1563→Shows last cached carousel items with timestamp warning.
+  1564→Quick Actions
+  1565→Always available (local actions).
+  1566→Happening Nearby
+  1567→Shows cached events from last 7 days, filtered to those that haven’t passed yet.
+  1568→For You
+  1569→Uses cached user vector and item embeddings; shows recommendations from cached items (still works offline).
+  1570→Trending
+  1571→Shows last cached trending data (stale after 1 day).
+  1572→Official Updates
+  1573→Shows last cached messages (Matrix room cache).
+  1574→Workspaces
+  1575→Works offline if rooms were previously synced (Matrix stores messages locally).
+  1576→Sponsored Banner
+  1577→Cached for the campaign duration.
+  1578→Upcoming Events
+  1579→Cached from local database.
+  1580→5.6 Customization & Accessibility
+  1581→Reorder sections: Drag and drop from settings → “Dashboard Layout”.
+  1582→Hide sections: Toggle visibility per section.
+  1583→Font scaling: Respects system font size (Dynamic Type for iOS, accessible scaling for Android).
+  1584→Dark mode: Full support with charcoal background and cream text.
+  1585→5.7 User Journey Example: Dashboard First Launch
+  1586→Layla (Cairo) signs up → Dashboard loads.
+  1587→Top carousel shows “Welcome to Circle – Start by creating your profile.”
+  1588→Quick Actions: She taps “New Post” and shares a photo to Lamahat.
+  1589→Happening Nearby shows “Sufi Café concert 0.8 km” – she taps “Interested”.
+  1590→For You recommends “Cairo Book Circle” because she mentioned reading in her profile (ondevice inference).
+  1591→After following the Ministry of Health’s Official Channel, an update appears: “New vaccine available at clinics.”
+  1592→Sponsored banner shows “El Sawy Cultural Centre – Friday night poetry” (citylevel ad).
+  1593→All of this happens without any personal data leaving her device, except the minimal public actions (e.g., following an Official Channel is a public Matrix event).
+  1594→5.8 Performance Metrics (Targets)
+  1595→Metric
+  1596→Value
+  1597→Dashboard load time (first launch)
+  1598→< 1.5 sec (over 4G)
+  1599→Dashboard load time (cached)
+
+[showing lines 1000-1599 of 8892; use offset=1600 with limit to continue reading]

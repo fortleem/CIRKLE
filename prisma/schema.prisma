@@ -1,0 +1,1223 @@
+// Circle (دواير) — Prisma schema
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// A Circle user. One account per human (enforced by Circle Verify).
+model User {
+  id           String   @id @default(cuid())
+  circleId     String   @unique // @layla:matrix.circle.app
+  displayName  String
+  arabicName   String?
+  avatarColor  String   @default("teal") // teal|rose|steel|gold|charcoal
+  verified     Boolean  @default(false)
+  region       String   @default("EG")
+  joinedAt     DateTime @default(now())
+  conversations ConversationMember[]
+  posts        Post[]
+  messages     Message[]
+  transactions Transaction[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+/// 1:1, group, or channel conversations (Wasl).
+model Conversation {
+  id           String   @id @default(cuid())
+  type         String   @default("direct") // direct|group|channel
+  name         String
+  arabicName   String?
+  avatarColor  String   @default("teal")
+  encrypted    Boolean  @default(true)
+  participants ConversationMember[]
+  messages     Message[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([type])
+}
+
+model ConversationMember {
+  id              String   @id @default(cuid())
+  conversationId  String
+  userId          String?
+  displayName     String
+  avatarColor     String   @default("teal")
+  initials        String
+  presence        String   @default("offline") // online|away|offline|ghost
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user            User?    @relation(fields: [userId], references: [id])
+  joinedAt        DateTime @default(now())
+
+  @@unique([conversationId, displayName])
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  senderId       String?
+  senderName     String
+  senderInitials String
+  senderColor    String   @default("teal")
+  body           String
+  status         String   @default("sent") // pending|sent|delivered|read
+  encrypted      Boolean  @default(true)
+  replyToId      String?
+  attachmentKind String?  // image|audio|file|location|payment
+  attachmentName String?
+  attachmentUrl  String?
+  attachmentMime String?
+  attachmentSize Int?
+  systemEvent    String?
+  editedAt       DateTime?
+  deletedAt      DateTime?
+  isDeleted      Boolean  @default(false)
+  forwardedFromId String?
+  isStarred      Boolean  @default(false)
+  starredAt      DateTime?
+  isPinned       Boolean  @default(false)
+  threadId       String?
+  ttlSeconds     Int?     // disappearing messages
+  expiresAt      DateTime?
+  createdAt      DateTime @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User?    @relation(fields: [senderId], references: [id])
+  reactions      Reaction[]
+
+  @@index([conversationId, createdAt])
+  @@index([conversationId, isPinned])
+  @@index([conversationId, isStarred])
+  @@index([expiresAt])
+}
+
+model Reaction {
+  id           String   @id @default(cuid())
+  messageId    String
+  userId       String?
+  displayName  String
+  emoji        String
+  createdAt    DateTime @default(now())
+  message      Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, displayName, emoji])
+  @@index([messageId])
+}
+
+/// Public posts (Midan microblog + Lamahat photos + Mashahd shares).
+model Post {
+  id           String   @id @default(cuid())
+  authorId     String?
+  authorName   String
+  authorHandle String
+  authorInitials String
+  authorColor  String   @default("teal")
+  authorVerified Boolean @default(false)
+  body         String
+  arabicBody   String?
+  module       String   @default("midan") // midan|lamahat|mashahd|circle
+  visibility   String   @default("public") // public|followers|circle|anonymous
+  location     String?
+  language     String   @default("en")
+  likes        Int      @default(0)
+  comments     Int      @default(0)
+  shares       Int      @default(0)
+  views        Int      @default(0)
+  tags         String?  // comma-separated
+  mediaKind    String?  // image|video|album|gif
+  mediaCount   Int?
+  mediaCover   String?
+  author       User?    @relation(fields: [authorId], references: [id])
+  createdAt    DateTime @default(now())
+
+  @@index([module, createdAt])
+  @@index([authorHandle])
+}
+
+/// Citizen Shield reports (zero-knowledge, tamper-evident).
+model ShieldReport {
+  id                    String   @id @default(cuid())
+  caseNumber            String   @unique
+  category              String
+  title                 String
+  description           String
+  officeName            String
+  officeRegion          String
+  privacyLevel          String   @default("protected") // identified|protected|anonymous
+  evidenceHashes        String   @default("[]") // JSON array of SHA-256 hashes
+  ipfsHashes            String   @default("[]") // JSON array of IPFS content hashes
+  status                String   @default("pending") // pending|investigating|escalated|resolved|auto-published
+  escalationLevel       Int      @default(1)
+  aiSummary             String?
+  aiRoute               String?
+  aiLocalAuthority      String?
+  aiLegalFramework      String?
+  chainOfCustody        String   @default("[]") // JSON array of chain entries
+  witnessCount          Int      @default(0)
+  deadManSwitchEnabled  Boolean  @default(false)
+  deadManLastCheckIn    DateTime?
+  deadManTimeoutMinutes Int      @default(5)
+  deadManTriggered      Boolean  @default(false)
+  ephemeralPublicKey    String? // for anonymous reports
+  encryptedEvidenceKey  String? // AES key encrypted with ephemeral key
+  // ── Civic Wave Publishing ──
+  publishToMidan        Boolean  @default(false) // post to Midan (social feed)
+  publishToMashahd      Boolean  @default(false) // post to Mashahd (video evidence)
+  publishPublicLink     Boolean  @default(false) // generate shareable public link
+  publishedPostId       String? // linked Post ID if published to Midan
+  publishedAt           DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([status])
+  @@index([category])
+  @@index([officeName])
+  @@index([publishToMidan])
+}
+
+/// Circle Verify attestations (zero-knowledge claims).
+/// Backs `src/lib/identity.ts` — HMAC-SHA256 signed, nullifier-deduped.
+model VerifyClaim {
+  id         String   @id @default(cuid())
+  userId     String?
+  userLabel  String
+  type       String   // over_18|nationality|professional|unique_human
+  label      String
+  claimValue String   @default("") // canonical claim value: "true"|"EG"|"engineer"|...
+  status     String   @default("verified") // verified|pending|revoked
+  attestor   String
+  // ZK attestation fields (HMAC-SHA256 signature + nullifier for dedup)
+  signature  String?  // HMAC-SHA256 hex of canonical claim payload
+  nullifier  String?  // hash(username + claimType) — dedup without revealing username
+  revokedAt  DateTime?
+  expiresAt  DateTime?
+  issuedAt   DateTime @default(now())
+
+  @@index([userLabel])
+  @@index([type, status])
+  @@index([nullifier])
+}
+
+/// Circle Payments ledger (non-custodial; reflects on-chain / gateway settlements).
+model Transaction {
+  id                 String   @id @default(cuid())
+  userLabel          String
+  direction          String   // in|out
+  counterparty       String
+  counterpartyInitials String
+  counterpartyColor  String   @default("teal")
+  amount             Float
+  currency           String   @default("EGP")
+  method             String   // fawry|vodafone-cash|instapay|wechat|alipay|upi|usdc|qr
+  memo               String?
+  status             String   @default("settled") // settled|pending|failed
+  fee                Float    @default(0)
+  userId             String?
+  user               User?    @relation(fields: [userId], references: [id])
+  createdAt          DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+/// Travel itineraries generated by the AI planner.
+model TravelItinerary {
+  id           String   @id @default(cuid())
+  destination  String
+  days         Int
+  startDate    String
+  travelers    Int
+  budget       String
+  interests    String   // comma-separated
+  payload      String   // JSON of days_data
+  createdAt    DateTime @default(now())
+}
+
+/// Cirkle Oracle prediction markets — LMSR automated market maker.
+model PredictionMarket {
+  id                String   @id @default(cuid())
+  question          String
+  category          String   // news|sports|politics|crypto|travel|weather|visa|social
+  resolutionDate    DateTime
+  outcomes          String   // JSON array of {id,label,shares,probability}
+  totalVolume       Float    @default(0)
+  resolved          Boolean  @default(false)
+  resolutionOutcome String?
+  liquidityParam    Float    @default(100) // LMSR b parameter
+  createdAt         DateTime @default(now())
+  createdBy         String
+  bets              PredictionBet[]
+
+  @@index([category, resolved])
+  @@index([resolutionDate])
+}
+
+/// A bet placed on a PredictionMarket outcome.
+model PredictionBet {
+  id        String   @id @default(cuid())
+  marketId  String
+  market    PredictionMarket @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  username  String
+  outcomeId String
+  shares    Float
+  amount    Float
+  currency  String   @default("EGP")
+  createdAt DateTime @default(now())
+
+  @@index([marketId, createdAt])
+  @@index([username])
+}
+
+
+model App {
+  id            String   @id @default(cuid())
+  appId         String   @unique
+  name          String
+  description   String
+  developer     String
+  websiteUrl    String?
+  logoEmoji     String   @default("🔌")
+  category      String   @default("general")
+  status        String   @default("active")
+  scopes        String   @default("feed:read")
+  redirectUris  String   @default("")
+  webhookUrl    String?
+  webhookSecret String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  apiKeys       ApiKey[]
+  connections   AppConnection[]
+  events        WebhookEvent[]
+  @@index([status, category])
+}
+
+model ApiKey {
+  id          String   @id @default(cuid())
+  keyId       String   @unique
+  keyHash     String   @unique
+  appId       String
+  name        String   @default("Default")
+  tier        String   @default("free")
+  scopes      String   @default("feed:read")
+  status      String   @default("active")
+  lastUsedAt  DateTime?
+  requestCount Int     @default(0)
+  rateLimitPerMin Int  @default(60)
+  createdAt   DateTime @default(now())
+  app         App      @relation(fields: [appId], references: [id], onDelete: Cascade)
+  @@index([appId, status])
+}
+
+model AppConnection {
+  id          String   @id @default(cuid())
+  appId       String
+  userLabel   String
+  scopes      String
+  status      String   @default("active")
+  authCode    String?
+  accessToken String?  @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  app         App      @relation(fields: [appId], references: [id], onDelete: Cascade)
+  @@unique([appId, userLabel])
+}
+
+model WebhookEvent {
+  id          String   @id @default(cuid())
+  appId       String
+  eventType   String
+  payload     String
+  status      String   @default("pending")
+  attempts    Int      @default(0)
+  createdAt   DateTime @default(now())
+  app         App      @relation(fields: [appId], references: [id], onDelete: Cascade)
+  @@index([appId, status])
+}
+
+/// VoIP / Video call session log (Cirkle Call).
+/// WebRTC signaling flows through the chat-service socket.io (port 3003) —
+/// SDP/ICE candidates are NEVER persisted to the database.
+model CallSession {
+  id        String   @id @default(cuid())
+  caller    String
+  callee    String
+  type      String   // "voice" | "video"
+  status    String   @default("ringing") // ringing | accepted | rejected | ended | missed
+  startedAt DateTime?
+  endedAt   DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([caller, createdAt])
+  @@index([callee, createdAt])
+  @@index([status])
+}
+
+/// Data Subject Request intake (GDPR Article 15–21 / PDPL / CCPA).
+model DataSubjectRequest {
+  id        String   @id @default(cuid())
+  username  String
+  type      String   // access | correction | deletion | portability | objection
+  details   String?
+  status    String   @default("pending") // pending | in_progress | fulfilled | rejected
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([username])
+  @@index([status])
+}
+
+/// Creator monetization profile. One per username.
+model CreatorProfile {
+  id              String   @id @default(cuid())
+  username        String   @unique
+  verified        Boolean  @default(false)
+  monetized       Boolean  @default(false)
+  tier            String   @default("bronze") // bronze | silver | gold | platinum
+  totalEarnings   Float    @default(0)
+  totalSupporters Int      @default(0)
+  payoutMethod    String?  // "cirkle_pay" | "bank" | "crypto"
+  payoutDetails   String?  // opaque JSON blob (treated as encrypted at rest)
+  // Optional support tier amounts (one-off Commit micropayments).
+  basicAmount     Float    @default(5)
+  premiumAmount   Float    @default(20)
+  vipAmount       Float    @default(100)
+  currency        String   @default("SAR")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+/// One-off support (Commit micropayment) from a supporter to a creator.
+model CreatorSupport {
+  id        String   @id @default(cuid())
+  creator   String   // username
+  supporter String   // username
+  amount    Float
+  currency  String
+  message   String?
+  createdAt DateTime @default(now())
+
+  @@index([creator, createdAt])
+  @@index([supporter])
+}
+
+/// Recurring monthly subscription from a subscriber to a creator.
+model Subscription {
+  id         String   @id @default(cuid())
+  creator    String   // username
+  subscriber String   // username
+  tier       String   @default("basic") // basic | premium | vip
+  amount     Float    // monthly
+  currency   String
+  status     String   @default("active") // active | cancelled | expired
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([creator, subscriber])
+  @@index([subscriber, status])
+}
+
+/// Directed follow edge in the social graph.
+model Follow {
+  id        String   @id @default(cuid())
+  follower  String   // username
+  following String   // username
+  createdAt DateTime @default(now())
+
+  @@unique([follower, following])
+  @@index([following])
+}
+
+/// Per-user per-post interaction record. Powers the algorithmic feed.
+model PostInteraction {
+  id        String   @id @default(cuid())
+  username  String
+  postId    String
+  type      String   // "view" | "like" | "comment" | "share" | "dwell"
+  dwellMs   Int?     // for dwell tracking
+  createdAt DateTime @default(now())
+
+  @@unique([username, postId, type])
+  @@index([username, createdAt])
+  @@index([postId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Professional Network (Blueprint §14) — LinkedIn replacement.
+// Job postings, applications, profiles, skill endorsements, salary insights.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// A job posting (full-time | part-time | contract | internship).
+model JobPosting {
+  id           String   @id @default(cuid())
+  title        String
+  company      String
+  location     String
+  country      String
+  type         String   // full-time | part-time | contract | internship
+  salaryMin    Float?
+  salaryMax    Float?
+  currency     String?
+  description  String
+  requirements String
+  postedBy     String
+  createdAt    DateTime @default(now())
+  applications JobApplication[]
+
+  @@index([country, createdAt])
+  @@index([type, createdAt])
+  @@index([postedBy])
+}
+
+/// An application to a JobPosting.
+model JobApplication {
+  id          String   @id @default(cuid())
+  jobId       String
+  job         JobPosting @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  username    String
+  coverLetter String?
+  status      String   @default("pending") // pending | reviewed | accepted | rejected
+  createdAt   DateTime @default(now())
+
+  @@unique([jobId, username])
+  @@index([username, createdAt])
+}
+
+/// A professional profile (one per username). skills/experience/education
+/// are stored as JSON-encoded arrays (Prisma SQLite has no native list type).
+model ProProfile {
+  username     String   @id
+  headline     String?
+  summary      String?
+  skills       String   // JSON array of strings
+  experience   String   // JSON array of {role, company, start, end, description}
+  education    String   // JSON array of {school, degree, start, end}
+  availability String   @default("open") // open | looking | closed
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+/// A skill endorsement (target user + skill + endorsing user).
+model Endorsement {
+  id        String   @id @default(cuid())
+  target    String   // username being endorsed
+  skill     String
+  endorser  String   // username giving the endorsement
+  createdAt DateTime @default(now())
+
+  @@unique([target, skill, endorser])
+  @@index([target])
+  @@index([skill])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Circle Mail (Blueprint §20) — @cirkle.app email client.
+// Internal-only mail (username → username). AI triage via /api/ai/summarize.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// A mail message between two Cirkle users (internal @cirkle.app addresses).
+model MailMessage {
+  id           String   @id @default(cuid())
+  toUsername   String
+  fromUsername String
+  fromEmail    String
+  subject      String
+  body         String
+  read         Boolean  @default(false)
+  starred      Boolean  @default(false)
+  folder       String   @default("inbox") // inbox | sent | draft | trash
+  createdAt    DateTime @default(now())
+
+  @@index([toUsername, folder])
+  @@index([fromUsername, folder])
+  @@index([starred])
+}
+
+/// Polls & Quizzes — Blueprint §9.3, §10.5.2.
+/// `options` is a JSON array of `{ id, text }`. Voting is one-vote-per-user
+/// (enforced by the `@@unique([pollId, username])` on `PollVote`).
+model Poll {
+  id        String   @id @default(cuid())
+  question  String
+  options   String   // JSON array of { id, text }
+  createdBy String
+  duration  Int      // seconds
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  postId    String?
+  votes     PollVote[]
+
+  @@index([createdBy])
+  @@index([expiresAt])
+}
+
+model PollVote {
+  id        String   @id @default(cuid())
+  pollId    String
+  poll      Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  username  String
+  optionId  String
+  votedAt   DateTime @default(now())
+
+  @@unique([pollId, username])
+  @@index([pollId, optionId])
+}
+
+/// Bullet Comments / Danmaku — Blueprint §26.10.
+/// Bilibili-style scrolling comments overlaid on video. `timestamp` is the
+/// video position (seconds) at which the bullet should appear.
+model BulletComment {
+  id        String   @id @default(cuid())
+  postId    String
+  username  String
+  text      String
+  color     String   @default("white")
+  timestamp Float    // video timestamp in seconds
+  createdAt DateTime @default(now())
+
+  @@index([postId, timestamp])
+}
+
+/// Family Vault — Blueprint §26.6.
+/// `members` is a JSON array of usernames. Each `VaultItem` is encrypted on
+/// the client with a key derived from the family passphrase before upload —
+/// the server never sees the plaintext.
+model FamilyVault {
+  id        String   @id @default(cuid())
+  name      String
+  members   String   // JSON array of usernames
+  createdBy String
+  createdAt DateTime @default(now())
+
+  @@index([createdBy])
+}
+
+model VaultItem {
+  id            String   @id @default(cuid())
+  familyId      String
+  type          String   // photo | video | document | note
+  title         String
+  encryptedData String   // AES-256 encrypted (key derived from family passphrase)
+  uploadedBy    String
+  createdAt     DateTime @default(now())
+
+  @@index([familyId])
+}
+
+/// Decentralised Ticketing — Blueprint §26.7.
+/// Ed25519-signed offline event tickets. The `signature` is the Ed25519
+/// signature over the canonical ticket payload — verifiable offline by
+/// anyone holding the issuer's public key.
+model EventTicket {
+  id        String   @id @default(cuid())
+  eventName String
+  eventDate DateTime
+  venue     String
+  seat      String
+  holder    String
+  price     Float
+  currency  String
+  signature String
+  issuer    String
+  createdAt DateTime @default(now())
+
+  @@index([holder])
+}
+
+/// ───────────────────────────────────────────────────────────────────────────
+/// Local Ads Server — Blueprint §7.3.1, §30.
+/// Non-targeted local ads paid via corporate invoice. This is Cirkle's only
+/// revenue model. NO user profiling — only country + city + category are
+/// used to select an ad, in compliance with the privacy-first blueprint.
+/// ───────────────────────────────────────────────────────────────────────────
+model AdCampaign {
+  id            String   @id @default(cuid())
+  advertiser    String
+  title         String
+  body          String
+  cta           String
+  url           String
+  targetCountry String
+  targetCity    String?
+  category      String   // news | sports | tech | education | retail | food | travel
+  budget        Float
+  spent         Float    @default(0)
+  impressions   Int      @default(0)
+  clicks        Int      @default(0)
+  cpm           Float    // cost per mille (per 1,000 impressions)
+  startDate     DateTime
+  endDate       DateTime
+  status        String   @default("active") // active | paused | ended | exhausted
+  createdAt     DateTime @default(now())
+
+  @@index([advertiser])
+  @@index([targetCountry, category, status])
+  @@index([status, startDate, endDate])
+}
+
+model AdInvoice {
+  id         String    @id @default(cuid())
+  advertiser String
+  amount     Float
+  currency   String
+  status     String    @default("pending") // pending | paid | overdue
+  campaigns  String    // JSON array of campaign IDs
+  createdAt  DateTime  @default(now())
+  paidAt     DateTime?
+
+  @@index([advertiser, status])
+}
+
+/// ───────────────────────────────────────────────────────────────────────────
+/// Educational Workspaces — Blueprint §12.
+/// Free for schools, K-12, universities. Teachers create classes, post
+/// assignments, grade submissions, and mark attendance. Students submit
+/// work and view their grades + attendance.
+/// ───────────────────────────────────────────────────────────────────────────
+model EduClass {
+  id          String   @id @default(cuid())
+  name        String
+  institution String
+  teacher     String
+  students    String   // JSON array of usernames
+  createdAt   DateTime @default(now())
+
+  @@index([teacher])
+}
+
+model Assignment {
+  id          String   @id @default(cuid())
+  classId     String
+  title       String
+  description String
+  dueDate     DateTime
+  createdBy   String
+  createdAt   DateTime @default(now())
+  submissions Submission[]
+
+  @@index([classId, dueDate])
+  @@index([createdBy])
+}
+
+model Submission {
+  id              String   @id @default(cuid())
+  assignmentId    String
+  assignment      Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  studentUsername String
+  content         String
+  grade           Float?
+  feedback        String?
+  submittedAt     DateTime @default(now())
+
+  @@unique([assignmentId, studentUsername])
+  @@index([studentUsername])
+}
+
+model AttendanceRecord {
+  id              String   @id @default(cuid())
+  classId         String
+  studentUsername String
+  date            DateTime
+  status          String   // present | absent | late | excused
+  recordedBy      String
+  createdAt       DateTime @default(now())
+
+  @@unique([classId, studentUsername, date])
+  @@index([classId, date])
+}
+
+/// ───────────────────────────────────────────────────────────────────────────
+/// Knowledge Wiki — Blueprint §10.5.5, §26.4.
+/// IPFS-backed Markdown wikis inside any Circle. Each page is versioned —
+/// updates create a new WikiPageVersion row so the full history is
+/// preserved and diffs are queryable.
+/// ───────────────────────────────────────────────────────────────────────────
+model WikiPage {
+  id        String   @id @default(cuid())
+  circleId  String
+  slug      String
+  title     String
+  content   String   // Markdown
+  author    String
+  version   Int      @default(1)
+  ipfsHash  String?  // optional IPFS content hash (blueprint §26.4)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([circleId, slug])
+  @@index([circleId, updatedAt])
+  versions WikiPageVersion[]
+}
+
+model WikiPageVersion {
+  id        String   @id @default(cuid())
+  pageId    String
+  page      WikiPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  version   Int
+  title     String
+  content   String
+  author    String
+  ipfsHash  String?
+  createdAt DateTime @default(now())
+
+  @@unique([pageId, version])
+  @@index([pageId, version])
+}
+
+/// In-app feedback submitted from overlay headers (R10).
+model Feedback {
+  id        String   @id @default(cuid())
+  overlay   String
+  message   String
+  username  String?
+  createdAt DateTime @default(now())
+
+  @@index([overlay, createdAt])
+}
+
+
+// ============================================================
+
+// ============================================================
+// CIRKLE Brain AI — Phase Persistence Models (Upgrade 1)
+// ============================================================
+
+/// LIEE: AI feedback signals for continuous learning.
+model AIFeedback {
+  id              String   @id @default(cuid())
+  feedbackId      String   @unique
+  pipeline        String   // explicit | implicit | behavioral | operational | execution | satisfaction
+  sourcePhase     String   // gcie | pmb | crie | irde | uob | tee | liee | cie | user
+  userId          String?
+  targetEntityId  String?
+  targetType      String   // recommendation | capability | plan | step | workflow | search | provider
+  valence         String   // positive | negative | neutral
+  normalizedScore Float    @default(0.5)
+  raw             Json?
+  consentGranted  Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  @@index([pipeline, createdAt])
+  @@index([sourcePhase, createdAt])
+  @@index([userId, createdAt])
+}
+
+/// TGSE: Immutable audit records (cryptographically chained).
+model AuditRecord {
+  id            String   @id @default(cuid())
+  auditId       String   @unique
+  timestamp     DateTime @default(now())
+  eventType     String   // governance-decision | policy-evaluated | etc.
+  target        String   // crie | irde | uob | tee | liee | cie
+  decision      String?  // approve | deny | require-approval | warn | defer
+  description   String
+  data          Json?
+  hash          String
+  previousHash  String?
+
+  @@index([eventType, timestamp])
+  @@index([target, timestamp])
+}
+
+/// TGSE: Governance decisions.
+model GovernanceDecision {
+  id                    String   @id @default(cuid())
+  decisionId            String   @unique
+  target                String
+  decision              String   // approve | deny | require-approval | warn | defer
+  timestamp             DateTime @default(now())
+  policiesEvaluated     Json?
+  permissionsChecked    Json?
+  risksIdentified       Json?
+  requiresHumanApproval Boolean  @default(false)
+  approvalRequestId     String?
+  explanationSummary    String
+  explanationPolicy     Json?
+  explanationPermission Json?
+  explanationRisk       Json?
+  explanationApproval   Json?
+  confidence            Float    @default(0.5)
+  actionContext         Json?
+
+  @@index([target, timestamp])
+  @@index([decision, timestamp])
+}
+
+/// TGSE: Human approval requests.
+model ApprovalRequest {
+  id                  String    @id @default(cuid())
+  requestId           String    @unique
+  trigger             String    // high-value-payment | government-submission | etc.
+  target              String
+  actionContext       Json?
+  requiredApproverRole String
+  status              String    @default("pending") // pending | approved | rejected | expired | escalated
+  approver            String?
+  decidedAt           DateTime?
+  notes               String?
+  createdAt           DateTime  @default(now())
+  expiresAt           DateTime?
+  escalationChain     Json?
+
+  @@index([status, createdAt])
+  @@index([target, createdAt])
+}
+
+/// TEE: Execution records.
+model ExecutionRecord {
+  id              String   @id @default(cuid())
+  executionId     String   @unique
+  planId          String
+  state           String   // pending | running | completed | failed | cancelled | timed-out
+  startedAt       DateTime @default(now())
+  completedAt     DateTime?
+  totalDurationMs Int      @default(0)
+  stepsJson       Json?    // steps array
+  telemetryJson   Json?    // telemetry
+  outputsJson     Json?    // outputs
+  auditTrailJson  Json?    // audit trail
+  dryRun          Boolean  @default(true)
+  summary         String   @default("")
+  errorsJson      Json?
+  userId          String?
+
+  @@index([planId, startedAt])
+  @@index([state, startedAt])
+  @@index([userId, startedAt])
+}
+
+/// AHG: Account problems.
+model AccountProblem {
+  id              String    @id @default(cuid())
+  problemId       String    @unique
+  type            String    // payment-failed | account-locked | etc.
+  severity        String    // low | medium | high | critical
+  status          String    @default("detected")
+  userId          String
+  description     String
+  rootCauseJson   Json?
+  proposedFixesJson Json?
+  consentJson     Json?
+  executionResultJson Json?
+  resolvedAt      DateTime?
+  metadataJson    Json?
+  detectedAt      DateTime  @default(now())
+
+  @@index([userId, detectedAt])
+  @@index([status, detectedAt])
+  @@index([type, detectedAt])
+}
+
+/// Upgrade 9: AI response cache.
+model AIResponseCache {
+  id        String   @id @default(cuid())
+  cacheKey  String   @unique
+  query     String
+  response  Json
+  provider  String
+  confidence Float
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([cacheKey, expiresAt])
+  @@index([expiresAt])
+}
+
+/// Upgrade 11: Multi-tenant enterprise isolation.
+model Tenant {
+  id          String   @id @default(cuid())
+  tenantId    String   @unique
+  name        String
+  plan        String   @default("free") // free | pro | enterprise
+  createdAt   DateTime @default(now())
+  settings    Json?
+
+  @@index([tenantId])
+}
+
+model TenantMember {
+  id        String   @id @default(cuid())
+  tenantId  String
+  userId    String
+  role      String   @default("member") // admin | member | viewer
+  createdAt DateTime @default(now())
+
+  @@unique([tenantId, userId])
+  @@index([tenantId])
+}
+
+/// Upgrade 12: Push notification tokens.
+model PushToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String
+  platform  String   // ios | android | web
+  createdAt DateTime @default(now())
+  active    Boolean  @default(true)
+
+  @@index([userId, active])
+}
+
+// ── Phase 7.5: Autonomous Intelligence & Knowledge Engine (AIKE) ────────────
+
+/// Knowledge graph nodes — the central intelligence memory.
+model AikeKnowledgeNode {
+  id            String   @id @default(cuid())
+  nodeId        String   @unique
+  type          String   // user | place | business | product | hotel | flight | ...
+  name          String
+  properties    Json
+  trustScore    Float    @default(50)
+  confidence    Float    @default(0.5)
+  discoveredAt  DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  sourceIds     String   @default("[]")
+  tags          String   @default("[]")
+
+  @@index([type])
+  @@index([name])
+}
+
+/// Knowledge graph edges — relationships between nodes.
+model AikeKnowledgeEdge {
+  id              String   @id @default(cuid())
+  edgeId          String   @unique
+  fromNodeId      String
+  toNodeId        String
+  type            String   // visited | liked | purchased | works_at | located_in | ...
+  weight          Float    @default(0.5)
+  properties      Json
+  firstObservedAt DateTime @default(now())
+  lastObservedAt  DateTime @updatedAt
+  observationCount Int     @default(1)
+
+  @@index([fromNodeId])
+  @@index([toNodeId])
+  @@index([type])
+}
+
+/// Validated knowledge facts with confidence + trust scoring.
+model AikeKnowledgeFact {
+  id               String   @id @default(cuid())
+  factId           String   @unique
+  statement        String
+  domain           String
+  value            Json
+  sources          Json     // KnowledgeSourceRef[]
+  confidence       Float    @default(0.5)
+  trustScore       Float    @default(50)
+  verificationCount Int     @default(0)
+  contradictions   String   @default("[]")
+  lastCheckedAt    DateTime @default(now())
+  expiresAt        DateTime
+  status           String   @default("unvalidated") // validated | unvalidated | contradicted | expired | deprecated
+
+  @@index([domain])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+/// Detected knowledge gaps that need research.
+model AikeKnowledgeGap {
+  id                String   @id @default(cuid())
+  gapId             String   @unique
+  domain            String
+  description       String
+  triggerQuery      String?
+  encounterCount    Int      @default(1)
+  firstEncounteredAt DateTime @default(now())
+  lastEncounteredAt  DateTime @updatedAt
+  priority          Float    @default(0.5)
+  researchScheduled Boolean  @default(false)
+  status            String   @default("open") // open | researching | resolved | unresolvable
+
+  @@index([domain, status])
+  @@index([priority])
+}
+
+/// Autonomous research tasks scheduled by the research scheduler.
+model AikeResearchTask {
+  id            String   @id @default(cuid())
+  taskId        String   @unique
+  gapId         String?
+  query         String
+  domain        String
+  priority      String   @default("medium") // critical | high | medium | low | background
+  targetSources String   @default("[]")
+  status        String   @default("pending") // pending | in_progress | completed | failed | cancelled
+  scheduledFor  DateTime
+  startedAt     DateTime?
+  completedAt   DateTime?
+  results       Json?
+  error         String?
+  retryCount    Int      @default(0)
+
+  @@index([status, scheduledFor])
+  @@index([priority])
+}
+
+/// Continuously-updated world state entries.
+model AikeWorldStateEntry {
+  id                String   @id @default(cuid())
+  entryId           String   @unique
+  metric            String   // weather | traffic | currency | fuel_prices | ...
+  scope             String   // country code, city, or "global"
+  value             Json
+  source            String
+  refreshedAt       DateTime @default(now())
+  expiresAt         DateTime
+  refreshIntervalMs BigInt
+  active            Boolean  @default(true)
+
+  @@index([metric, scope, active])
+  @@index([expiresAt])
+}
+
+/// Platform events ingested by the Event Learning Engine.
+model AikePlatformEvent {
+  id             String   @id @default(cuid())
+  eventId        String   @unique
+  category       String   // travel | restaurant | payment | messaging | feed | ...
+  type           String   // Travel.Booked | Payment.Completed | ...
+  timestamp      DateTime @default(now())
+  userId         String?
+  entityIds      String   @default("[]")
+  payload        Json
+  consentGranted Boolean  @default(true)
+  sessionId      String?
+
+  @@index([category, timestamp])
+  @@index([userId, timestamp])
+  @@index([sessionId])
+}
+
+/// User journey patterns learned by Experience Replay.
+model AikeUserJourney {
+  id              String   @id @default(cuid())
+  journeyId       String   @unique
+  userId          String?
+  steps           Json     // JourneyStep[]
+  outcome         String   // success | failure | abandoned | in_progress
+  totalDurationMs BigInt
+  startedAt       DateTime @default(now())
+  endedAt         DateTime?
+  category        String   // travel_booking | restaurant_discovery | ...
+  confidence      Float    @default(0.5)
+
+  @@index([userId, category])
+  @@index([outcome])
+}
+
+/// Predictions generated by the Prediction Engine.
+model AikePrediction {
+  id           String   @id @default(cuid())
+  predictionId String   @unique
+  userId       String?
+  type         String   // next_destination | next_restaurant | next_payment | ...
+  predicted    Json
+  confidence   Float    @default(0.5)
+  timeHorizon  String
+  reasoning    String
+  evidence     String   @default("[]")
+  createdAt    DateTime @default(now())
+  fulfilledAt  DateTime?
+  correct      Boolean?
+
+  @@index([userId, type])
+  @@index([createdAt])
+}
+
+/// Domain-specific learned knowledge (one per domain trainer).
+model AikeDomainKnowledge {
+  id               String   @id @default(cuid())
+  domain           String   @unique // travel | payments | messaging | feed | ...
+  facts            Json
+  patterns         Json
+  recommendationModel Json
+  predictionModel  Json
+  ranking          Json
+  confidence       Float    @default(0.5)
+  lastTrainedAt    DateTime @default(now())
+  freshness        Float    @default(1.0)
+
+  @@index([domain])
+}
+
+/// Training pipeline run results (nightly training history).
+model AikeTrainingRun {
+  id                   String   @id @default(cuid())
+  runId                String   @unique
+  startedAt            DateTime @default(now())
+  completedAt          DateTime?
+  durationMs           BigInt   @default(0)
+  eventsProcessed      Int      @default(0)
+  journeysRecognized   Int      @default(0)
+  factsUpdated         Int      @default(0)
+  gapsDetected         Int      @default(0)
+  researchTasksCreated Int      @default(0)
+  predictionsGenerated Int      @default(0)
+  modelsEvaluated      Int      @default(0)
+  improvementsPublished Int     @default(0)
+  errors               String   @default("[]")
+  status               String   @default("in_progress") // success | partial | failed | in_progress
+
+  @@index([startedAt])
+  @@index([status])
+}
+
+/// AI provider performance metrics (provider learning).
+model AikeProviderMetrics {
+  id             String   @id @default(cuid())
+  provider       String   @unique // groq | openrouter | gemini | openai | huggingface
+  accuracy       Float    @default(0.5)
+  avgLatencyMs   Float    @default(0)
+  costPer1k      Float    @default(0)
+  arabicQuality  Float    @default(0.5)
+  reasoningScore Float    @default(0.5)
+  codeScore      Float    @default(0.5)
+  visionScore    Float    @default(0.5)
+  reliability    Float    @default(0.5)
+  availability   Float    @default(0.5)
+  totalCalls     Int      @default(0)
+  updatedAt      DateTime @updatedAt
+}
+
+/// Discovered capabilities (capability learning).
+model AikeDiscoveredCapability {
+  id                    String   @id @default(cuid())
+  discoveryId           String   @unique
+  capabilityId          String
+  type                  String   // api | model | plugin | government_integration | ...
+  description           String
+  provider              String
+  coverage              String   @default("[]")
+  integrationDifficulty Float    @default(0.5)
+  estimatedValue        Float    @default(0.5)
+  trustScore            Float    @default(50)
+  status                String   @default("discovered") // discovered | evaluating | approved | rejected | integrated
+  discoveredAt          DateTime @default(now())
+
+  @@index([type, status])
+  @@index([estimatedValue])
+}
+
+/// Model evaluation history.
+model AikeModelEvaluation {
+  id            String   @id @default(cuid())
+  evaluationId  String   @unique
+  modelName     String
+  accuracy      Float
+  precision     Float
+  recall        Float
+  f1Score       Float
+  latencyMs     Float
+  sampleSize    Int
+  evaluatedAt   DateTime @default(now())
+  recommendation String  // deploy | rollback | monitor | retrain
+
+  @@index([modelName, evaluatedAt])
+}

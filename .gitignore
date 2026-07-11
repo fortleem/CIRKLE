@@ -1,0 +1,10 @@
+*.log
+.DS_Store
+.next/
+.tool-results/
+.zscripts/
+backups/
+node_modules/
+tool-results/
+tsconfig.tsbuildinfo
+.env

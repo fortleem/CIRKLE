@@ -1,0 +1,2 @@
+import type { MetadataRoute } from "next";
+export default function manifest(): MetadataRoute.Manifest { return { name: "Cirkle — A New Social Operating System", short_name: "Cirkle", description: "Cirkle (دواير) — a luxurious AI-native super app.", start_url: "/", display: "standalone", background_color: "#0a0a0a", theme_color: "#1A4A5A", icons: [{ src: "/favicon.ico", sizes: "any", type: "image/x-icon" }] }; }
