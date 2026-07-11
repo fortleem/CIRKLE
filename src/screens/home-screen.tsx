@@ -1067,9 +1067,9 @@ export function HomeScreen() {
   }, [currentList, isSearching, searchQuery]);
 
   return (
-    <div className="space-y-8 pb-32 xl:grid xl:grid-cols-[1fr_420px] xl:gap-6 xl:space-y-0">
-      {/* Left column (main feed) — XL: wide, default: full width */}
-      <div className="space-y-8 xl:pb-32">
+    <div className="space-y-8 pb-32 xl:grid xl:grid-cols-[420px_1fr] xl:gap-6 xl:space-y-0">
+      {/* Main feed column — XL: wide (now on RIGHT), default: full width */}
+      <div className="space-y-8 xl:pb-32 xl:order-2 order-1">
       {/* Greeting + mesh + region selector */}
       <section className="px-6 pt-2 flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -1532,10 +1532,10 @@ export function HomeScreen() {
         </button>
       </section>
 
-      </div>{/* End left column */}
+      </div>{/* End main feed column (now on right) */}
 
-      {/* Right column (sidebar) — Today's Cirkle + News + Official Channels + Live Spaces */}
-      <div className="space-y-8 xl:pb-32">
+      {/* Sidebar column — Today's Cirkle + News + Official Channels + Live Spaces (now on LEFT) */}
+      <div className="space-y-8 xl:pb-32 xl:order-1 order-2">
 
       {/* R10: Today's Cirkle — AI-generated 5-bullet summary of everything today */}
       <section className="px-6">
@@ -2168,7 +2168,7 @@ export function HomeScreen() {
         </div>
       )}
 
-      </div>{/* End right column */}
+      </div>{/* End sidebar column (now on left) */}
     </div>
   );
 }
