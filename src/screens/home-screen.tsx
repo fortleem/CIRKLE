@@ -1070,21 +1070,44 @@ export function HomeScreen() {
     <div className="space-y-8 pb-32 xl:grid xl:grid-cols-[420px_1fr] xl:gap-6 xl:space-y-0">
       {/* Main feed column — XL: wide (now on RIGHT), default: full width */}
       <div className="space-y-8 xl:pb-32 xl:order-2 order-1">
-      {/* Greeting + mesh + region selector */}
+      {/* Greeting + mesh + region selector — Super-upgraded with profile avatar */}
       <section className="px-6 pt-2 flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <motion.h1 initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="font-display text-3xl sm:text-4xl leading-tight">
-            {greeting()}, <span className="gradient-text-gold">{firstName}</span>
-          </motion.h1>
+        {/* Profile avatar + greeting */}
+        <div className="flex items-center gap-3 min-w-0">
           <button
-            onClick={() => setPickerOpen((v) => !v)}
-            className="text-muted-foreground text-sm mt-1 flex items-center gap-1 hover:text-foreground transition"
+            onClick={() => window.dispatchEvent(new CustomEvent("circle:navigate", { detail: { tab: "profile" } }))}
+            className="relative shrink-0 group"
           >
-            <MapPin className="w-3.5 h-3.5" />
-            {cInfo.flag} {effectiveCity} ·{" "}
-            {weather ? `${weather.tempC}°C · ${weather.condition} ${weather.icon}` : "Loading weather…"}
-            <ChevronDown className="w-3 h-3" />
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-secondary/40 to-accent/20 border-2 border-secondary/40 flex items-center justify-center text-lg font-display text-secondary group-hover:scale-105 transition">
+              {firstName[0]}
+            </div>
+            <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-green-500 border-2 border-background" />
           </button>
+          <div className="min-w-0">
+            <motion.h1 initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="font-display text-2xl sm:text-3xl leading-tight">
+              {greeting()}, <span className="gradient-text-gold">{firstName}</span>
+            </motion.h1>
+            <button
+              onClick={() => setPickerOpen((v) => !v)}
+              className="text-muted-foreground text-xs mt-0.5 flex items-center gap-1 hover:text-foreground transition"
+            >
+              <MapPin className="w-3 h-3" />
+              {cInfo.flag} {effectiveCity}
+              {weather && <span className="text-secondary">· {weather.tempC}°C {weather.icon}</span>}
+              <ChevronDown className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
+        {/* Quick stats badge */}
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent("circle:ai"))}
+            className="w-10 h-10 rounded-full glass-strong border border-secondary/30 flex items-center justify-center hover:scale-105 transition shadow-soft"
+            title="Ask Cirkle Brain AI"
+          >
+            <Sparkles className="w-4 h-4 text-secondary" />
+          </button>
+        </div>
 
           {pickerOpen && (
             <motion.div
@@ -1115,7 +1138,6 @@ export function HomeScreen() {
               </select>
             </motion.div>
           )}
-        </div>
         <div className="flex flex-col items-end gap-2">
           <MeshBadge label={t.mesh} />
           {/* Cirkle Brain AI status indicator */}
@@ -1328,52 +1350,152 @@ export function HomeScreen() {
       {/* R6: For You — AI-personalized feed from Midan (Facebook News Feed equivalent) */}
       <section id="sec-foryou" className="px-6">
         <SectionHeader icon={Heart} title="For You" inline brain />
+
+        {/* ── Super Upgrade: "What's on your mind?" composer (Facebook-style) ── */}
+        <div className="glass-strong rounded-2xl p-4 mt-3 border border-border/40 shadow-soft">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-secondary/40 to-accent/20 border border-secondary/30 flex items-center justify-center text-sm font-medium text-secondary shrink-0">
+              {firstName[0]}
+            </div>
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent("circle:composer", { detail: { kind: "post" } }))}
+              className="flex-1 text-start text-sm text-muted-foreground bg-muted/30 hover:bg-muted/50 rounded-full px-4 py-2.5 transition border border-border/40"
+            >
+              What's on your mind, {firstName}?
+            </button>
+          </div>
+          <div className="flex items-center gap-1 mt-3 pt-3 border-t border-border/30">
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent("circle:composer", { detail: { kind: "post" } }))}
+              className="flex-1 flex items-center justify-center gap-1.5 text-xs text-foreground/70 hover:bg-muted/40 rounded-lg py-2 transition"
+            >
+              <Plus className="w-4 h-4 text-secondary" /> Post
+            </button>
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent("circle:composer", { detail: { kind: "post", media: "image" } }))}
+              className="flex-1 flex items-center justify-center gap-1.5 text-xs text-foreground/70 hover:bg-muted/40 rounded-lg py-2 transition"
+            >
+              <Aperture className="w-4 h-4 text-accent" /> Photo
+            </button>
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent("circle:composer", { detail: { kind: "post", media: "video" } }))}
+              className="flex-1 flex items-center justify-center gap-1.5 text-xs text-foreground/70 hover:bg-muted/40 rounded-lg py-2 transition"
+            >
+              <Clapperboard className="w-4 h-4 text-primary" /> Video
+            </button>
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent("circle:ai"))}
+              className="flex-1 flex items-center justify-center gap-1.5 text-xs text-foreground/70 hover:bg-muted/40 rounded-lg py-2 transition"
+            >
+              <Sparkles className="w-4 h-4 text-secondary" /> AI
+            </button>
+          </div>
+        </div>
+
+        {/* ── Super Upgrade: Trending Now (Twitter-style) ── */}
+        {trending.length > 0 && (
+          <div className="mt-3">
+            <div className="flex items-center gap-2 mb-2">
+              <TrendingUp className="w-4 h-4 text-secondary" />
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Trending in {city || cInfo.capital}</span>
+            </div>
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+              {trending.slice(0, 8).map((t, i) => (
+                <button
+                  key={i}
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent("circle:ai", { detail: { query: `Tell me about ${t.tag}` } }));
+                  }}
+                  className="shrink-0 glass rounded-full px-3 py-1.5 flex items-center gap-1.5 hover:scale-[1.03] hover:border-secondary/40 border border-transparent transition"
+                >
+                  <span className="text-[10px] text-muted-foreground">#{i + 1}</span>
+                  <span className="text-xs font-medium">{t.tag}</span>
+                  <span className="text-[10px] text-secondary">{t.count}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {forYou.length > 0 ? (
-          <div className="space-y-3 mt-3">
+          <div className="space-y-4 mt-4">
             {forYou.slice(0, 8).map((p, i) => (
               <motion.div
                 key={p.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className="glass rounded-2xl p-4 border border-border/40"
+                className="glass-strong rounded-2xl border border-border/40 overflow-hidden shadow-soft hover:shadow-float transition-shadow"
               >
-                <div className="flex items-center gap-2.5 mb-2">
-                  <div className="w-8 h-8 rounded-full bg-gradient-mesh flex items-center justify-center text-xs font-medium text-foreground/80 shrink-0">
-                    {p.user?.charAt(0) || "U"}
+                {/* Post header — avatar + name + time + more */}
+                <div className="flex items-center gap-3 p-4 pb-2">
+                  <div className="relative shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-secondary/40 to-accent/20 border-2 border-secondary/30 flex items-center justify-center text-sm font-medium text-secondary">
+                      {p.user?.charAt(0) || "U"}
+                    </div>
+                    {p.verified && (
+                      <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-secondary flex items-center justify-center border-2 border-background">
+                        <BadgeCheck className="w-2.5 h-2.5 text-secondary-foreground" />
+                      </div>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1">
-                      <span className="text-sm font-medium truncate">{p.user}</span>
-                      {p.verified && <BadgeCheck className="w-3.5 h-3.5 text-secondary shrink-0" />}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-semibold truncate">{p.user}</span>
+                      {p.verified && <span className="text-[9px] text-secondary font-medium">Verified</span>}
                     </div>
                     <span className="text-[10px] text-muted-foreground">{p.handle} · {p.time}</span>
                   </div>
+                  <button className="w-8 h-8 rounded-full hover:bg-muted/40 flex items-center justify-center text-muted-foreground transition shrink-0">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+                  </button>
                 </div>
-                <p className="text-sm text-foreground/90 leading-relaxed line-clamp-3 mb-2">{p.body}</p>
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                  <button onClick={() => toast.success("Liked ❤")} className="flex items-center gap-1 hover:text-accent transition">
-                    <Heart className="w-3.5 h-3.5" /> {p.likes}
+                {/* Post body */}
+                <p className="text-sm text-foreground/90 leading-relaxed px-4 pb-3 line-clamp-4">{p.body}</p>
+                {/* Post image placeholder (gradient cover) */}
+                {p.image && (
+                  <div className="relative h-48 bg-gradient-to-br from-primary/20 via-secondary/15 to-accent/20 overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-secondary/10 opacity-50" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Aperture className="w-12 h-12 text-secondary/30" />
+                    </div>
+                  </div>
+                )}
+                {/* Engagement bar — Facebook-style */}
+                <div className="flex items-center gap-1 px-4 py-2 border-t border-border/30">
+                  <button onClick={() => toast.success("Liked ❤")} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-accent hover:bg-accent/10 rounded-lg px-2.5 py-1.5 transition">
+                    <Heart className="w-4 h-4" /> <span className="font-medium">{p.likes > 999 ? `${(p.likes/1000).toFixed(1)}k` : p.likes}</span>
                   </button>
-                  <button onClick={() => toast("Comments")} className="flex items-center gap-1 hover:text-foreground transition">
-                    <MessageCircle className="w-3.5 h-3.5" /> {p.comments}
+                  <button onClick={() => toast("Comments")} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 rounded-lg px-2.5 py-1.5 transition">
+                    <MessageCircle className="w-4 h-4" /> <span className="font-medium">{p.comments}</span>
                   </button>
-                  <button onClick={() => toast("Shared")} className="flex items-center gap-1 hover:text-secondary transition">
-                    <Share2 className="w-3.5 h-3.5" /> {p.reposts}
+                  <button onClick={() => toast("Shared")} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-secondary hover:bg-secondary/10 rounded-lg px-2.5 py-1.5 transition">
+                    <Share2 className="w-4 h-4" /> <span className="font-medium">{p.reposts}</span>
                   </button>
-                  <button onClick={() => window.dispatchEvent(new CustomEvent("circle:navigate", { detail: { tab: "midan" } }))} className="ml-auto text-secondary hover:underline">
-                    View all →
+                  <button onClick={() => window.dispatchEvent(new CustomEvent("circle:navigate", { detail: { tab: "midan" } }))} className="ml-auto text-[10px] text-secondary hover:underline font-medium">
+                    View in Midan →
                   </button>
                 </div>
               </motion.div>
             ))}
           </div>
         ) : (
-          <div className="glass rounded-2xl p-6 text-center">
-            <p className="text-sm text-muted-foreground">No personalized posts yet — follow people to see their posts here.</p>
-            <button onClick={() => window.dispatchEvent(new CustomEvent("circle:navigate", { detail: { tab: "midan" } }))} className="mt-2 text-xs text-secondary hover:underline">
-              Explore Midan →
-            </button>
+          <div className="glass-strong rounded-2xl p-8 text-center border border-border/40 mt-3">
+            <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-secondary/30 to-accent/15 border border-secondary/30 flex items-center justify-center mb-3">
+              <Heart className="w-7 h-7 text-secondary" />
+            </div>
+            <h3 className="font-display text-lg mb-1">Your feed is warming up</h3>
+            <p className="text-xs text-muted-foreground max-w-xs mx-auto mb-4">
+              Follow people, join Circles, and post to see personalized content here. Cirkle Brain AI is learning your interests.
+            </p>
+            <div className="flex items-center justify-center gap-2">
+              <button onClick={() => window.dispatchEvent(new CustomEvent("circle:composer", { detail: { kind: "post" } }))} className="px-4 py-2 rounded-full bg-gradient-gold text-charcoal text-xs font-medium hover:scale-[1.03] transition">
+                Create your first post
+              </button>
+              <button onClick={() => window.dispatchEvent(new CustomEvent("circle:navigate", { detail: { tab: "midan" } }))} className="px-4 py-2 rounded-full glass text-xs font-medium hover:bg-muted/40 transition">
+                Explore Midan →
+              </button>
+            </div>
           </div>
         )}
       </section>
