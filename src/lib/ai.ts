@@ -98,20 +98,26 @@ export async function callHuggingFace(sys: string, usr: string, max = 1500): Pro
 export async function callGemini(sys: string, usr: string, max: number): Promise<string | null> {
   const key = process.env.GEMINI_API_KEY || process.env.Gemini_API_Key;
   if (!key) return null;
-  try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: `${sys}\n\n${usr}` }] }],
-        generationConfig: { maxOutputTokens: max, temperature: 0.7 },
-      }),
-      signal: AbortSignal.timeout(15000),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
-  } catch { return null; }
+  // Try gemini-2.0-flash first (current model), fall back to gemini-flash-latest
+  const models = ["gemini-2.0-flash", "gemini-flash-latest", "gemini-1.5-flash"];
+  for (const model of models) {
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `${sys}\n\n${usr}` }] }],
+          generationConfig: { maxOutputTokens: max, temperature: 0.7 },
+        }),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!res.ok) continue; // Try next model
+      const data = await res.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (text) return text;
+    } catch { /* try next model */ }
+  }
+  return null;
 }
 /**
  * OpenRouter provider — supports live web search via the `:online` model
