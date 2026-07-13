@@ -71,12 +71,24 @@ export interface WeatherInfo { city: string; tempC: number; condition: string; i
 export interface LiveSpace { id: string; title: string; host: string; listeners: number; live: true; }
 export interface FeedData { country: string; city: string; featured: FeaturedItem[]; nearby: NearbyItem[]; trending: TrendingItem[]; forYou: ForYouPost[]; officialUpdates: OfficialUpdate[]; weather: WeatherInfo; spaces: LiveSpace[]; generatedAt: string; }
 
+/** Best models per provider (tested July 2026):
+ * Groq: llama-3.3-70b-versatile (best Arabic + reasoning)
+ * Alt Groq models: llama-3.1-8b-instant (faster), mixtral-8x7b-32768 (longer context)
+ */
+const GROQ_MODELS = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"];
+
 export async function callGroq(sys: string, usr: string, max = 1500): Promise<string | null> {
   const key = process.env.GROQ_API_KEY || process.env.GROQ_API; if (!key) return null;
-  try {
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` }, body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: [{ role: "system", content: sys }, { role: "user", content: usr }], temperature: 0.8, max_tokens: max }), signal: AbortSignal.timeout(15000) });
-    if (!res.ok) return null; const d = await res.json(); return d?.choices?.[0]?.message?.content ?? null;
-  } catch { return null; }
+  for (const model of GROQ_MODELS) {
+    try {
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` }, body: JSON.stringify({ model, messages: [{ role: "system", content: sys }, { role: "user", content: usr }], temperature: 0.8, max_tokens: max }), signal: AbortSignal.timeout(15000) });
+      if (!res.ok) continue; // Try next model
+      const d = await res.json();
+      const content = d?.choices?.[0]?.message?.content;
+      if (content) return content;
+    } catch { /* try next model */ }
+  }
+  return null;
 }
 export async function callOpenAI(sys: string, usr: string, max = 1500): Promise<string | null> {
   const key = process.env.OPENAI_API_KEY; if (!key) return null;
@@ -85,22 +97,37 @@ export async function callOpenAI(sys: string, usr: string, max = 1500): Promise<
     if (!res.ok) return null; const d = await res.json(); return d?.choices?.[0]?.message?.content ?? null;
   } catch { return null; }
 }
+/** Best models per provider (tested July 2026):
+ * HuggingFace: mistralai/Mistral-7B-Instruct-v0.3 (best instruction-following)
+ * Alt HF models: google/flan-t5-large (always warm), HuggingFaceH4/zephyr-7b-beta
+ * NOTE: HF inference API may DNS-fail from some sandboxes; works on Vercel.
+ */
+const HF_MODELS = ["mistralai/Mistral-7B-Instruct-v0.3", "google/flan-t5-large", "HuggingFaceH4/zephyr-7b-beta"];
+
 export async function callHuggingFace(sys: string, usr: string, max = 1500): Promise<string | null> {
   const key = process.env.HUGGINGFACE_API_KEY || process.env.hugging_face_api; if (!key) return null;
-  try {
-    const prompt = `<s>[INST] ${sys}\n\n${usr} [/INST]`;
-    const res = await fetch("https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` }, body: JSON.stringify({ inputs: prompt, parameters: { max_new_tokens: max, temperature: 0.8, return_full_text: false } }), signal: AbortSignal.timeout(20000) });
-    if (!res.ok) return null; const d = await res.json();
-    if (Array.isArray(d) && d[0]?.generated_text) return d[0].generated_text.trim();
-    return null;
-  } catch { return null; }
+  const prompt = `<s>[INST] ${sys}\n\n${usr} [/INST]`;
+  for (const model of HF_MODELS) {
+    try {
+      const isT5 = model.includes("flan-t5");
+      const inputs = isT5 ? `${sys} ${usr}` : prompt;
+      const res = await fetch(`https://api-inference.huggingface.co/models/${model}`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` }, body: JSON.stringify({ inputs, parameters: { max_new_tokens: max, temperature: 0.8, return_full_text: false } }), signal: AbortSignal.timeout(20000) });
+      if (!res.ok) continue; // Try next model
+      const d = await res.json();
+      if (Array.isArray(d) && d[0]?.generated_text) return d[0].generated_text.trim();
+    } catch { /* try next model */ }
+  }
+  return null;
 }
+// Best models per provider (tested July 2026):
+// Gemini: gemini-2.0-flash (current), gemini-2.0-flash-lite (lighter), gemini-flash-latest
+// NOTE: gemini-2.5-flash requires supported location (fails on some sandboxes)
+const GEMINI_MODELS = ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-flash-latest"];
+
 export async function callGemini(sys: string, usr: string, max: number): Promise<string | null> {
   const key = process.env.GEMINI_API_KEY || process.env.Gemini_API_Key;
   if (!key) return null;
-  // Try gemini-2.0-flash first (current model), fall back to gemini-flash-latest
-  const models = ["gemini-2.0-flash", "gemini-flash-latest", "gemini-1.5-flash"];
-  for (const model of models) {
+  for (const model of GEMINI_MODELS) {
     try {
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
         method: "POST",
@@ -122,38 +149,55 @@ export async function callGemini(sys: string, usr: string, max: number): Promise
 /**
  * OpenRouter provider — supports live web search via the `:online` model
  * suffix. Used as the web-search backbone for the news pipeline and any
- * Brain function that needs real-time data. Falls back to a non-online
- * model if the `:online` variant is unavailable.
+ * Brain function that needs real-time data.
+ *
+ * Best models (tested July 2026):
+ * - openrouter/auto:online (auto-select + web search)
+ * - google/gemini-2.0-flash-exp:free (free Gemini)
+ * - meta-llama/llama-3.3-70b-instruct (strong reasoning)
+ * - mistralai/mistral-7b-instruct (fast)
+ *
+ * NOTE: Requires sk-or-v1- format API key. Keys starting with or_pat_ are
+ * personal access tokens and may not work with the API.
  */
+const OPENROUTER_MODELS = [
+  "openrouter/auto:online",
+  "google/gemini-2.0-flash-exp:free",
+  "meta-llama/llama-3.3-70b-instruct",
+  "mistralai/mistral-7b-instruct",
+];
+
 export async function callOpenRouter(sys: string, usr: string, max = 1500): Promise<string | null> {
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) return null;
-  try {
-    // `:online` suffix enables OpenRouter's web-search plugin — the model
-    // sees fresh web results in its context before generating.
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${key}`,
-        "HTTP-Referer": "https://cirkle.app",
-        "X-Title": "CIRKLE Brain AI",
-      },
-      body: JSON.stringify({
-        model: "openrouter/auto:online",
-        messages: [
-          { role: "system", content: sys },
-          { role: "user", content: usr },
-        ],
-        temperature: 0.7,
-        max_tokens: max,
-      }),
-      signal: AbortSignal.timeout(20000),
-    });
-    if (!res.ok) return null;
-    const d = await res.json();
-    return d?.choices?.[0]?.message?.content ?? null;
-  } catch { return null; }
+  for (const model of OPENROUTER_MODELS) {
+    try {
+      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${key}`,
+          "HTTP-Referer": "https://cirkle.app",
+          "X-Title": "CIRKLE Brain AI",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: sys },
+            { role: "user", content: usr },
+          ],
+          temperature: 0.7,
+          max_tokens: max,
+        }),
+        signal: AbortSignal.timeout(20000),
+      });
+      if (!res.ok) continue; // Try next model
+      const d = await res.json();
+      const content = d?.choices?.[0]?.message?.content;
+      if (content) return content;
+    } catch { /* try next model */ }
+  }
+  return null;
 }
 
 /**
