@@ -6,7 +6,14 @@ import { useAuth } from "@/lib/auth-store";
 import { motion } from "framer-motion";
 import { getCountry } from "@/lib/countries";
 import { useApp } from "@/lib/app-store";
-import { ScanLine, Send, Plus, Eye, EyeOff, Nfc, ShieldCheck, ArrowUpRight, ArrowDownLeft, X, Wallet, Loader2, Brain } from "lucide-react";
+import {
+  ScanLine, Send, Plus, Eye, EyeOff, Nfc, ShieldCheck,
+  ArrowUpRight, ArrowDownLeft, X, Wallet, Loader2, Brain,
+  TrendingDown, TrendingUp, Sparkles, Clock, Zap,
+  CreditCard, Banknote, QrCode, Landmark,
+  Utensils, Bus, ShoppingBag, Receipt, Film, Package,
+  PiggyBank, BarChart3, PieChart,
+} from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -81,6 +88,188 @@ interface Tx {
 
 const CONTACTS: string[] = []; // Real contacts loaded from /api/contacts
 
+// ─── Spending analytics helpers ───────────────────────────────────────
+// Pure functions that derive chart-ready data from the raw Tx[] stream.
+// No external chart library — every visualization below is rendered with
+// plain divs + CSS conic-gradient / height percentages.
+
+const CATEGORY_COLORS: Record<string, string> = {
+  Food: "#C06070",          // brand rose
+  Transport: "#4A6A8A",     // steel blue
+  Shopping: "#C2A060",      // sand gold
+  Bills: "#1A4A5A",         // deep teal
+  Entertainment: "#7B5EA7", // accent purple
+  Other: "#6B7280",         // neutral gray
+};
+
+const CATEGORY_ICONS: Record<string, any> = {
+  Food: Utensils,
+  Transport: Bus,
+  Shopping: ShoppingBag,
+  Bills: Receipt,
+  Entertainment: Film,
+  Other: Package,
+};
+
+/** Infers a spending category from the tx memo + method free text. */
+function inferCategory(tx: Tx): string {
+  const text = `${tx.memo || ""} ${tx.method}`.toLowerCase();
+  if (/food|restaurant|cafe|coffee|eat|dinner|lunch|breakfast|meal|grocer|supermarket|bakery|takeout|delivery|kitchen/.test(text)) return "Food";
+  if (/transport|taxi|uber|careem|gas|fuel|bus|train|metro|park|car|ride|bike|scooter|lyft/.test(text)) return "Transport";
+  if (/shop|store|mall|amazon|purchase|retail|fashion|clothes|electronic|book|gift|market/.test(text)) return "Shopping";
+  if (/bill|utility|electric|water|internet|phone|rent|mortgage|subscription|netflix|spotify|insurance|salary|payroll/.test(text)) return "Bills";
+  if (/entertainment|movie|cinema|game|concert|ticket|fun|leisure|sport|stream/.test(text)) return "Entertainment";
+  return "Other";
+}
+
+/** Builds the last 7 days of outgoing spend (settled only). */
+function getLast7DaysSpending(txs: Tx[]): { day: string; amount: number; isToday: boolean }[] {
+  const days: { day: string; amount: number; isToday: boolean }[] = [];
+  const now = new Date();
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
+    d.setHours(0, 0, 0, 0);
+    const next = new Date(d);
+    next.setDate(d.getDate() + 1);
+    const amount = txs
+      .filter(t => t.direction === "out" && t.status === "settled")
+      .filter(t => {
+        const td = new Date(t.timestamp);
+        return td >= d && td < next;
+      })
+      .reduce((s, t) => s + t.amount, 0);
+    days.push({
+      day: d.toLocaleDateString("en-US", { weekday: "short" }).slice(0, 3),
+      amount,
+      isToday: i === 0,
+    });
+  }
+  return days;
+}
+
+/** Groups outgoing settled txs by inferred category, sorted desc. */
+function getCategoryBreakdown(txs: Tx[]): { category: string; amount: number; color: string; pct: number }[] {
+  const map = new Map<string, number>();
+  let total = 0;
+  for (const t of txs) {
+    if (t.direction !== "out" || t.status !== "settled") continue;
+    const cat = inferCategory(t);
+    map.set(cat, (map.get(cat) || 0) + t.amount);
+    total += t.amount;
+  }
+  return Array.from(map.entries())
+    .map(([category, amount]) => ({
+      category,
+      amount,
+      color: CATEGORY_COLORS[category] || CATEGORY_COLORS.Other,
+      pct: total > 0 ? (amount / total) * 100 : 0,
+    }))
+    .sort((a, b) => b.amount - a.amount);
+}
+
+/** Three quick stat cards: week spend, month spend, lifetime saved. */
+function getQuickStats(txs: Tx[]): { weekSpent: number; monthSpent: number; totalSaved: number } {
+  const now = new Date();
+  const weekAgo = new Date(now); weekAgo.setDate(now.getDate() - 7);
+  const monthAgo = new Date(now); monthAgo.setMonth(now.getMonth() - 1);
+  const settledOut = txs.filter(t => t.direction === "out" && t.status === "settled");
+  const settledIn = txs.filter(t => t.direction === "in" && t.status === "settled");
+  const weekSpent = settledOut.filter(t => new Date(t.timestamp) >= weekAgo).reduce((s, t) => s + t.amount, 0);
+  const monthSpent = settledOut.filter(t => new Date(t.timestamp) >= monthAgo).reduce((s, t) => s + t.amount, 0);
+  const totalIn = settledIn.reduce((s, t) => s + t.amount, 0);
+  const totalOut = settledOut.reduce((s, t) => s + t.amount, 0);
+  const totalSaved = Math.max(0, totalIn - totalOut);
+  return { weekSpent, monthSpent, totalSaved };
+}
+
+/** Compares this week's spend vs last week's — returns a localized insight. */
+function getSmartInsight(txs: Tx[], currency: string): { text: string; tone: "positive" | "neutral" | "warning" } {
+  if (txs.length === 0) {
+    return { text: "Make your first payment to unlock personalized spending insights.", tone: "neutral" };
+  }
+  const last7 = getLast7DaysSpending(txs);
+  const this7Amount = last7.reduce((s, d) => s + d.amount, 0);
+  const prev7End = new Date(); prev7End.setDate(prev7End.getDate() - 7);
+  const prev7Start = new Date(); prev7Start.setDate(prev7Start.getDate() - 14);
+  const prev7Amount = txs
+    .filter(t => t.direction === "out" && t.status === "settled")
+    .filter(t => {
+      const td = new Date(t.timestamp);
+      return td >= prev7Start && td < prev7End;
+    })
+    .reduce((s, t) => s + t.amount, 0);
+
+  const breakdown = getCategoryBreakdown(txs);
+  const topCat = breakdown[0];
+
+  if (prev7Amount === 0 && this7Amount === 0) {
+    return { text: "No spending in the last 2 weeks — you're on a saving streak!", tone: "positive" };
+  }
+  if (prev7Amount === 0) {
+    return {
+      text: `You spent ${currency} ${this7Amount.toFixed(2)} this week${topCat ? ` — mostly on ${topCat.category.toLowerCase()}` : ""}.`,
+      tone: "neutral",
+    };
+  }
+  const pct = Math.round(((this7Amount - prev7Amount) / prev7Amount) * 100);
+  if (pct < 0) {
+    return {
+      text: `You spent ${Math.abs(pct)}% less this week than last week — that's ${currency} ${(prev7Amount - this7Amount).toFixed(2)} saved.`,
+      tone: "positive",
+    };
+  }
+  if (pct > 25) {
+    return {
+      text: `Spending is up ${pct}% vs last week${topCat ? `, driven by ${topCat.category.toLowerCase()}` : ""}. Consider setting a budget.`,
+      tone: "warning",
+    };
+  }
+  return {
+    text: `Spending is steady — up ${pct}% vs last week${topCat ? `. Top category: ${topCat.category}` : ""}.`,
+    tone: "neutral",
+  };
+}
+
+/** Maps a method string to a representative lucide icon. */
+function getMethodIcon(method: string) {
+  const m = (method || "").toLowerCase();
+  if (/card|visa|mastercard|amex/.test(m)) return CreditCard;
+  if (/bank|transfer|wire|iban/.test(m)) return Landmark;
+  if (/qr|scan|code/.test(m)) return QrCode;
+  if (/cash/.test(m)) return Banknote;
+  if (/wallet|pay/.test(m)) return Wallet;
+  return CreditCard;
+}
+
+/** Builds the conic-gradient stops string for the category donut. */
+function buildDonutStops(breakdown: { color: string; amount: number }[]): string {
+  const total = breakdown.reduce((s, c) => s + c.amount, 0);
+  if (total === 0) return "hsl(var(--muted)) 0% 100%";
+  let acc = 0;
+  return breakdown.map(c => {
+    const start = (acc / total) * 100;
+    acc += c.amount;
+    const end = (acc / total) * 100;
+    return `${c.color} ${start}% ${end}%`;
+  }).join(", ");
+}
+
+/** Compact colored status pill for the enhanced transaction cards. */
+function StatusBadge({ status }: { status: "settled" | "pending" | "failed" }) {
+  const cfg = {
+    settled: { dot: "bg-emerald-500", text: "text-emerald-600 dark:text-emerald-400", label: "Settled" },
+    pending: { dot: "bg-amber-500", text: "text-amber-600 dark:text-amber-400", label: "Pending" },
+    failed: { dot: "bg-rose-500", text: "text-rose-600 dark:text-rose-400", label: "Failed" },
+  }[status];
+  return (
+    <span className={`inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-medium ${cfg.text}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+      {cfg.label}
+    </span>
+  );
+}
+
 export function PayScreen() {
   const { user } = useAuth();
   const [hide, setHide] = useState(false);
@@ -118,6 +307,15 @@ export function PayScreen() {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         });
+
+  // ── Derived spending analytics for the new chart sections ──
+  // All pure functions of `txs` — recompute on every render (cheap for
+  // typical tx counts). Memoization skipped intentionally: the dataset is
+  // small and the helpers are O(n).
+  const last7 = getLast7DaysSpending(txs);
+  const breakdown = getCategoryBreakdown(txs);
+  const quick = getQuickStats(txs);
+  const insight = getSmartInsight(txs, balanceCurrency);
 
   const onMove = (e: React.MouseEvent) => {
     if (!cardRef.current) return;
@@ -326,6 +524,137 @@ export function PayScreen() {
         </div>
       </div>
 
+      {/* ── Spending Analytics: quick stats + smart insight + 7-day chart + category donut ── */}
+      <div className="px-5 mt-6">
+        <h2 className="font-display text-xl flex items-center gap-2 mb-3">
+          <BarChart3 className="w-5 h-5 text-secondary" />
+          Spending analytics
+        </h2>
+
+        {/* Quick stats row — 3 cards */}
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          <div className="glass rounded-2xl p-3">
+            <div className="w-7 h-7 rounded-lg bg-rose-500/15 flex items-center justify-center mb-1.5">
+              <TrendingUp className="w-3.5 h-3.5 text-rose-500" />
+            </div>
+            <div className="text-[9px] uppercase tracking-wider text-muted-foreground">This week</div>
+            <div className="font-display text-sm mt-0.5 truncate">{balanceCurrency} {quick.weekSpent.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</div>
+          </div>
+          <div className="glass rounded-2xl p-3">
+            <div className="w-7 h-7 rounded-lg bg-amber-500/15 flex items-center justify-center mb-1.5">
+              <Wallet className="w-3.5 h-3.5 text-amber-500" />
+            </div>
+            <div className="text-[9px] uppercase tracking-wider text-muted-foreground">This month</div>
+            <div className="font-display text-sm mt-0.5 truncate">{balanceCurrency} {quick.monthSpent.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</div>
+          </div>
+          <div className="glass rounded-2xl p-3">
+            <div className="w-7 h-7 rounded-lg bg-emerald-500/15 flex items-center justify-center mb-1.5">
+              <PiggyBank className="w-3.5 h-3.5 text-emerald-500" />
+            </div>
+            <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Total saved</div>
+            <div className="font-display text-sm mt-0.5 truncate">{balanceCurrency} {quick.totalSaved.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</div>
+          </div>
+        </div>
+
+        {/* Smart insight card — locally computed (no API call). */}
+        <div className={`rounded-2xl border p-3.5 flex items-start gap-3 mb-3 relative overflow-hidden ${
+          insight.tone === "positive" ? "border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 to-transparent" :
+          insight.tone === "warning" ? "border-amber-500/30 bg-gradient-to-br from-amber-500/10 to-transparent" :
+          "border-secondary/30 bg-gradient-to-br from-secondary/10 to-transparent"
+        }`}>
+          <div className="absolute -top-8 -right-8 w-24 h-24 bg-secondary/15 rounded-full blur-2xl pointer-events-none" />
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+            insight.tone === "positive" ? "bg-emerald-500/20" :
+            insight.tone === "warning" ? "bg-amber-500/20" :
+            "bg-gradient-gold"
+          }`}>
+            {insight.tone === "positive" ? <TrendingDown className="w-4 h-4 text-emerald-500" /> :
+             insight.tone === "warning" ? <TrendingUp className="w-4 h-4 text-amber-500" /> :
+             <Sparkles className="w-4 h-4 text-brand-charcoal" />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[9px] uppercase tracking-widest text-secondary flex items-center gap-1">
+              <Zap className="w-2.5 h-2.5" /> Smart insight
+            </div>
+            <div className="text-[13px] leading-snug mt-1">{insight.text}</div>
+          </div>
+        </div>
+
+        {/* 7-day spending bar chart — pure CSS bars. */}
+        <div className="glass rounded-2xl p-4 mb-3">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Last 7 days</div>
+              <div className="font-display text-lg">
+                {balanceCurrency} {last7.reduce((s, d) => s + d.amount, 0).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+              </div>
+            </div>
+            <div className="text-[10px] text-muted-foreground text-right">
+              <div>Avg / day</div>
+              <div className="text-secondary font-medium">
+                {balanceCurrency} {(last7.reduce((s, d) => s + d.amount, 0) / 7).toFixed(2)}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-end gap-1.5 h-28">
+            {last7.map((d, i) => {
+              const max = Math.max(...last7.map(x => x.amount), 1);
+              const h = max > 0 ? Math.max((d.amount / max) * 100, d.amount > 0 ? 6 : 2) : 2;
+              return (
+                <div key={i} className="flex-1 flex flex-col items-center gap-1.5 h-full">
+                  <div className="text-[9px] text-muted-foreground font-medium tabular-nums">{d.amount > 0 ? d.amount.toFixed(0) : ""}</div>
+                  <div className="flex-1 w-full flex items-end">
+                    <div
+                      className={`w-full rounded-t-md transition-all ${d.isToday ? "bg-gradient-to-t from-secondary to-secondary/60" : "bg-gradient-to-t from-secondary/50 to-secondary/20"}`}
+                      style={{ height: `${h}%` }}
+                    />
+                  </div>
+                  <div className={`text-[10px] ${d.isToday ? "text-secondary font-semibold" : "text-muted-foreground"}`}>{d.day}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Category breakdown — CSS conic-gradient donut + legend. */}
+        <div className="glass rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <PieChart className="w-4 h-4 text-secondary" />
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">By category</div>
+          </div>
+          {breakdown.length === 0 ? (
+            <div className="text-center py-6 text-xs text-muted-foreground">No spending to break down yet.</div>
+          ) : (
+            <div className="flex items-center gap-4">
+              <div className="relative w-28 h-28 shrink-0">
+                <div
+                  className="w-full h-full rounded-full"
+                  style={{ background: `conic-gradient(${buildDonutStops(breakdown)})` }}
+                />
+                <div className="absolute inset-3 rounded-full bg-card flex flex-col items-center justify-center">
+                  <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Total</div>
+                  <div className="font-display text-sm">{balanceCurrency} {breakdown.reduce((s, c) => s + c.amount, 0).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
+                </div>
+              </div>
+              <div className="flex-1 space-y-1.5 min-w-0">
+                {breakdown.map(c => {
+                  const Icon = CATEGORY_ICONS[c.category] || Package;
+                  return (
+                    <div key={c.category} className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full shrink-0" style={{ background: c.color }} />
+                      <Icon className="w-3 h-3 text-muted-foreground shrink-0" />
+                      <span className="text-[11px] flex-1 truncate">{c.category}</span>
+                      <span className="text-[11px] text-muted-foreground tabular-nums">{c.pct.toFixed(0)}%</span>
+                      <span className="text-[11px] font-medium tabular-nums">{balanceCurrency} {c.amount.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Transactions */}
       <div className="px-5 mt-6">
         <div className="flex items-center justify-between mb-3">
@@ -350,23 +679,76 @@ export function PayScreen() {
           <div className="glass rounded-2xl divide-y divide-border/60 overflow-hidden">
             {txs.map((tx) => {
               const isPos = tx.direction === "in";
-              const when = tx.timestamp ? new Date(tx.timestamp).toLocaleString() : "";
-              const cat = tx.memo || tx.method.replace(/_/g, " ");
+              const when = tx.timestamp
+                ? new Date(tx.timestamp).toLocaleString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : "";
+              const cat = inferCategory(tx);
+              const MethodIcon = getMethodIcon(tx.method);
+              const CatIcon = CATEGORY_ICONS[cat] || Package;
               return (
                 <button
                   key={tx.id}
                   onClick={() => setTxSheet(tx)}
                   className="w-full px-4 py-3 flex items-center gap-3 hover:bg-muted/40 transition text-start"
                 >
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isPos ? "bg-secondary/20 text-secondary" : "bg-muted text-foreground"}`}>
-                    {isPos ? <ArrowDownLeft className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
+                  {/* Counterparty avatar with gradient + directional type badge */}
+                  <div className="relative shrink-0">
+                    <div
+                      className="w-11 h-11 rounded-full flex items-center justify-center font-display text-sm"
+                      style={{
+                        background: tx.counterpartyColor || "var(--gradient-mesh)",
+                        color: "hsl(var(--cream))",
+                      }}
+                    >
+                      {tx.counterpartyInitials || tx.counterparty?.[0]?.toUpperCase() || "?"}
+                    </div>
+                    <div
+                      className={`absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center border-2 border-card ${
+                        isPos ? "bg-emerald-500" : "bg-rose-500"
+                      }`}
+                      aria-hidden
+                    >
+                      {isPos ? (
+                        <ArrowDownLeft className="w-3 h-3 text-white" />
+                      ) : (
+                        <ArrowUpRight className="w-3 h-3 text-white" />
+                      )}
+                    </div>
                   </div>
+
+                  {/* Counterparty name + category + date + payment method */}
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate">{tx.counterparty}</div>
-                    <div className="text-[11px] text-muted-foreground">{cat} · {when}</div>
+                    <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                      <CatIcon className="w-3 h-3 shrink-0" />
+                      <span className="truncate">{cat}</span>
+                      <span className="text-muted-foreground/50">·</span>
+                      <Clock className="w-3 h-3 shrink-0" />
+                      <span className="truncate">{when}</span>
+                    </div>
+                    <div className="text-[10px] text-muted-foreground/70 flex items-center gap-1 mt-0.5">
+                      <MethodIcon className="w-3 h-3 shrink-0" />
+                      <span className="truncate capitalize">{tx.method.replace(/_/g, " ")}</span>
+                      {tx.fee > 0 && <span className="text-muted-foreground/50">· fee {tx.fee.toFixed(2)}</span>}
+                    </div>
                   </div>
-                  <div className={`text-sm font-medium ${isPos ? "text-secondary" : ""}`}>
-                    {isPos ? "+" : "−"}{tx.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+
+                  {/* Amount (green in / red out) + status badge */}
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <div
+                      className={`text-sm font-semibold tabular-nums ${
+                        isPos ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                      }`}
+                    >
+                      {isPos ? "+" : "−"}
+                      {tx.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    </div>
+                    <StatusBadge status={tx.status} />
                   </div>
                 </button>
               );

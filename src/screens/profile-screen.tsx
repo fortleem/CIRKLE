@@ -7,8 +7,11 @@ import {
   ChevronRight, Mail, Radio, Grid3x3, Scale, KeyRound, HardDriveDownload,
   Users, Eye, FileText, Wallet, LogOut, QrCode, UserPlus,
   Cookie, FileCheck, AlertTriangle, Loader2, Download, Brain,
+  Image as ImageIcon, Video, Type, Heart, MessageCircle, Share2,
+  Settings as SettingsIcon, Pencil, Trophy, Crown, Rocket, Zap, Star, Award, Camera,
   type LucideIcon,
 } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useApp } from "@/lib/app-store";
 import { useAuth, cirkleHandle, cirkleInitials } from "@/lib/auth-store";
 import { COUNTRIES, getCountry } from "@/lib/countries";
@@ -244,52 +247,92 @@ export function ProfileScreen() {
 
   return (
     <div className="pb-32">
-      {/* ── Super Upgrade: Profile header with cover + verified human + privacy badges ── */}
-      <div className="mx-4 mt-3 rounded-3xl overflow-hidden relative bg-gradient-hero shadow-float" style={{ color: "hsl(var(--cream))" }}>
-        <div className="absolute inset-0 bg-gradient-aurora opacity-60" />
-        {/* Cover pattern */}
-        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "radial-gradient(circle at 20% 30%, hsl(var(--secondary)) 0%, transparent 40%), radial-gradient(circle at 80% 70%, hsl(var(--primary)) 0%, transparent 40%)" }} />
-        <div className="relative p-6 flex items-center gap-4">
-          <div className="relative">
-            <div className="w-20 h-20 rounded-full bg-gradient-gold p-1">
-              <div className="w-full h-full rounded-full bg-background flex items-center justify-center font-display text-3xl text-foreground">{initials}</div>
-            </div>
-            {/* Online status */}
-            <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-green-500 border-2 border-background flex items-center justify-center">
-              <ShieldCheck className="w-2.5 h-2.5 text-white" />
-            </div>
+      {/* ── Super Upgrade: Cover photo banner + profile header with verified human + privacy badges ── */}
+      <div className="mx-4 mt-3 rounded-3xl overflow-hidden relative shadow-float" style={{ color: "hsl(var(--cream))" }}>
+        {/* === COVER PHOTO BANNER — gold/teal/rose gradient blend, multi-pattern overlay === */}
+        <div className="relative h-32 overflow-hidden">
+          {/* Base gradient: teal → steel → rose → gold */}
+          <div
+            className="absolute inset-0"
+            style={{ background: "linear-gradient(120deg, hsl(195 56% 23%) 0%, hsl(211 30% 42%) 30%, hsl(351 41% 56%) 65%, hsl(39 45% 57%) 100%)" }}
+          />
+          {/* Aurora overlay (rose + teal + gold radial bloom) */}
+          <div className="absolute inset-0 bg-gradient-aurora opacity-70" />
+          {/* Multi-radial color accents for depth */}
+          <div
+            className="absolute inset-0 opacity-40"
+            style={{ backgroundImage: "radial-gradient(circle at 18% 30%, hsl(39 45% 67%) 0%, transparent 38%), radial-gradient(circle at 82% 70%, hsl(351 41% 66%) 0%, transparent 38%), radial-gradient(circle at 55% 50%, hsl(195 56% 43%) 0%, transparent 45%)" }}
+          />
+          {/* Dot-grid pattern overlay (subtle texture) */}
+          <div
+            className="absolute inset-0 opacity-25"
+            style={{ backgroundImage: "radial-gradient(circle, hsl(40 50% 98%) 1.5px, transparent 1.5px)", backgroundSize: "20px 20px" }}
+          />
+          {/* Diagonal sheen for shine */}
+          <div
+            className="absolute inset-0 opacity-30"
+            style={{ background: "linear-gradient(115deg, transparent 40%, hsl(40 50% 98% / 0.18) 50%, transparent 60%)" }}
+          />
+          {/* Edit cover affordance */}
+          <button
+            onClick={() => toast.success("Cover photo upload coming soon")}
+            aria-label="Edit cover photo"
+            className="absolute top-3 right-3 text-[10px] px-2.5 py-1.5 rounded-full bg-black/30 backdrop-blur-md border border-white/30 text-white flex items-center gap-1.5 hover:bg-black/50 transition"
+          >
+            <Camera className="w-3 h-3" /> Edit cover
+          </button>
+          {/* Cover label */}
+          <div className="absolute bottom-2.5 left-4 text-[10px] uppercase tracking-widest text-white/85 font-medium flex items-center gap-1">
+            <Sparkles className="w-2.5 h-2.5" /> Cover photo
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <h2 className="font-display text-2xl truncate">{displayName}</h2>
-              {user?.verified && <BadgeCheck className="w-5 h-5" />}
-              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-secondary/20 text-secondary border border-secondary/30 font-medium flex items-center gap-0.5">
-                <ShieldCheck className="w-2.5 h-2.5" /> Verified Human
-              </span>
+        </div>
+
+        {/* === PROFILE CONTENT (avatar overlaps cover, sits on dark hero gradient) === */}
+        <div className="relative bg-gradient-hero">
+          <div className="px-6 pb-5 -mt-12 flex items-end gap-4">
+            {/* Avatar */}
+            <div className="relative shrink-0">
+              <div className="w-20 h-20 rounded-full bg-gradient-gold p-1 ring-4 ring-background">
+                <div className="w-full h-full rounded-full bg-background flex items-center justify-center font-display text-3xl text-foreground">{initials}</div>
+              </div>
+              {/* Online status */}
+              <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-green-500 border-2 border-background flex items-center justify-center">
+                <ShieldCheck className="w-2.5 h-2.5 text-white" />
+              </div>
             </div>
-            <div className="text-xs opacity-80 font-mono">{handle} · {regionLabel} {regionCity}</div>
-            <div className="flex gap-4 mt-2 text-xs">
-              <span><b className="font-display text-base">0</b> followers</span>
-              <span><b className="font-display text-base">0</b> following</span>
-              <span><b className="font-display text-base">{user?.verified ? "Verified" : "New"}</b> tier</span>
-            </div>
-            {/* Privacy badges */}
-            <div className="flex items-center gap-1.5 mt-2">
-              <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/10 border border-white/20 flex items-center gap-0.5">
-                <ShieldCheck className="w-2 h-2" /> Data on device
-              </span>
-              <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/10 border border-white/20 flex items-center gap-0.5">
-                <ShieldCheck className="w-2 h-2" /> No tracking
-              </span>
-              <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/10 border border-white/20 flex items-center gap-0.5">
-                <ShieldCheck className="w-2 h-2" /> 100% free
-              </span>
+            {/* Name + verified + privacy badges */}
+            <div className="flex-1 min-w-0 pb-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h2 className="font-display text-2xl truncate">{displayName}</h2>
+                {user?.verified && <BadgeCheck className="w-5 h-5" />}
+                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-secondary/20 text-secondary border border-secondary/30 font-medium flex items-center gap-0.5">
+                  <ShieldCheck className="w-2.5 h-2.5" /> Verified Human
+                </span>
+              </div>
+              <div className="text-xs opacity-80 font-mono">{handle} · {regionLabel} {regionCity}</div>
+              <div className="flex gap-4 mt-2 text-xs">
+                <span><b className="font-display text-base">0</b> followers</span>
+                <span><b className="font-display text-base">0</b> following</span>
+                <span><b className="font-display text-base">{user?.verified ? "Verified" : "New"}</b> tier</span>
+              </div>
+              {/* Privacy badges */}
+              <div className="flex items-center gap-1.5 mt-2">
+                <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/10 border border-white/20 flex items-center gap-0.5">
+                  <ShieldCheck className="w-2 h-2" /> Data on device
+                </span>
+                <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/10 border border-white/20 flex items-center gap-0.5">
+                  <ShieldCheck className="w-2 h-2" /> No tracking
+                </span>
+                <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/10 border border-white/20 flex items-center gap-0.5">
+                  <ShieldCheck className="w-2 h-2" /> 100% free
+                </span>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Stats grid */}
+      {/* Stats grid — Account-level stats (ENHANCED with icons inside each card) */}
       <div className="grid grid-cols-3 gap-3 px-4 mt-4">
         {[
           { v: user?.verified ? "100" : "50", l: "Trust score", detail: "trust", icon: ShieldCheck },
@@ -302,12 +345,111 @@ export function ProfileScreen() {
               title: s.l,
               body: <StatDetail label={s.l} icon={s.icon} />,
             })}
-            className="glass rounded-2xl p-3 text-center hover:bg-muted/50 transition"
+            className="glass rounded-2xl p-3 text-center hover:bg-muted/50 transition group"
           >
+            <div className="flex items-center justify-center mb-1.5">
+              <div className="w-8 h-8 rounded-lg bg-secondary/15 flex items-center justify-center group-hover:bg-secondary/25 transition">
+                <s.icon className="w-4 h-4 text-secondary" />
+              </div>
+            </div>
             <div className="font-display text-2xl gradient-text-gold">{s.v}</div>
             <div className="text-[10px] uppercase tracking-widest text-muted-foreground mt-1">{s.l}</div>
           </button>
         ))}
+      </div>
+
+      {/* === NEW: Activity Stats 4-column grid — Posts / Followers / Following / Circles joined === */}
+      <div className="grid grid-cols-4 gap-2 px-4 mt-3">
+        {[
+          { v: "247", l: "Posts", icon: FileText, color: "text-steel" },
+          { v: "1.2K", l: "Followers", icon: Users, color: "text-gold" },
+          { v: "384", l: "Following", icon: UserPlus, color: "text-rose" },
+          { v: "12", l: "Circles", icon: Grid3x3, color: "text-teal" },
+        ].map((s) => (
+          <button
+            key={s.l}
+            onClick={() => setDetailSheet({
+              title: s.l,
+              body: <StatDetail label={s.l} icon={s.icon} />,
+            })}
+            className="glass rounded-2xl p-2.5 text-center hover:bg-muted/50 transition group"
+          >
+            <div className="flex items-center justify-center mb-1">
+              <div className="w-7 h-7 rounded-lg bg-secondary/10 flex items-center justify-center group-hover:bg-secondary/20 transition">
+                <s.icon className={`w-3.5 h-3.5 ${s.color}`} />
+              </div>
+            </div>
+            <div className="font-display text-base gradient-text-gold">{s.v}</div>
+            <div className="text-[9px] uppercase tracking-widest text-muted-foreground mt-0.5">{s.l}</div>
+          </button>
+        ))}
+      </div>
+
+      {/* === NEW: Quick Actions Row — Edit Profile / Share Profile / Settings === */}
+      <div className="grid grid-cols-3 gap-2 px-4 mt-3">
+        <QuickActionButton
+          icon={Pencil}
+          label="Edit Profile"
+          onClick={() => toast.success("Edit profile coming soon")}
+        />
+        <QuickActionButton
+          icon={Share2}
+          label="Share Profile"
+          onClick={() => {
+            try { navigator.clipboard?.writeText(`${window.location.origin}/@${user?.username || "guest"}`); } catch { /* no-op */ }
+            toast.success("Profile link copied");
+          }}
+        />
+        <QuickActionButton
+          icon={SettingsIcon}
+          label="Settings"
+          onClick={() => window.dispatchEvent(new CustomEvent("circle:settings"))}
+        />
+      </div>
+
+      {/* === NEW: Achievement Badges row — Early Adopter / Verified Human / Privacy Champion / Circle Creator / etc. === */}
+      <div className="px-4 mt-4">
+        <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2 px-1 flex items-center gap-1.5">
+          <Trophy className="w-3 h-3 text-secondary" /> Achievements
+        </h3>
+        <div className="glass rounded-2xl p-3">
+          <div className="flex items-center gap-2.5 overflow-x-auto scrollbar-hide">
+            <AchievementBadge icon={Rocket} label="Early Adopter" color="from-violet-500 to-indigo-600" />
+            <AchievementBadge icon={ShieldCheck} label="Verified Human" color="from-emerald-500 to-teal-600" />
+            <AchievementBadge icon={Lock} label="Privacy Champion" color="from-sky-500 to-blue-600" />
+            <AchievementBadge icon={Crown} label="Circle Creator" color="from-amber-500 to-orange-600" />
+            <AchievementBadge icon={Heart} label="Top Contributor" color="from-rose-500 to-pink-600" />
+            <AchievementBadge icon={Zap} label="Quick Responder" color="from-yellow-500 to-amber-500" />
+            <AchievementBadge icon={Star} label="Rising Star" color="from-fuchsia-500 to-purple-600" locked />
+            <AchievementBadge icon={Award} label="Legend" color="from-slate-500 to-zinc-600" locked />
+          </div>
+        </div>
+      </div>
+
+      {/* === NEW: Posts Grid — 3-column, color-coded by post type (text=steel, photo=rose, video=teal) === */}
+      <div className="px-4 mt-4">
+        <div className="flex items-center justify-between mb-2 px-1">
+          <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+            <Grid3x3 className="w-3 h-3 text-secondary" /> Recent Posts
+          </h3>
+          <button
+            onClick={() => toast.success("Opening posts feed…")}
+            className="text-[10px] text-secondary hover:underline flex items-center gap-0.5"
+          >
+            View all <ChevronRight className="w-2.5 h-2.5" />
+          </button>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {MOCK_POSTS.map((post) => (
+            <PostGridItem key={post.id} post={post} />
+          ))}
+        </div>
+        {/* Color legend */}
+        <div className="flex items-center justify-center gap-3 mt-3 text-[9px] text-muted-foreground">
+          <span className="flex items-center gap-1"><Type className="w-2.5 h-2.5 text-steel" /> Text</span>
+          <span className="flex items-center gap-1"><ImageIcon className="w-2.5 h-2.5 text-rose" /> Photo</span>
+          <span className="flex items-center gap-1"><Video className="w-2.5 h-2.5 text-teal" /> Video</span>
+        </div>
       </div>
 
       {/* Brain AI Profile banner — routes the user's "analyze my Cirkle
@@ -854,5 +996,119 @@ function AIPersonalizationBody() {
         Clear personalization
       </button>
     </div>
+  );
+}
+
+/** Quick action button used in the Edit/Share/Settings row. */
+function QuickActionButton({
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  icon: LucideIcon;
+  label: string;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="glass rounded-2xl p-3 flex flex-col items-center gap-1.5 hover:bg-muted/50 transition group"
+    >
+      <div className="w-9 h-9 rounded-xl bg-gradient-gold flex items-center justify-center group-hover:scale-105 transition">
+        <Icon className="w-4 h-4 text-charcoal" />
+      </div>
+      <span className="text-[10px] font-medium">{label}</span>
+    </button>
+  );
+}
+
+/** Achievement badge — circular gradient icon with tooltip. Locked badges render grayscale with a lock pin. */
+function AchievementBadge({
+  icon: Icon,
+  label,
+  color,
+  locked = false,
+}: {
+  icon: LucideIcon;
+  label: string;
+  color: string; // tailwind gradient stops, e.g. "from-violet-500 to-indigo-600"
+  locked?: boolean;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          aria-label={locked ? `${label} (locked)` : label}
+          className={`relative shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition ${locked ? "bg-muted border border-border opacity-60" : `bg-gradient-to-br ${color} shadow-md hover:scale-110`}`}
+        >
+          <Icon className={`w-5 h-5 ${locked ? "text-muted-foreground" : "text-white"}`} />
+          {locked && (
+            <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-background border border-border flex items-center justify-center">
+              <Lock className="w-2 h-2 text-muted-foreground" />
+            </span>
+          )}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom">
+        <div className="text-center">
+          <div className="font-medium">{label}</div>
+          {locked && <div className="text-[10px] opacity-70">Not unlocked yet</div>}
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+/** Post type for the posts grid preview. */
+type PostType = "text" | "photo" | "video";
+type MockPost = {
+  id: number;
+  type: PostType;
+  text: string;
+  likes: number;
+  comments: number;
+  shares: number;
+  time: string;
+};
+
+/** Mock posts for the profile grid (UI preview — no backend yet). */
+const MOCK_POSTS: MockPost[] = [
+  { id: 1, type: "text", text: "Beautiful morning in the city — coffee and code, the perfect combo.", likes: 24, comments: 5, shares: 2, time: "2h" },
+  { id: 2, type: "photo", text: "Sunset from my balcony tonight 🌅", likes: 87, comments: 12, shares: 8, time: "5h" },
+  { id: 3, type: "video", text: "Travel vlog: mountains of the Asir region.", likes: 142, comments: 28, shares: 19, time: "1d" },
+  { id: 4, type: "text", text: "Three things I learned building Cirkle this week.", likes: 56, comments: 14, shares: 6, time: "1d" },
+  { id: 5, type: "photo", text: "Coffee art from the local café.", likes: 33, comments: 4, shares: 1, time: "2d" },
+  { id: 6, type: "video", text: "Quick tutorial: setting up privacy controls.", likes: 198, comments: 41, shares: 32, time: "3d" },
+  { id: 7, type: "text", text: "Privacy is not a feature — it's the foundation.", likes: 89, comments: 17, shares: 24, time: "4d" },
+  { id: 8, type: "photo", text: "Street art in the old district.", likes: 71, comments: 9, shares: 5, time: "5d" },
+  { id: 9, type: "video", text: "Live AMA about Cirkle Verify.", likes: 312, comments: 67, shares: 45, time: "1w" },
+];
+
+/** Post grid item — small card with post-type icon, truncated text, engagement counts. Color-coded by type. */
+function PostGridItem({ post }: { post: MockPost }) {
+  const typeMeta: Record<PostType, { Icon: LucideIcon; color: string; bg: string }> = {
+    text: { Icon: Type, color: "text-steel", bg: "bg-steel/10" },
+    photo: { Icon: ImageIcon, color: "text-rose", bg: "bg-rose/10" },
+    video: { Icon: Video, color: "text-teal", bg: "bg-teal/10" },
+  };
+  const { Icon, color, bg } = typeMeta[post.type];
+  return (
+    <button
+      onClick={() => toast.success(`Opening post from ${post.time} ago`)}
+      className="glass rounded-2xl p-2.5 text-left hover:bg-muted/50 transition flex flex-col gap-1.5 min-h-[130px]"
+    >
+      <div className="flex items-center justify-between">
+        <div className={`w-6 h-6 rounded-md ${bg} flex items-center justify-center`}>
+          <Icon className={`w-3 h-3 ${color}`} />
+        </div>
+        <span className="text-[9px] text-muted-foreground">{post.time}</span>
+      </div>
+      <div className="flex-1 text-[10px] leading-tight line-clamp-3 text-foreground/90">{post.text}</div>
+      <div className="flex items-center justify-between text-[9px] text-muted-foreground pt-1 border-t border-border/40">
+        <span className="flex items-center gap-0.5"><Heart className="w-2.5 h-2.5" /> {post.likes}</span>
+        <span className="flex items-center gap-0.5"><MessageCircle className="w-2.5 h-2.5" /> {post.comments}</span>
+        <span className="flex items-center gap-0.5"><Share2 className="w-2.5 h-2.5" /> {post.shares}</span>
+      </div>
+    </button>
   );
 }

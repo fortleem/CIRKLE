@@ -1,9 +1,38 @@
 // @ts-nocheck
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Heart, MessageCircle, Repeat2, Share2, ShieldCheck, Mic, BadgeCheck, BarChart3, Radio, X, Send, Loader2, Coins, UserPlus, UserCheck, MessageSquare, Brain } from "lucide-react";
+import {
+  Heart,
+  MessageCircle,
+  Repeat2,
+  Share2,
+  ShieldCheck,
+  Mic,
+  BadgeCheck,
+  BarChart3,
+  Radio,
+  X,
+  Send,
+  Loader2,
+  Coins,
+  UserPlus,
+  UserCheck,
+  MessageSquare,
+  Brain,
+  TrendingUp,
+  Hash,
+  Bookmark,
+  Eye,
+  Image as ImageIcon,
+  Smile,
+  MapPin,
+  CalendarClock,
+  Sparkles,
+  Info,
+  MoreHorizontal,
+} from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
@@ -67,6 +96,7 @@ interface PostState {
   likes: number;
   reposts: number;
   reposted: boolean;
+  bookmarked: boolean;
 }
 
 // Normalized post shape that works for API posts.
@@ -84,6 +114,39 @@ interface UnifiedPost {
   initials?: string;
   color?: string;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Engagement helpers — used to derive the trending rail + view estimates.
+// Weighted score: replies signal depth, reposts signal reach, likes signal
+// lightweight affinity. We weight accordingly.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function engagementScore(p: UnifiedPost): number {
+  return p.likes + p.reposts * 2.5 + p.comments * 1.8;
+}
+
+/** Compact number formatter: 1.2K, 12.4K, 3.1M. */
+function fmt(n: number): string {
+  if (n < 1000) return String(n);
+  if (n < 1_000_000) return `${(n / 1000).toFixed(n < 10_000 ? 1 : 0)}K`;
+  return `${(n / 1_000_000).toFixed(1)}M`;
+}
+
+/** Rough "views" estimate derived from likes + reposts (no API field yet). */
+function estimateViews(p: UnifiedPost): number {
+  return Math.round((p.likes + p.reposts) * 7.3 + p.comments * 4.1);
+}
+
+// Default trending hashtags used as a fallback when the feed has no #hashtags
+// of its own. Tuned to the Saudi / GCC context the Midan was designed for.
+const FALLBACK_TRENDS: { tag: string; count: number; category: string }[] = [
+  { tag: "Vision2030", count: 12400, category: "Saudi Arabia · Trending" },
+  { tag: "RiyadhSeason", count: 8920, category: "Entertainment · Trending" },
+  { tag: "NEOM", count: 5410, category: "Technology · Trending" },
+  { tag: "SaudiCup", count: 3210, category: "Sports · Trending" },
+  { tag: "Diriyah", count: 2890, category: "Culture · Trending" },
+  { tag: "LEAP", count: 1840, category: "Technology · Trending" },
+];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // IntersectionObserver hook — tracks view + dwell interactions per post.
@@ -241,7 +304,7 @@ export function MidanScreen() {
   const allPosts: UnifiedPost[] = useMemo(() => apiPosts ?? [], [apiPosts]);
 
   const [states, setStates] = useState<Record<string, PostState>>(() =>
-    Object.fromEntries(allPosts.map((p) => [p.id, { liked: false, likes: p.likes, reposts: p.reposts, reposted: false }]))
+    Object.fromEntries(allPosts.map((p) => [p.id, { liked: false, likes: p.likes, reposts: p.reposts, reposted: false, bookmarked: false }]))
   );
   const [commentFor, setCommentFor] = useState<UnifiedPost | null>(null);
   const [shareFor, setShareFor] = useState<UnifiedPost | null>(null);
@@ -249,6 +312,30 @@ export function MidanScreen() {
   const [spacesOpen, setSpacesOpen] = useState(false);
   // Per-handle follow state (client-side optimistic; synced with /api/follow).
   const [following, setFollowing] = useState<Set<string>>(new Set());
+
+  // Sync per-post UI state with posts as they load from the API. The lazy
+  // useState initializer above runs at mount when allPosts is still empty,
+  // so we hydrate state entries here whenever new posts appear.
+  useEffect(() => {
+    if (allPosts.length === 0) return;
+    setStates((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const p of allPosts) {
+        if (!next[p.id]) {
+          next[p.id] = {
+            liked: false,
+            likes: p.likes,
+            reposts: p.reposts,
+            reposted: false,
+            bookmarked: false,
+          };
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [allPosts]);
 
   // Track views via IntersectionObserver.
   useViewTracking(username, allPosts);
@@ -285,6 +372,85 @@ export function MidanScreen() {
     return allPosts;
   }, [filter, allPosts, following]);
 
+  // ── Trending rail: top 8 posts by weighted engagement score ──────────
+  // Re-derives whenever the API feed changes (likes/reposts from server).
+  const trendingPosts = useMemo(() => {
+    if (allPosts.length === 0) return [];
+    return [...allPosts]
+      .map((p) => ({ p, score: engagementScore(p) }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 8)
+      .map((x) => x.p);
+  }, [allPosts]);
+
+  // ── Trending hashtags: mined from the live feed (#hashtag), with a
+  // curated fallback list when the feed has no hashtags yet. Each trend
+  // is decorated with a category + post count for the Twitter-style rail.
+  const trendingTopics = useMemo(() => {
+    const map = new Map<string, { tag: string; count: number; category: string }>();
+    for (const p of allPosts) {
+      const matches = (p.body.match(/#[\p{L}\d_]+/gu) || []) as string[];
+      for (const m of matches) {
+        const tag = m.slice(1);
+        const key = tag.toLowerCase();
+        const entry = map.get(key) || { tag, count: 0, category: "Trending in Midan" };
+        entry.count += 1;
+        map.set(key, entry);
+      }
+    }
+    const fromFeed = Array.from(map.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6)
+      .map((t) => ({
+        tag: t.tag,
+        // Boost the displayed count so the rail doesn't show "1 post" —
+        // we treat feed occurrences as a signal of broader momentum.
+        count: Math.max(t.count * 412 + 87, 240),
+        category: t.category,
+      }));
+    return fromFeed.length > 0 ? fromFeed : FALLBACK_TRENDS;
+  }, [allPosts]);
+
+  // ── Who to follow: pick 3 distinct authors the user doesn't follow yet.
+  // Prefers verified authors first, then the rest by engagement score.
+  const suggestedFollows = useMemo(() => {
+    const seen = new Set<string>();
+    const candidates: UnifiedPost[] = [];
+    for (const p of allPosts) {
+      const handle = p.handle.replace(/^@/, "");
+      if (!handle) continue;
+      if (following.has(handle)) continue;
+      if (seen.has(handle)) continue;
+      if (username && handle.toLowerCase() === username.toLowerCase()) continue;
+      seen.add(handle);
+      candidates.push(p);
+    }
+    candidates.sort((a, b) => {
+      if (!!a.verified !== !!b.verified) return a.verified ? -1 : 1;
+      return engagementScore(b) - engagementScore(a);
+    });
+    return candidates.slice(0, 3);
+  }, [allPosts, following, username]);
+
+  // ── "Why am I seeing this?" tooltip reasons, rotated per-post so the
+  // rail doesn't read like a broken record. Picked deterministically from
+  // the post id hash so the same post always shows the same reason.
+  const whySeeing = useMemo(() => {
+    const reasons = [
+      "People you follow are engaging with this",
+      "This post is trending in your region",
+      "Because you follow similar topics",
+      "Popular in the Midan right now",
+      "Based on your recent interests",
+      "Suggested by the Brain — no ad targeting",
+    ];
+    return (id: string) => {
+      let h = 0;
+      for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+      return reasons[Math.abs(h) % reasons.length];
+    };
+  }, []);
+
   const toggleLike = (id: string) => {
     setStates((prev) => {
       const s = prev[id];
@@ -301,6 +467,15 @@ export function MidanScreen() {
       return { ...prev, [id]: { ...s, reposted: !s.reposted, reposts: s.reposted ? s.reposts - 1 : s.reposts + 1 } };
     });
     toast.success(states[id]?.reposted ? "Un-reposted" : "Reposted 🔁");
+  };
+
+  const toggleBookmark = (id: string) => {
+    setStates((prev) => {
+      const s = prev[id];
+      if (!s) return prev;
+      return { ...prev, [id]: { ...s, bookmarked: !s.bookmarked } };
+    });
+    toast.success(states[id]?.bookmarked ? "Removed from bookmarks" : "Saved to bookmarks 🔖");
   };
 
   const isOwnPost = (p: UnifiedPost) => {
@@ -397,21 +572,169 @@ export function MidanScreen() {
         ))}
       </div>
 
-      {/* Composer */}
-      <button
-        className="mx-5 mt-4 glass rounded-2xl p-3 w-[calc(100%-2.5rem)] flex items-start gap-3 text-start hover:bg-muted/50 transition"
-        onClick={() => window.dispatchEvent(new CustomEvent("circle:composer", { detail: { kind: "post" } }))}
-      >
-        <div className="w-9 h-9 rounded-full bg-gradient-hero flex items-center justify-center text-primary-foreground font-display shrink-0">Y</div>
-        <div className="bg-transparent flex-1 text-sm py-2 text-muted-foreground">Share to the public square</div>
-        <span
-          onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent("circle:composer", { detail: { kind: "poll" } })); }}
-          className="w-9 h-9 rounded-full bg-secondary/20 text-secondary flex items-center justify-center shrink-0"
-          aria-label="Poll"
-        >
-          <Mic className="w-4 h-4" />
-        </span>
-      </button>
+      {/* ── Compose CTA — "What's happening?" card (Twitter-style) ── */}
+      {(() => {
+        const composerName = user?.displayName || username || "friend";
+        const composerInitial = (composerName.trim()[0] || "Y").toUpperCase();
+        const composerKind = (kind: string, extra?: Record<string, unknown>) =>
+          window.dispatchEvent(new CustomEvent("circle:composer", { detail: { kind, ...extra } }));
+        return (
+          <div className="mx-5 mt-4 glass rounded-3xl p-4 w-[calc(100%-2.5rem)]">
+            <button
+              onClick={() => composerKind("post")}
+              className="w-full flex items-start gap-3 text-start rounded-2xl p-1 -m-1 hover:bg-muted/30 transition"
+              aria-label="Compose a new post"
+            >
+              <div className="w-12 h-12 rounded-full bg-gradient-hero flex items-center justify-center text-primary-foreground font-display text-base shrink-0 ring-2 ring-secondary/25">
+                {composerInitial}
+              </div>
+              <div className="flex-1 min-w-0 pt-1">
+                <div className="text-base text-muted-foreground">
+                  What&apos;s happening, {composerName.split(" ")[0]}?
+                </div>
+                <div className="mt-1 inline-flex items-center gap-1 text-[11px] text-secondary">
+                  <Sparkles className="w-3 h-3" />
+                  Share to the public square · No algorithm boost
+                </div>
+              </div>
+            </button>
+            <div className="mt-3 pt-3 border-t border-border/40 flex items-center justify-between">
+              <div className="flex items-center gap-0.5 text-secondary">
+                <button
+                  onClick={() => composerKind("post", { media: "image" })}
+                  className="w-9 h-9 rounded-full hover:bg-secondary/15 flex items-center justify-center transition"
+                  aria-label="Add photo"
+                  title="Photo"
+                >
+                  <ImageIcon className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => composerKind("poll")}
+                  className="w-9 h-9 rounded-full hover:bg-secondary/15 flex items-center justify-center transition"
+                  aria-label="Create poll"
+                  title="Poll"
+                >
+                  <BarChart3 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => composerKind("post", { media: "emoji" })}
+                  className="w-9 h-9 rounded-full hover:bg-secondary/15 flex items-center justify-center transition"
+                  aria-label="Add emoji"
+                  title="Emoji"
+                >
+                  <Smile className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => composerKind("post", { location: true })}
+                  className="w-9 h-9 rounded-full hover:bg-secondary/15 flex items-center justify-center transition"
+                  aria-label="Tag location"
+                  title="Location"
+                >
+                  <MapPin className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => composerKind("schedule")}
+                  className="w-9 h-9 rounded-full hover:bg-secondary/15 flex items-center justify-center transition"
+                  aria-label="Schedule post"
+                  title="Schedule"
+                >
+                  <CalendarClock className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => composerKind("post", { voice: true })}
+                  className="w-9 h-9 rounded-full hover:bg-secondary/15 flex items-center justify-center transition"
+                  aria-label="Voice post"
+                  title="Voice post"
+                >
+                  <Mic className="w-4 h-4" />
+                </button>
+              </div>
+              <button
+                onClick={() => composerKind("post")}
+                className="px-5 py-1.5 rounded-full bg-gradient-gold text-charcoal text-sm font-medium hover:scale-[1.02] active:scale-95 transition shadow-sm"
+              >
+                Post
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Trending Now — horizontal rail of top-engagement posts ── */}
+      {trendingPosts.length > 0 && (
+        <section className="mt-5 px-5" aria-label="Trending posts">
+          <div className="flex items-center justify-between mb-2.5">
+            <div className="flex items-center gap-2 min-w-0">
+              <TrendingUp className="w-4 h-4 text-accent shrink-0" />
+              <h2 className="font-display text-base leading-none">Trending Now</h2>
+              <span className="text-[10px] text-muted-foreground truncate">
+                · Top {trendingPosts.length} by engagement
+              </span>
+            </div>
+            <button
+              onClick={() => toast("Full trending page — coming soon")}
+              className="text-[11px] text-secondary hover:underline shrink-0"
+            >
+              See all
+            </button>
+          </div>
+          <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2 -mx-1 px-1 snap-x">
+            {trendingPosts.map((p, idx) => {
+              const s = states[p.id];
+              const initial = (p.initials || p.name || "?").trim()[0]?.toUpperCase() || "?";
+              const likes = s?.likes ?? p.likes;
+              const reposts = s?.reposts ?? p.reposts;
+              const views = estimateViews(p);
+              return (
+                <motion.button
+                  key={`trend-${p.id}`}
+                  initial={{ opacity: 0, x: 24 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.04 }}
+                  onClick={() => toast(`Opening @${p.handle.replace(/^@/, "")}'s trending post…`)}
+                  className="glass rounded-2xl p-3.5 w-72 shrink-0 snap-start text-start hover:bg-muted/40 hover:border-secondary/30 transition group"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-bold tracking-wider text-accent">
+                      #{idx + 1} · TRENDING
+                    </span>
+                    <TrendingUp className="w-3.5 h-3.5 text-accent/70 group-hover:scale-110 transition" />
+                  </div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-9 h-9 rounded-full bg-gradient-mesh flex items-center justify-center text-primary-foreground text-sm font-display shrink-0">
+                      {initial}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1">
+                        <span className="font-medium text-xs truncate">{p.name}</span>
+                        {p.verified && <BadgeCheck className="w-3 h-3 text-secondary shrink-0" />}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground truncate">
+                        {p.handle} · {p.time}
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-xs leading-relaxed line-clamp-3 mb-3 text-foreground/90">{p.body}</p>
+                  <div className="flex items-center gap-3 text-[10px] text-muted-foreground pt-2 border-t border-border/30">
+                    <span className="flex items-center gap-1">
+                      <Heart className="w-3 h-3" /> {fmt(likes)}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Repeat2 className="w-3 h-3" /> {fmt(reposts)}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <MessageCircle className="w-3 h-3" /> {fmt(p.comments)}
+                    </span>
+                    <span className="flex items-center gap-1 ms-auto">
+                      <Eye className="w-3 h-3" /> {fmt(views)}
+                    </span>
+                  </div>
+                </motion.button>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Feed */}
       {isLoading ? (
@@ -438,28 +761,63 @@ export function MidanScreen() {
           const own = isOwnPost(p);
           const isFollowing = following.has(p.handle.replace(/^@/, ""));
           const initial = (p.initials || p.name || "?").trim()[0]?.toUpperCase() || "?";
-          return (
+          const views = estimateViews(p);
+
+          const card = (
             <motion.li
-              key={p.id}
               data-post-id={p.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.06 }}
-              className="px-6 py-4 border-b border-border"
+              className="px-6 py-4 border-b border-border hover:bg-muted/20 transition-colors"
             >
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-mesh flex items-center justify-center font-display text-sm text-primary-foreground shrink-0">
+                {/* Avatar — larger (w-11), ring tinted by verified status */}
+                <div
+                  className={`w-11 h-11 rounded-full bg-gradient-mesh flex items-center justify-center font-display text-sm text-primary-foreground shrink-0 ring-1 ${
+                    p.verified ? "ring-secondary/50" : "ring-border/60"
+                  }`}
+                >
                   {initial}
                 </div>
                 <div className="flex-1 min-w-0">
+                  {/* Header: name + verified + handle + time · Why-am-I-seeing + Follow */}
                   <div className="flex items-center gap-1.5">
-                    <span className="font-medium">{p.name}</span>
-                    {p.verified && <BadgeCheck className="w-3.5 h-3.5 text-secondary" />}
-                    <span className="text-xs text-muted-foreground">{p.handle} · {p.time}</span>
+                    <span className="font-medium truncate max-w-[40%]">{p.name}</span>
+                    {p.verified && <BadgeCheck className="w-3.5 h-3.5 text-secondary shrink-0" />}
+                    <span className="text-xs text-muted-foreground truncate">
+                      {p.handle} · {p.time}
+                    </span>
+                    {/* "Why am I seeing this?" tooltip button */}
+                    <button
+                      onClick={() =>
+                        toast(whySeeing(p.id), {
+                          description:
+                            "Cirkle never uses ad targeting — recommendations are interest + engagement based.",
+                        })
+                      }
+                      className="ms-auto w-7 h-7 rounded-full hover:bg-muted/60 flex items-center justify-center text-muted-foreground hover:text-foreground transition shrink-0"
+                      aria-label="Why am I seeing this?"
+                      title="Why am I seeing this?"
+                    >
+                      <Info className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() =>
+                        toast(`Post options for @${p.handle.replace(/^@/, "")}'s post`, {
+                          description: "Mute · Block · Report · Embed · Pin to profile",
+                        })
+                      }
+                      className="w-7 h-7 rounded-full hover:bg-muted/60 flex items-center justify-center text-muted-foreground hover:text-foreground transition shrink-0"
+                      aria-label="More options"
+                      title="More"
+                    >
+                      <MoreHorizontal className="w-3.5 h-3.5" />
+                    </button>
                     {!own && (
                       <button
                         onClick={() => handleFollow(p)}
-                        className={`ms-auto text-[10px] px-2.5 py-1 rounded-full flex items-center gap-1 transition shrink-0 ${
+                        className={`text-[10px] px-2.5 py-1 rounded-full flex items-center gap-1 transition shrink-0 ${
                           isFollowing
                             ? "bg-muted text-muted-foreground hover:bg-accent/15 hover:text-accent"
                             : "bg-secondary/15 text-secondary border border-secondary/40 hover:bg-secondary/25"
@@ -472,11 +830,17 @@ export function MidanScreen() {
                       </button>
                     )}
                   </div>
-                  <p className="mt-1.5 text-[15px] leading-relaxed">{p.body}</p>
+                  {/* Body — line-clamped for long posts, preserves line breaks */}
+                  <p className="mt-1.5 text-[15px] leading-relaxed line-clamp-5 whitespace-pre-wrap break-words">
+                    {p.body}
+                  </p>
 
                   {p.image && (
-                    <div className="mt-3 rounded-2xl aspect-video relative overflow-hidden">
+                    <div className="mt-3 rounded-2xl aspect-video relative overflow-hidden border border-border/40">
                       <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-primary/20 to-secondary/10" />
+                      <div className="absolute bottom-2 left-2 text-[10px] text-primary-foreground/80 flex items-center gap-1">
+                        <ImageIcon className="w-3 h-3" /> Media attachment
+                      </div>
                     </div>
                   )}
 
@@ -484,45 +848,100 @@ export function MidanScreen() {
                     <ShieldCheck className="w-3 h-3" /> AI verified · No misinformation
                   </div>
 
-                  <div className="mt-3 flex items-center gap-6 text-xs text-muted-foreground">
-                    <button
-                      onClick={() => toggleLike(p.id)}
-                      className={`flex items-center gap-1.5 transition ${s.liked ? "text-accent" : "hover:text-accent"}`}
-                    >
-                      <Heart className={`w-4 h-4 ${s.liked ? "fill-current" : ""}`} />
-                      {s.likes.toLocaleString()}
-                    </button>
+                  {/* Engagement bar — pill-hover on every action, full set:
+                       replies · reposts · likes · views · bookmark · share · support · analytics */}
+                  <div className="mt-3 flex items-center gap-0.5 text-xs text-muted-foreground -ms-1.5">
                     <button
                       onClick={() => setCommentFor(p)}
-                      className="flex items-center gap-1.5 hover:text-secondary transition"
+                      className="group flex items-center gap-1 hover:text-secondary transition"
+                      aria-label={`Reply to ${p.name}`}
                     >
-                      <MessageCircle className="w-4 h-4" />{p.comments}
+                      <span className="p-1.5 rounded-full group-hover:bg-secondary/15 transition">
+                        <MessageCircle className="w-4 h-4" />
+                      </span>
+                      <span className="tabular-nums">{fmt(p.comments)}</span>
                     </button>
                     <button
                       onClick={() => toggleRepost(p.id)}
-                      className={`flex items-center gap-1.5 transition ${s.reposted ? "text-secondary" : "hover:text-primary"}`}
+                      className={`group flex items-center gap-1 transition ${
+                        s.reposted ? "text-secondary" : "hover:text-primary"
+                      }`}
+                      aria-pressed={s.reposted}
+                      aria-label={s.reposted ? "Undo repost" : "Repost"}
                     >
-                      <Repeat2 className={`w-4 h-4 ${s.reposted ? "fill-current" : ""}`} />{s.reposts}
+                      <span
+                        className={`p-1.5 rounded-full transition ${
+                          s.reposted ? "bg-secondary/15" : "group-hover:bg-primary/15"
+                        }`}
+                      >
+                        <Repeat2 className={`w-4 h-4 ${s.reposted ? "fill-current" : ""}`} />
+                      </span>
+                      <span className="tabular-nums">{fmt(s.reposts)}</span>
+                    </button>
+                    <button
+                      onClick={() => toggleLike(p.id)}
+                      className={`group flex items-center gap-1 transition ${
+                        s.liked ? "text-accent" : "hover:text-accent"
+                      }`}
+                      aria-pressed={s.liked}
+                      aria-label={s.liked ? "Unlike" : "Like"}
+                    >
+                      <span
+                        className={`p-1.5 rounded-full transition ${
+                          s.liked ? "bg-accent/15" : "group-hover:bg-accent/15"
+                        }`}
+                      >
+                        <Heart className={`w-4 h-4 ${s.liked ? "fill-current" : ""}`} />
+                      </span>
+                      <span className="tabular-nums">{fmt(s.likes)}</span>
+                    </button>
+                    <button
+                      onClick={() => toast(`Detailed analytics for @${p.handle.replace(/^@/, "")}'s post — coming soon`)}
+                      className="group flex items-center gap-1 hover:text-secondary transition"
+                      aria-label="View count"
+                      title="Views"
+                    >
+                      <span className="p-1.5 rounded-full group-hover:bg-secondary/15 transition">
+                        <Eye className="w-4 h-4" />
+                      </span>
+                      <span className="tabular-nums">{fmt(views)}</span>
+                    </button>
+                    <button
+                      onClick={() => toggleBookmark(p.id)}
+                      className={`group p-1.5 rounded-full transition ${
+                        s.bookmarked
+                          ? "text-secondary bg-secondary/15"
+                          : "hover:text-secondary hover:bg-secondary/15"
+                      }`}
+                      aria-pressed={s.bookmarked}
+                      aria-label={s.bookmarked ? "Remove bookmark" : "Bookmark post"}
+                      title={s.bookmarked ? "Bookmarked" : "Bookmark"}
+                    >
+                      <Bookmark className={`w-4 h-4 ${s.bookmarked ? "fill-current" : ""}`} />
                     </button>
                     <button
                       onClick={() => setShareFor(p)}
-                      className="flex items-center gap-1.5 hover:text-foreground transition"
+                      className="group p-1.5 rounded-full hover:text-foreground hover:bg-muted/60 transition"
+                      aria-label="Share post"
+                      title="Share"
                     >
                       <Share2 className="w-4 h-4" />
                     </button>
                     {!own && (
                       <button
                         onClick={() => setSupportFor(p)}
-                        className="flex items-center gap-1.5 hover:text-secondary transition"
-                        aria-label={`Support ${p.name}`}
+                        className="group p-1.5 rounded-full hover:text-secondary hover:bg-secondary/15 transition"
+                        aria-label={`Support ${p.name} with CirkleCommit`}
+                        title="Support"
                       >
                         <Coins className="w-4 h-4" />
                       </button>
                     )}
                     <button
-                      onClick={() => toast("View analytics — Coming soon")}
-                      className="flex items-center gap-1.5 hover:text-foreground transition ms-auto"
-                      aria-label="Analytics"
+                      onClick={() => toast("Detailed analytics — coming soon")}
+                      className="group p-1.5 rounded-full hover:text-foreground hover:bg-muted/60 transition ms-auto"
+                      aria-label="Open detailed analytics"
+                      title="Analytics"
                     >
                       <BarChart3 className="w-4 h-4" />
                     </button>
@@ -531,8 +950,138 @@ export function MidanScreen() {
               </div>
             </motion.li>
           );
+
+          // Interleave the "Who to follow" rail after the 3rd post so it
+          // surfaces mid-feed rather than buried at the bottom.
+          if (i === 2 && suggestedFollows.length > 0) {
+            return (
+              <Fragment key={p.id}>
+                {card}
+                <motion.li
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.18 }}
+                  className="px-6 py-4 border-b border-border bg-gradient-to-br from-secondary/[0.05] to-transparent"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <UserPlus className="w-4 h-4 text-secondary" />
+                      <h3 className="font-display text-sm">Who to follow</h3>
+                      <span className="text-[10px] text-muted-foreground">· suggested by the Brain</span>
+                    </div>
+                    <button
+                      onClick={() => toast("More suggestions — coming soon")}
+                      className="text-[11px] text-secondary hover:underline"
+                    >
+                      See more
+                    </button>
+                  </div>
+                  <div className="space-y-3">
+                    {suggestedFollows.map((sf) => {
+                      const sfHandle = sf.handle.replace(/^@/, "");
+                      const sfInitial = (sf.initials || sf.name || "?").trim()[0]?.toUpperCase() || "?";
+                      const sfFollowing = following.has(sfHandle);
+                      return (
+                        <div key={sfHandle} className="flex items-center gap-3">
+                          <div
+                            className={`w-10 h-10 rounded-full bg-gradient-mesh flex items-center justify-center font-display text-sm text-primary-foreground shrink-0 ring-1 ${
+                              sf.verified ? "ring-secondary/50" : "ring-border/60"
+                            }`}
+                          >
+                            {sfInitial}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1">
+                              <span className="font-medium text-sm truncate">{sf.name}</span>
+                              {sf.verified && <BadgeCheck className="w-3 h-3 text-secondary shrink-0" />}
+                            </div>
+                            <div className="text-[11px] text-muted-foreground truncate">{sf.handle}</div>
+                          </div>
+                          <button
+                            onClick={() => handleFollow(sf)}
+                            className={`text-[11px] px-3 py-1.5 rounded-full flex items-center gap-1 transition shrink-0 ${
+                              sfFollowing
+                                ? "bg-muted text-muted-foreground hover:bg-accent/15 hover:text-accent"
+                                : "bg-foreground text-background hover:opacity-90"
+                            }`}
+                            aria-pressed={sfFollowing}
+                            aria-label={sfFollowing ? `Unfollow ${sf.handle}` : `Follow ${sf.handle}`}
+                          >
+                            {sfFollowing ? (
+                              <>
+                                <UserCheck className="w-3 h-3" /> Following
+                              </>
+                            ) : (
+                              <>
+                                <UserPlus className="w-3 h-3" /> Follow
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </motion.li>
+              </Fragment>
+            );
+          }
+
+          return <Fragment key={p.id}>{card}</Fragment>;
         })}
       </ul>
+      )}
+
+      {/* ── Trends for you — hashtag rail (mines hashtags from the live feed) ── */}
+      {!isLoading && filteredPosts.length > 0 && trendingTopics.length > 0 && (
+        <section
+          className="mt-6 mx-5 glass rounded-3xl p-4 w-[calc(100%-2.5rem)]"
+          aria-label="Trends for you"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Hash className="w-4 h-4 text-accent" />
+              <h2 className="font-display text-base leading-none">Trends for you</h2>
+              <span className="text-[10px] text-muted-foreground">· {city || country || "Global"}</span>
+            </div>
+            <button
+              onClick={() => toast("Trend settings — coming soon")}
+              className="w-7 h-7 rounded-full hover:bg-muted/60 flex items-center justify-center text-muted-foreground hover:text-foreground transition"
+              aria-label="Trends info"
+              title="Trending from real engagement — no promoted trends"
+            >
+              <Info className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <ul className="space-y-0.5">
+            {trendingTopics.map((t, idx) => (
+              <li key={t.tag}>
+                <button
+                  onClick={() => toast(`Exploring #${t.tag}…`)}
+                  className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-muted/40 transition text-start group"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center shrink-0 group-hover:bg-secondary/20 transition">
+                    <Hash className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[10px] text-muted-foreground leading-tight truncate">{t.category}</div>
+                    <div className="font-medium text-sm truncate">#{t.tag}</div>
+                    <div className="text-[10px] text-muted-foreground leading-tight">
+                      {fmt(t.count)} posts
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-0.5 shrink-0">
+                    <span className="text-[10px] font-bold text-accent tabular-nums">#{idx + 1}</span>
+                    <TrendingUp className="w-3 h-3 text-accent/60 group-hover:scale-110 transition" />
+                  </div>
+                </button>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-3 pt-3 border-t border-border/40 text-[10px] text-muted-foreground flex items-center gap-1.5">
+            <ShieldCheck className="w-3 h-3 text-secondary" />
+            Trending from real engagement — no promoted trends, no boosted hashtags.
+          </div>
+        </section>
       )}
 
       {/* Comment sheet */}

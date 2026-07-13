@@ -23,6 +23,7 @@ import {
   FileText, Plus, Star, ExternalLink, Search, Share2, Bookmark, Trash2,
   AlertTriangle, Info, Lightbulb, Phone, UtensilsCrossed, Compass,
   Receipt, ChevronRight, PiggyBank, TrendingUp, PlaneTakeoff,
+  Flame, BadgePercent, Timer, Heart, Package,
 } from "lucide-react";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
@@ -2265,6 +2266,736 @@ function DestinationDetailSheet({
 }
 
 /* ------------------------------------------------------------------ */
+/* AI Travel Insights · Popular Destinations · Hot Deals · Trending   */
+/* --------------------------------------------------------------------*
+ * Editorial/booking-style additions layered on top of the live data
+ * dashboard. These sections make Rihla feel more like a premium travel
+ * marketplace (Booking.com / TripAdvisor) while reusing the same glass
+ * design system and brain AI. Nothing existing is removed.
+ * ------------------------------------------------------------------ */
+
+/** Rich destination metadata for the upgraded cards grid. */
+interface PopularDestination {
+  code: string;
+  city: string;
+  priceTier: 1 | 2 | 3 | 4;
+  fromPrice: number;     // USD per day estimate
+  rating: number;        // 0..5
+  reviews: number;
+  bestTime: string;
+  visaRequired: boolean;
+  tempC: number;
+  weather: string;
+  gradient: string;      // tailwind from-via-to
+  tags: string[];
+  trendPct?: number;     // used by the trending rail
+}
+
+/** Hot-deal card (flight / hotel / package). */
+interface TravelDeal {
+  id: string;
+  type: "flight" | "hotel" | "package";
+  title: string;
+  destination: string;
+  originalPrice: number;
+  discountedPrice: number;
+  currency: string;
+  endsAt: number;       // epoch ms
+  gradient: string;
+  rating?: number;
+  nights?: number;
+}
+
+const POPULAR_DESTINATIONS: PopularDestination[] = [
+  { code: "TR", city: "Istanbul",
+    priceTier: 2, fromPrice: 65, rating: 4.7, reviews: 284_593,
+    bestTime: "Apr–Jun", visaRequired: false, tempC: 22, weather: "Sunny",
+    gradient: "from-rose-500/55 via-rose-500/15 to-transparent",
+    tags: ["Culture", "Food"] },
+  { code: "AE", city: "Dubai",
+    priceTier: 4, fromPrice: 180, rating: 4.6, reviews: 512_044,
+    bestTime: "Nov–Mar", visaRequired: false, tempC: 31, weather: "Clear",
+    gradient: "from-amber-500/55 via-amber-500/15 to-transparent",
+    tags: ["Luxury", "Shopping"] },
+  { code: "JP", city: "Tokyo",
+    priceTier: 4, fromPrice: 165, rating: 4.8, reviews: 398_217,
+    bestTime: "Mar–May", visaRequired: true, tempC: 18, weather: "Cloudy",
+    gradient: "from-pink-500/55 via-pink-500/15 to-transparent",
+    tags: ["Culture", "Tech"] },
+  { code: "GB", city: "London",
+    priceTier: 4, fromPrice: 195, rating: 4.5, reviews: 612_890,
+    bestTime: "May–Sep", visaRequired: true, tempC: 14, weather: "Rainy",
+    gradient: "from-sky-500/55 via-sky-500/15 to-transparent",
+    tags: ["History", "Museums"] },
+  { code: "FR", city: "Paris",
+    priceTier: 4, fromPrice: 175, rating: 4.6, reviews: 724_103,
+    bestTime: "Apr–Jun", visaRequired: true, tempC: 16, weather: "Partly cloudy",
+    gradient: "from-indigo-500/55 via-indigo-500/15 to-transparent",
+    tags: ["Romance", "Art"] },
+  { code: "EG", city: "Cairo",
+    priceTier: 1, fromPrice: 35, rating: 4.4, reviews: 188_229,
+    bestTime: "Oct–Apr", visaRequired: false, tempC: 28, weather: "Sunny",
+    gradient: "from-amber-600/55 via-amber-600/15 to-transparent",
+    tags: ["History", "Pyramids"] },
+];
+
+const HOT_DEALS: TravelDeal[] = [
+  { id: "deal-1", type: "flight",
+    title: "Round-trip to Istanbul",
+    destination: "Istanbul, TR",
+    originalPrice: 480, discountedPrice: 312, currency: "USD",
+    endsAt: Date.now() + 2 * 86_400_000 + 4 * 3_600_000,
+    gradient: "from-rose-500/55 via-rose-500/15 to-transparent",
+    rating: 4.5 },
+  { id: "deal-2", type: "hotel",
+    title: "5-star stay · Dubai Marina",
+    destination: "Dubai, AE",
+    originalPrice: 320, discountedPrice: 198, currency: "USD", nights: 3,
+    endsAt: Date.now() + 1 * 86_400_000 + 12 * 3_600_000,
+    gradient: "from-amber-500/55 via-amber-500/15 to-transparent",
+    rating: 4.7 },
+  { id: "deal-3", type: "package",
+    title: "Tokyo · 5 nights + flight",
+    destination: "Tokyo, JP",
+    originalPrice: 2_100, discountedPrice: 1_470, currency: "USD", nights: 5,
+    endsAt: Date.now() + 4 * 86_400_000 + 2 * 3_600_000,
+    gradient: "from-pink-500/55 via-pink-500/15 to-transparent",
+    rating: 4.8 },
+  { id: "deal-4", type: "flight",
+    title: "Cairo weekend escape",
+    destination: "Cairo, EG",
+    originalPrice: 280, discountedPrice: 189, currency: "USD",
+    endsAt: Date.now() + 6 * 86_400_000,
+    gradient: "from-amber-600/55 via-amber-600/15 to-transparent",
+    rating: 4.3 },
+  { id: "deal-5", type: "package",
+    title: "London · 4 nights + tour",
+    destination: "London, GB",
+    originalPrice: 1_650, discountedPrice: 1_140, currency: "USD", nights: 4,
+    endsAt: Date.now() + 3 * 86_400_000 + 8 * 3_600_000,
+    gradient: "from-sky-500/55 via-sky-500/15 to-transparent",
+    rating: 4.6 },
+];
+
+/** Trending destinations, swapped by user's home region. */
+const TRENDING_BY_REGION: Record<string, PopularDestination[]> = {
+  MENA: [
+    { code: "TR", city: "Istanbul", priceTier: 2, fromPrice: 65, rating: 4.7, reviews: 284_593, bestTime: "Apr–Jun", visaRequired: false, tempC: 22, weather: "Sunny", gradient: "from-rose-500/50 via-rose-500/15 to-transparent", tags: ["Culture"], trendPct: 32 },
+    { code: "AE", city: "Dubai", priceTier: 4, fromPrice: 180, rating: 4.6, reviews: 512_044, bestTime: "Nov–Mar", visaRequired: false, tempC: 31, weather: "Clear", gradient: "from-amber-500/50 via-amber-500/15 to-transparent", tags: ["Luxury"], trendPct: 24 },
+    { code: "EG", city: "Cairo", priceTier: 1, fromPrice: 35, rating: 4.4, reviews: 188_229, bestTime: "Oct–Apr", visaRequired: false, tempC: 28, weather: "Sunny", gradient: "from-amber-600/50 via-amber-600/15 to-transparent", tags: ["History"], trendPct: 18 },
+    { code: "SA", city: "Riyadh", priceTier: 3, fromPrice: 95, rating: 4.5, reviews: 92_113, bestTime: "Nov–Feb", visaRequired: false, tempC: 26, weather: "Clear", gradient: "from-emerald-500/50 via-emerald-500/15 to-transparent", tags: ["Modern"], trendPct: 41 },
+  ],
+  EUROPE: [
+    { code: "GB", city: "London", priceTier: 4, fromPrice: 195, rating: 4.5, reviews: 612_890, bestTime: "May–Sep", visaRequired: true, tempC: 14, weather: "Rainy", gradient: "from-sky-500/50 via-sky-500/15 to-transparent", tags: ["History"], trendPct: 12 },
+    { code: "FR", city: "Paris", priceTier: 4, fromPrice: 175, rating: 4.6, reviews: 724_103, bestTime: "Apr–Jun", visaRequired: true, tempC: 16, weather: "Partly cloudy", gradient: "from-indigo-500/50 via-indigo-500/15 to-transparent", tags: ["Romance"], trendPct: 19 },
+    { code: "DE", city: "Berlin", priceTier: 3, fromPrice: 110, rating: 4.5, reviews: 318_204, bestTime: "May–Sep", visaRequired: true, tempC: 15, weather: "Cloudy", gradient: "from-amber-700/50 via-amber-700/15 to-transparent", tags: ["Nightlife"], trendPct: 27 },
+    { code: "TR", city: "Istanbul", priceTier: 2, fromPrice: 65, rating: 4.7, reviews: 284_593, bestTime: "Apr–Jun", visaRequired: false, tempC: 22, weather: "Sunny", gradient: "from-rose-500/50 via-rose-500/15 to-transparent", tags: ["Culture"], trendPct: 32 },
+  ],
+  ASIA: [
+    { code: "JP", city: "Tokyo", priceTier: 4, fromPrice: 165, rating: 4.8, reviews: 398_217, bestTime: "Mar–May", visaRequired: true, tempC: 18, weather: "Cloudy", gradient: "from-pink-500/50 via-pink-500/15 to-transparent", tags: ["Tech"], trendPct: 38 },
+    { code: "IN", city: "Mumbai", priceTier: 1, fromPrice: 30, rating: 4.2, reviews: 184_902, bestTime: "Nov–Feb", visaRequired: true, tempC: 30, weather: "Sunny", gradient: "from-orange-500/50 via-orange-500/15 to-transparent", tags: ["Culture"], trendPct: 22 },
+    { code: "AE", city: "Dubai", priceTier: 4, fromPrice: 180, rating: 4.6, reviews: 512_044, bestTime: "Nov–Mar", visaRequired: false, tempC: 31, weather: "Clear", gradient: "from-amber-500/50 via-amber-500/15 to-transparent", tags: ["Luxury"], trendPct: 24 },
+    { code: "TH", city: "Bangkok", priceTier: 2, fromPrice: 45, rating: 4.5, reviews: 412_887, bestTime: "Nov–Feb", visaRequired: false, tempC: 33, weather: "Sunny", gradient: "from-emerald-500/50 via-emerald-500/15 to-transparent", tags: ["Food"], trendPct: 17 },
+  ],
+  AMERICAS: [
+    { code: "US", city: "New York", priceTier: 4, fromPrice: 220, rating: 4.6, reviews: 938_204, bestTime: "Apr–Jun", visaRequired: true, tempC: 17, weather: "Cloudy", gradient: "from-sky-500/50 via-sky-500/15 to-transparent", tags: ["City"], trendPct: 14 },
+    { code: "BR", city: "Rio", priceTier: 2, fromPrice: 55, rating: 4.5, reviews: 284_593, bestTime: "Dec–Mar", visaRequired: false, tempC: 28, weather: "Sunny", gradient: "from-emerald-500/50 via-emerald-500/15 to-transparent", tags: ["Beach"], trendPct: 26 },
+    { code: "MX", city: "Mexico City", priceTier: 2, fromPrice: 50, rating: 4.4, reviews: 192_044, bestTime: "Mar–May", visaRequired: false, tempC: 22, weather: "Sunny", gradient: "from-orange-600/50 via-orange-600/15 to-transparent", tags: ["Food"], trendPct: 21 },
+  ],
+  AFRICA: [
+    { code: "EG", city: "Cairo", priceTier: 1, fromPrice: 35, rating: 4.4, reviews: 188_229, bestTime: "Oct–Apr", visaRequired: false, tempC: 28, weather: "Sunny", gradient: "from-amber-600/50 via-amber-600/15 to-transparent", tags: ["History"], trendPct: 18 },
+    { code: "NG", city: "Lagos", priceTier: 2, fromPrice: 50, rating: 4.2, reviews: 84_591, bestTime: "Nov–Mar", visaRequired: true, tempC: 30, weather: "Sunny", gradient: "from-emerald-600/50 via-emerald-600/15 to-transparent", tags: ["Culture"], trendPct: 22 },
+    { code: "MA", city: "Marrakech", priceTier: 2, fromPrice: 55, rating: 4.6, reviews: 142_044, bestTime: "Mar–May", visaRequired: false, tempC: 26, weather: "Sunny", gradient: "from-orange-600/50 via-orange-600/15 to-transparent", tags: ["Markets"], trendPct: 31 },
+  ],
+};
+
+function regionForCountry(code: string): keyof typeof TRENDING_BY_REGION {
+  const MENA = ["SA","AE","EG","QA","KW","BH","OM","JO","LB","TR","MA","DZ","TN","IQ","IR","YE","PS","SY"];
+  const EUROPE = ["GB","FR","DE","IT","ES","PT","NL","BE","CH","AT","SE","NO","DK","FI","PL","GR","IE","CZ","RO","HU"];
+  const ASIA = ["JP","CN","KR","IN","TH","VN","ID","MY","SG","PH","HK","TW","BD","PK","LK","NP","MM","KH"];
+  const AMERICAS = ["US","CA","BR","AR","MX","CL","CO","PE","VE","EC","UY","PY","BO","CR","PA","DO"];
+  if (MENA.includes(code)) return "MENA";
+  if (EUROPE.includes(code)) return "EUROPE";
+  if (ASIA.includes(code)) return "ASIA";
+  if (AMERICAS.includes(code)) return "AMERICAS";
+  return "AFRICA";
+}
+
+function priceTierLabel(tier: number): string {
+  return "$".repeat(Math.max(1, Math.min(4, tier)));
+}
+
+function formatReviews(n: number): string {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
+  if (n >= 1_000) return (n / 1_000).toFixed(1) + "K";
+  return String(n);
+}
+
+/** Ticking countdown hook — refreshes once per second. */
+function useCountdown(target: number) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(t);
+  }, []);
+  const diff = Math.max(0, target - now);
+  return {
+    days: Math.floor(diff / 86_400_000),
+    hours: Math.floor((diff % 86_400_000) / 3_600_000),
+    minutes: Math.floor((diff % 3_600_000) / 60_000),
+    seconds: Math.floor((diff % 60_000) / 1_000),
+    ended: diff === 0,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* AI Travel Insights — editorial Brain card ("Based on your prefs")   */
+/* ------------------------------------------------------------------ */
+
+function AITravelInsights({
+  destination,
+  userCountry,
+}: {
+  destination: { code: string; city: string };
+  userCountry: string;
+}) {
+  const destCountry = getCountry(destination.code);
+  const userCi = getCountry(userCountry);
+  const [insights, setInsights] = useState<string[] | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/brain", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query: `Give me exactly 3 short bullet-point travel insights (each max 14 words) about ${destCountry.name} (${destination.city}) for a traveler from ${userCi.name}. Focus on budget/timing, cultural etiquette, hidden gems. No intro, no numbering, just 3 lines separated by newlines.`,
+            country: userCountry,
+            city: destination.city,
+            language: "en",
+          }),
+        });
+        const data: BrainResponse | null = res.ok ? await res.json() : null;
+        const lines = (data?.answer || "")
+          .split(/\n+/)
+          .map((l) => l.replace(/^[-•*\d.)\s]+/, "").trim())
+          .filter(Boolean)
+          .slice(0, 3);
+        if (cancelled) return;
+        setInsights(lines.length ? lines : null);
+      } catch {
+        if (!cancelled) setInsights(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [destination.city, destination.code, destCountry.name, userCi.name, userCountry]);
+
+  const fallback = [
+    `Best value season in ${destination.city} is shoulder spring — fewer crowds, milder weather.`,
+    `Carry small local cash for markets — cards often fail in old-town stalls.`,
+    `Learn three words of ${destCountry.locale.toUpperCase()} — locals brighten visibly.`,
+  ];
+  const shown = insights || fallback;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mx-5 mt-5 rounded-3xl border border-secondary/30 bg-gradient-to-br from-secondary/15 via-card/40 to-card p-5 shadow-soft relative overflow-hidden"
+    >
+      <div className="absolute -top-10 -right-10 w-32 h-32 bg-secondary/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-rose/15 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="relative flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-9 h-9 rounded-2xl bg-gradient-mesh flex items-center justify-center shadow-soft">
+            <Brain className="w-4.5 h-4.5 text-primary-foreground" />
+          </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-widest text-secondary/80 leading-none">
+              Cirkle Brain · Personalized
+            </div>
+            <div className="font-display text-lg leading-tight mt-0.5">
+              Based on your preferences
+            </div>
+          </div>
+        </div>
+        <span className="text-[10px] glass rounded-full px-2 py-1 flex items-center gap-1">
+          <Sparkles className="w-3 h-3 text-secondary" /> AI curated
+        </span>
+      </div>
+
+      <div className="relative space-y-2">
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-9 rounded-xl bg-muted/30 animate-pulse" />
+          ))
+        ) : (
+          shown.map((line, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, x: -6 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.08 }}
+              className="flex items-start gap-2 rounded-xl bg-card/70 border border-border/60 p-2.5"
+            >
+              <span className="mt-0.5 w-5 h-5 rounded-md bg-secondary/15 text-secondary flex items-center justify-center text-[10px] font-bold shrink-0">
+                {i + 1}
+              </span>
+              <span className="text-xs leading-relaxed text-card-foreground/90">{line}</span>
+            </motion.div>
+          ))
+        )}
+      </div>
+
+      <div className="relative mt-3 flex items-center justify-between gap-2">
+        <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+          <Sparkles className="w-3 h-3 text-secondary" />
+          Tailored for {userCi.flag} {userCi.name} · {destCountry.flag} {destination.city}
+        </div>
+        <button
+          onClick={() => {
+            window.dispatchEvent(new CustomEvent("circle:ai", {
+              detail: {
+                query: `Give me personalized travel recommendations for ${destCountry.name} (${destination.city}) — I'm from ${userCi.name}.`,
+                context: "travel",
+                destination: destination.city,
+              },
+            }));
+            toast("Opening Cirkle Brain…");
+          }}
+          className="text-[10px] px-2.5 py-1 rounded-full glass hover:bg-muted/50 transition flex items-center gap-1 shrink-0"
+        >
+          More <ChevronRight className="w-3 h-3" />
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Popular Destinations — Booking.com-style cards grid                 */
+/* ------------------------------------------------------------------ */
+
+function DestinationCardsGrid({
+  onSelect,
+}: {
+  onSelect: (d: { code: string; city: string }) => void;
+}) {
+  const [saved, setSaved] = useState<Set<string>>(() =>
+    new Set(loadJSON<string[]>("rihla:fav-destinations", [])),
+  );
+
+  const toggleSave = (code: string) => {
+    setSaved((prev) => {
+      const next = new Set(prev);
+      if (next.has(code)) next.delete(code);
+      else next.add(code);
+      saveJSON("rihla:fav-destinations", Array.from(next));
+      return next;
+    });
+  };
+
+  return (
+    <div className="px-5 mt-6">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="font-display text-xl flex items-center gap-2">
+          <Globe className="w-5 h-5 text-secondary" />
+          Popular destinations
+        </h2>
+        <span className="text-[10px] text-muted-foreground">
+          {POPULAR_DESTINATIONS.length} curated cities
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {POPULAR_DESTINATIONS.map((d, i) => {
+          const ci = getCountry(d.code);
+          const isSaved = saved.has(d.code);
+          return (
+            <motion.div
+              key={d.code + d.city}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.04 }}
+              className="rounded-2xl bg-card border border-border overflow-hidden shadow-soft hover:shadow-float transition-shadow group"
+            >
+              {/* Cover */}
+              <div className="relative h-32">
+                <button
+                  onClick={() => onSelect({ code: d.code, city: d.city })}
+                  className="block w-full h-full text-left"
+                  aria-label={`Open ${d.city}`}
+                >
+                  <div className={`absolute inset-0 bg-gradient-to-br ${d.gradient} transition-transform duration-500 group-hover:scale-105`} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-charcoal/85 via-charcoal/20 to-transparent" />
+                </button>
+
+                {/* Weather badge */}
+                <div className="absolute top-2 right-2 glass rounded-full px-2 py-0.5 text-[10px] flex items-center gap-1">
+                  <CloudSun className="w-3 h-3 text-secondary" /> {d.tempC}°
+                </div>
+
+                {/* Visa indicator */}
+                <div className={`absolute top-2 left-2 rounded-full px-2 py-0.5 text-[10px] flex items-center gap-1 backdrop-blur-sm border ${
+                  d.visaRequired
+                    ? "bg-rose-500/25 text-rose-100 border-rose-400/40"
+                    : "bg-emerald-500/25 text-emerald-100 border-emerald-400/40"
+                }`}>
+                  {d.visaRequired ? <FileCheck className="w-3 h-3" /> : <ShieldCheck className="w-3 h-3" />}
+                  {d.visaRequired ? "Visa req" : "Visa-free"}
+                </div>
+
+                {/* Save heart */}
+                <button
+                  onClick={() => {
+                    toggleSave(d.code);
+                    toast(isSaved ? "Removed from favorites" : "Saved to favorites");
+                  }}
+                  className="absolute bottom-2 right-2 w-7 h-7 rounded-full glass flex items-center justify-center hover:scale-110 transition z-10"
+                  aria-label={isSaved ? "Remove from favorites" : "Save to favorites"}
+                >
+                  <Heart className={`w-3.5 h-3.5 ${isSaved ? "fill-rose-500 text-rose-500" : "text-cream"}`} />
+                </button>
+
+                {/* City name */}
+                <button
+                  onClick={() => onSelect({ code: d.code, city: d.city })}
+                  className="absolute bottom-2 left-2 right-10 text-left text-cream"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-lg" aria-hidden>{ci.flag}</span>
+                    <span className="font-display text-lg leading-tight drop-shadow-md">{d.city}</span>
+                  </div>
+                  <div className="text-[10px] opacity-80 flex items-center gap-1">
+                    <MapPin className="w-2.5 h-2.5" /> {ci.name}
+                  </div>
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-3 space-y-2">
+                {/* Rating + reviews */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-0.5">
+                    {Array.from({ length: 5 }).map((_, s) => (
+                      <Star
+                        key={s}
+                        className={`w-3.5 h-3.5 ${
+                          s < Math.round(d.rating)
+                            ? "fill-secondary text-secondary"
+                            : "text-muted-foreground/40"
+                        }`}
+                      />
+                    ))}
+                    <span className="text-xs font-semibold ml-1">{d.rating.toFixed(1)}</span>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">
+                    {formatReviews(d.reviews)} reviews
+                  </span>
+                </div>
+
+                {/* Best time + price */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1 text-[10px] glass rounded-full px-2 py-1">
+                    <Calendar className="w-3 h-3 text-secondary" /> Best: {d.bestTime}
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[9px] uppercase tracking-widest text-muted-foreground leading-none">
+                      From / day
+                    </div>
+                    <div className="font-display text-sm leading-tight mt-0.5">
+                      <span className="text-secondary mr-1">{priceTierLabel(d.priceTier)}</span>
+                      <span>${d.fromPrice}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tags */}
+                <div className="flex flex-wrap gap-1">
+                  {d.tags.map((t) => (
+                    <span
+                      key={t}
+                      className="text-[9px] uppercase tracking-widest px-2 py-0.5 rounded-full bg-muted/40 text-muted-foreground border border-border/60"
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Hot Deals — horizontal scrolling rail with countdowns               */
+/* ------------------------------------------------------------------ */
+
+function DealCard({
+  deal,
+  saved,
+  onToggleSave,
+  index,
+}: {
+  deal: TravelDeal;
+  saved: boolean;
+  onToggleSave: () => void;
+  index: number;
+}) {
+  const { days, hours, minutes, seconds, ended } = useCountdown(deal.endsAt);
+  const discountPct = Math.round(
+    (1 - deal.discountedPrice / deal.originalPrice) * 100,
+  );
+  const typeMeta = deal.type === "flight"
+    ? { Icon: Plane, label: "Flight" }
+    : deal.type === "hotel"
+      ? { Icon: Hotel, label: "Hotel" }
+      : { Icon: Package, label: "Package" };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: 12 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.05 }}
+      className="snap-start shrink-0 w-72 rounded-2xl bg-card border border-border overflow-hidden shadow-soft hover:shadow-float transition-shadow group"
+    >
+      {/* Cover */}
+      <div className="relative h-32">
+        <div className={`absolute inset-0 bg-gradient-to-br ${deal.gradient} transition-transform duration-500 group-hover:scale-105`} />
+        <div className="absolute inset-0 bg-gradient-to-t from-charcoal/85 via-charcoal/20 to-transparent" />
+
+        {/* Discount badge */}
+        <div className="absolute top-2 left-2 flex items-center gap-1 rounded-full bg-rose-500 text-white text-[10px] font-bold px-2 py-1 shadow-soft">
+          <BadgePercent className="w-3 h-3" /> -{discountPct}%
+        </div>
+
+        {/* Deal type */}
+        <div className="absolute top-2 right-2 glass rounded-full px-2 py-0.5 text-[10px] flex items-center gap-1">
+          <typeMeta.Icon className="w-3 h-3 text-secondary" /> {typeMeta.label}
+        </div>
+
+        {/* Bookmark */}
+        <button
+          onClick={onToggleSave}
+          className="absolute bottom-2 right-2 w-7 h-7 rounded-full glass flex items-center justify-center hover:scale-110 transition z-10"
+          aria-label={saved ? "Remove deal" : "Save deal"}
+        >
+          <Bookmark className={`w-3.5 h-3.5 ${saved ? "fill-secondary text-secondary" : "text-cream"}`} />
+        </button>
+
+        {/* Title */}
+        <div className="absolute bottom-2 left-2 right-10 text-cream">
+          <div className="font-display text-base leading-tight drop-shadow-md">{deal.title}</div>
+          <div className="text-[10px] opacity-80 flex items-center gap-1 mt-0.5">
+            <MapPin className="w-2.5 h-2.5" /> {deal.destination}
+          </div>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="p-3 space-y-2.5">
+        {/* Rating + nights */}
+        {deal.rating !== undefined && (
+          <div className="flex items-center gap-1.5">
+            <Star className="w-3.5 h-3.5 fill-secondary text-secondary" />
+            <span className="text-xs font-semibold">{deal.rating.toFixed(1)}</span>
+            {deal.nights && (
+              <span className="text-[10px] text-muted-foreground ml-auto">
+                {deal.nights} nights
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Price row */}
+        <div className="flex items-end justify-between">
+          <div>
+            <div className="text-[10px] text-muted-foreground line-through">
+              {deal.currency} {deal.originalPrice}
+            </div>
+            <div className="font-display text-xl text-secondary leading-none mt-0.5">
+              {deal.currency} {deal.discountedPrice}
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-[9px] uppercase tracking-widest text-muted-foreground leading-none">
+              You save
+            </div>
+            <div className="text-xs font-semibold text-emerald-500 mt-0.5">
+              {deal.currency} {deal.originalPrice - deal.discountedPrice}
+            </div>
+          </div>
+        </div>
+
+        {/* Countdown */}
+        <div className={`rounded-xl p-2 flex items-center gap-2 ${
+          ended
+            ? "bg-muted/40 text-muted-foreground"
+            : "bg-gradient-to-r from-rose-500/15 to-amber-500/10 border border-rose-500/30"
+        }`}>
+          <Timer className={`w-3.5 h-3.5 ${ended ? "" : "text-rose-500"}`} />
+          <div className="text-[10px] font-medium">
+            {ended ? "Deal ended" : (
+              <span className="tabular-nums">
+                Ends in{" "}
+                {days > 0 && <span className="font-bold">{days}d </span>}
+                <span className="font-bold">{hours}h </span>
+                <span className="font-bold">{minutes}m </span>
+                <span className="opacity-70">{seconds}s</span>
+              </span>
+            )}
+          </div>
+        </div>
+
+        <button
+          onClick={() => toast.success(`Reserved: ${deal.title} · ${deal.currency} ${deal.discountedPrice}`)}
+          className="w-full py-2 rounded-full bg-primary text-primary-foreground text-xs font-medium flex items-center justify-center gap-1.5 hover:opacity-90 transition"
+        >
+          <PlaneTakeoff className="w-3.5 h-3.5" /> Book now
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+function HotDealsRail() {
+  const [bookmarked, setBookmarked] = useState<Set<string>>(new Set());
+  const toggleBm = (id: string) => {
+    setBookmarked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  return (
+    <div className="mt-6">
+      <div className="flex items-center justify-between mb-3 px-5">
+        <h2 className="font-display text-xl flex items-center gap-2">
+          <Flame className="w-5 h-5 text-rose-500" />
+          Hot Deals
+        </h2>
+        <span className="text-[10px] text-muted-foreground">
+          {HOT_DEALS.length} live · refreshed hourly
+        </span>
+      </div>
+      <div className="flex gap-3 overflow-x-auto px-5 pb-2 snap-x snap-mandatory scrollbar-hide">
+        {HOT_DEALS.map((deal, i) => (
+          <DealCard
+            key={deal.id}
+            deal={deal}
+            saved={bookmarked.has(deal.id)}
+            onToggleSave={() => toggleBm(deal.id)}
+            index={i}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Trending Destinations — based on user's home region                 */
+/* ------------------------------------------------------------------ */
+
+function TrendingDestinations({
+  userCountry,
+  onSelect,
+}: {
+  userCountry: string;
+  onSelect: (d: { code: string; city: string }) => void;
+}) {
+  const region = regionForCountry(userCountry);
+  const userCi = getCountry(userCountry);
+  const list = TRENDING_BY_REGION[region] || TRENDING_BY_REGION.MENA;
+
+  return (
+    <div className="px-5 mt-6">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="font-display text-xl flex items-center gap-2">
+          <TrendingUp className="w-5 h-5 text-secondary" />
+          Trending in your region
+        </h2>
+        <span className="text-[10px] text-muted-foreground">
+          {region} · {userCi.flag} {userCi.name}
+        </span>
+      </div>
+      <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide">
+        {list.map((d, i) => {
+          const ci = getCountry(d.code);
+          return (
+            <motion.button
+              key={d.code + d.city}
+              initial={{ opacity: 0, x: 8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.05 }}
+              onClick={() => onSelect({ code: d.code, city: d.city })}
+              className="snap-start shrink-0 w-56 rounded-2xl bg-card border border-border overflow-hidden shadow-soft hover:shadow-float transition-shadow text-left group"
+            >
+              <div className="relative h-28">
+                <div className={`absolute inset-0 bg-gradient-to-br ${d.gradient} transition-transform duration-500 group-hover:scale-105`} />
+                <div className="absolute inset-0 bg-gradient-to-t from-charcoal/80 to-transparent" />
+                <div className="absolute top-2 right-2 rounded-full bg-secondary text-secondary-foreground text-[10px] font-bold px-2 py-0.5 flex items-center gap-1 shadow-soft">
+                  <TrendingUp className="w-3 h-3" /> +{d.trendPct}%
+                </div>
+                <div className="absolute bottom-2 left-2 right-2 text-cream">
+                  <div className="flex items-center gap-1">
+                    <span className="text-base" aria-hidden>{ci.flag}</span>
+                    <span className="font-display text-base leading-tight drop-shadow-md">{d.city}</span>
+                  </div>
+                  <div className="text-[10px] opacity-80 flex items-center gap-1">
+                    <MapPin className="w-2.5 h-2.5" /> {ci.name}
+                  </div>
+                </div>
+              </div>
+              <div className="p-2.5 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-0.5">
+                    {Array.from({ length: 5 }).map((_, s) => (
+                      <Star
+                        key={s}
+                        className={`w-3 h-3 ${
+                          s < Math.round(d.rating)
+                            ? "fill-secondary text-secondary"
+                            : "text-muted-foreground/40"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">{d.rating.toFixed(1)}</span>
+                </div>
+                <div className="flex items-center justify-between text-[10px]">
+                  <div className="flex items-center gap-1 glass rounded-full px-1.5 py-0.5">
+                    <CloudSun className="w-3 h-3 text-secondary" /> {d.tempC}°
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-secondary font-semibold">
+                      {priceTierLabel(d.priceTier)}
+                    </span>
+                    <span className="text-muted-foreground">· ${d.fromPrice}/d</span>
+                  </div>
+                </div>
+              </div>
+            </motion.button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Main screen                                                        */
 /* ------------------------------------------------------------------ */
 
@@ -2391,6 +3122,18 @@ export function RihlaScreen() {
           </button>
         ))}
       </div>
+
+      {/* 1b. AI Travel Insights — editorial "Based on your preferences" */}
+      <AITravelInsights destination={destination} userCountry={country} />
+
+      {/* 1c. Hot Deals — horizontal rail with countdowns */}
+      <HotDealsRail />
+
+      {/* 1d. Popular Destinations — Booking.com-style cards grid */}
+      <DestinationCardsGrid onSelect={(d) => setDestDetail(d)} />
+
+      {/* 1e. Trending Destinations — based on user's home region */}
+      <TrendingDestinations userCountry={country} onSelect={(d) => setDestDetail(d)} />
 
       {/* 2. Smart Trip Planner */}
       <SmartTripPlanner

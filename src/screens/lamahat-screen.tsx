@@ -3,7 +3,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Sparkles, Layers, Heart, Plus, Grid3x3, Bookmark, Film, Camera, Loader2, Brain, ShieldCheck } from "lucide-react";
+import { Sparkles, Layers, Heart, Plus, Grid3x3, Bookmark, Film, Camera, Loader2, Brain, ShieldCheck, MessageCircle, Eye } from "lucide-react";
 import { LamahatViewer } from "@/components/overlays/lamahat-viewer";
 import { toast } from "sonner";
 import { useApp } from "@/lib/app-store";
@@ -73,6 +73,68 @@ interface Photo {
   body: string;
   authorName: string;
   ratio: "tall" | "wide" | "square";
+}
+
+/** Colored category definitions — each drives the placeholder gradient + pill style. */
+const CATEGORIES = [
+  { name: "Travel", bg: "from-sky-500/45 via-blue-600/35 to-indigo-700/45", pill: "bg-sky-500/30 text-sky-100 border-sky-300/40" },
+  { name: "Food", bg: "from-amber-500/45 via-orange-600/35 to-rose-700/45", pill: "bg-amber-500/30 text-amber-100 border-amber-300/40" },
+  { name: "Nature", bg: "from-emerald-500/45 via-green-600/35 to-teal-700/45", pill: "bg-emerald-500/30 text-emerald-100 border-emerald-300/40" },
+  { name: "Friends", bg: "from-pink-500/45 via-rose-600/35 to-fuchsia-700/45", pill: "bg-pink-500/30 text-pink-100 border-pink-300/40" },
+  { name: "Studio", bg: "from-violet-500/45 via-purple-600/35 to-indigo-700/45", pill: "bg-violet-500/30 text-violet-100 border-violet-300/40" },
+  { name: "Sunsets", bg: "from-orange-500/45 via-rose-600/35 to-purple-700/45", pill: "bg-orange-500/30 text-orange-100 border-orange-300/40" },
+  { name: "Architecture", bg: "from-slate-500/45 via-zinc-600/35 to-stone-700/45", pill: "bg-slate-500/30 text-slate-100 border-slate-300/40" },
+  { name: "Art", bg: "from-fuchsia-500/45 via-pink-600/35 to-violet-700/45", pill: "bg-fuchsia-500/30 text-fuchsia-100 border-fuchsia-300/40" },
+] as const;
+
+/** Avatar gradient pairs — uses brand tokens (gold/rose/teal/accent) so cards stay on-brand. */
+const AVATAR_GRADIENTS = [
+  "linear-gradient(135deg, hsl(var(--gold)), hsl(var(--rose)))",
+  "linear-gradient(135deg, hsl(var(--teal)), hsl(var(--gold)))",
+  "linear-gradient(135deg, hsl(var(--rose)), hsl(var(--accent)))",
+  "linear-gradient(135deg, hsl(var(--gold)), hsl(var(--teal)))",
+  "linear-gradient(135deg, hsl(var(--accent)), hsl(var(--gold)))",
+  "linear-gradient(135deg, hsl(var(--teal)), hsl(var(--rose)))",
+] as const;
+
+const TIME_AGO = ["5m", "18m", "42m", "2h", "5h", "9h", "14h", "1d", "2d", "3d", "4d", "6d", "1w", "2w", "3w", "1mo"] as const;
+
+/** Stable 32-bit hash from a string — used to derive deterministic mock data per photo. */
+function hashStr(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+/** Compress a raw integer into a human count (1.2k / 12.4k / 1.2M). */
+function formatCount(n: number): string {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
+  if (n >= 1_000) return (n / 1_000).toFixed(1).replace(/\.0$/, "") + "k";
+  return String(n);
+}
+
+/**
+ * Enrich a raw Photo with deterministic mock engagement data so every card
+ * renders realistic metadata (likes / comments / views / category / time /
+ * avatar) without requiring API changes. Same id → same metrics, every render.
+ */
+function enrichPhoto(p: Photo) {
+  const h = hashStr(p.id);
+  const category = CATEGORIES[h % CATEGORIES.length];
+  const likes = 48 + (h % 9_520);          // 48 .. 9,567
+  const comments = 2 + (h % 480);          // 2 .. 481
+  const views = 1_200 + (h % 58_800);      // 1,200 .. 59,999
+  const timeAgo = TIME_AGO[h % TIME_AGO.length];
+  const avatar = AVATAR_GRADIENTS[h % AVATAR_GRADIENTS.length];
+  const initials =
+    (p.authorName || "U")
+      .split(/\s+/)
+      .map((s) => s[0])
+      .filter(Boolean)
+      .slice(0, 2)
+      .join("")
+      .toUpperCase() || "U";
+  return { category, likes, comments, views, timeAgo, avatar, initials };
 }
 
 export function LamahatScreen() {
@@ -274,29 +336,85 @@ export function LamahatScreen() {
         <div className="columns-2 sm:columns-3 md:columns-4 gap-2 px-2 mt-4">
           {grid.map((p, i) => {
             const isLiked = !!liked[i];
+            const meta = enrichPhoto(p);
             return (
               <button
                 key={p.id}
                 onClick={() => setViewer({ open: true, mode: "post", index: i })}
-                className={`mb-2 break-inside-avoid rounded-xl relative overflow-hidden group block w-full ${
+                className={`mb-2 break-inside-avoid rounded-2xl relative overflow-hidden group block w-full ring-1 ring-white/5 ${
                   p.ratio === "tall" ? "aspect-[3/4]" : p.ratio === "wide" ? "aspect-[4/3]" : "aspect-square"
                 }`}
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/10 transition group-hover:scale-105" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition" />
+                {/* Photo placeholder — category-tinted gradient (zooms on hover) */}
+                <div className={`absolute inset-0 bg-gradient-to-br ${meta.category.bg} transition-transform duration-500 group-hover:scale-110`} />
+                {/* Texture / sheen overlay so the placeholder reads as a photo */}
+                <div
+                  className="absolute inset-0 opacity-50 mix-blend-soft-light"
+                  style={{
+                    backgroundImage:
+                      "radial-gradient(circle at 25% 15%, hsl(var(--cream) / 0.35), transparent 55%), radial-gradient(circle at 78% 82%, hsl(var(--gold) / 0.3), transparent 50%)",
+                  }}
+                />
+                {/* Top legibility scrim (always on) */}
+                <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/55 to-transparent" />
+
+                {/* Top-left: avatar + author + time (always visible) */}
+                <div className="absolute top-2 left-2 right-12 flex items-center gap-2 z-10">
+                  <div
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-brand-charcoal shrink-0 ring-2 ring-white/40 shadow-md"
+                    style={{ background: meta.avatar }}
+                    aria-hidden
+                  >
+                    {meta.initials}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] font-semibold text-cream truncate drop-shadow-md leading-tight">
+                      {p.authorName}
+                    </div>
+                    <div className="text-[9px] text-cream/80 leading-tight">{meta.timeAgo} ago</div>
+                  </div>
+                </div>
+
+                {/* Top-right: like heart (always visible, primary action) */}
                 <span
-                  onClick={(e) => { e.stopPropagation(); toggleLike(i); toast(isLiked ? "Unliked" : "Liked ❤"); }}
-                  className="absolute top-2 right-2 w-8 h-8 rounded-full glass-strong flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleLike(i);
+                    toast(isLiked ? "Unliked" : "Liked ❤");
+                  }}
+                  className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full glass-strong flex items-center justify-center transition hover:scale-110"
                   role="button"
-                  aria-label="Like"
+                  aria-label={isLiked ? "Unlike" : "Like"}
                 >
-                  <Heart className={`w-4 h-4 ${isLiked ? "fill-current text-accent" : "text-cream"}`} />
+                  <Heart
+                    className={`w-4 h-4 transition ${isLiked ? "fill-current text-accent scale-110" : "text-cream"}`}
+                  />
                 </span>
-                <div className="absolute bottom-2 left-2 right-2 flex items-center gap-3 opacity-0 group-hover:opacity-100 transition text-xs" style={{ color: "hsl(var(--cream))" }}>
-                  <span className="flex items-center gap-1">
-                    <Heart className={`w-3 h-3 ${isLiked ? "fill-current" : ""}`} /> {(i + 1) * 124 + (isLiked ? 1 : 0)}
+
+                {/* Hover overlay — dark gradient lifting from the bottom */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-[5]" />
+
+                {/* Category pill — always visible, bottom-left */}
+                <span
+                  className={`absolute bottom-2 left-2 z-10 inline-flex items-center text-[9px] font-medium px-2 py-0.5 rounded-full border backdrop-blur-sm ${meta.category.pill}`}
+                >
+                  {meta.category.name}
+                </span>
+
+                {/* Engagement stats — fade in on hover, bottom-right */}
+                <div className="absolute bottom-2 right-2 z-10 flex items-center gap-2 text-[10px] text-cream opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <span className="flex items-center gap-0.5" title={`${formatCount(meta.likes + (isLiked ? 1 : 0))} likes`}>
+                    <Heart className={`w-3 h-3 ${isLiked ? "fill-current text-accent" : "text-cream"}`} />
+                    {formatCount(meta.likes + (isLiked ? 1 : 0))}
                   </span>
-                  <span className="flex items-center gap-1"><Layers className="w-3 h-3" /> {i + 2}</span>
+                  <span className="flex items-center gap-0.5" title={`${formatCount(meta.comments)} comments`}>
+                    <MessageCircle className="w-3 h-3" />
+                    {formatCount(meta.comments)}
+                  </span>
+                  <span className="flex items-center gap-0.5" title={`${formatCount(meta.views)} views`}>
+                    <Eye className="w-3 h-3" />
+                    {formatCount(meta.views)}
+                  </span>
                 </div>
               </button>
             );

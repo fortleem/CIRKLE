@@ -22,7 +22,7 @@ import {
   TrendingUp, Flame, Users, Eye, Bookmark, BookmarkCheck, Zap,
   BadgeCheck, Coins, Film, Hash, Crown, Send, Loader2, Info,
   Scissors, UsersRound, ChevronRight, Tv, ListMusic, Search, Settings,
-  ShieldCheck, type LucideIcon,
+  ShieldCheck, ThumbsUp, Clock, type LucideIcon,
 } from "lucide-react";
 import { MashahdPlayer } from "@/components/overlays/mashahd-player";
 import { toast } from "sonner";
@@ -72,6 +72,8 @@ interface VideoItem {
   subscribers: string;
   growth?: number;        // % growth for trending
   why: string;            // AI explanation for "Why am I seeing this?"
+  createdAt: number;       // epoch ms — drives "2 days ago" relative time
+  watchProgress?: number;  // 0..100 — partially-watched red bar under thumbnail
 }
 
 interface ChannelItem {
@@ -141,9 +143,44 @@ function fmtCount(n: number): string {
 }
 
 function fmtDuration(sec: number): string {
-  const m = Math.floor(sec / 60);
+  // Supports hours so long videos render as "1:23:45" (not "83:45").
+  // Shorts / sub-hour videos keep the "12:34" shape used everywhere else.
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
   const s = sec % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+/** Relative "2 days ago" formatter — used on every video card meta row. */
+function fmtRelativeTime(ts: number): string {
+  const diff = Date.now() - ts;
+  const sec = Math.max(0, Math.floor(diff / 1000));
+  if (sec < 60) return "just now";
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min} minute${min === 1 ? "" : "s"} ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} hour${hr === 1 ? "" : "s"} ago`;
+  const day = Math.floor(hr / 24);
+  if (day < 7) return `${day} day${day === 1 ? "" : "s"} ago`;
+  const wk = Math.floor(day / 7);
+  if (wk < 5) return `${wk} week${wk === 1 ? "" : "s"} ago`;
+  const mo = Math.floor(day / 30);
+  if (mo < 12) return `${mo} month${mo === 1 ? "" : "s"} ago`;
+  const yr = Math.floor(day / 365);
+  return `${yr} year${yr === 1 ? "" : "s"} ago`;
+}
+
+/**
+ * Like-ratio percentage shown next to the thumbs-up icon on every card.
+ * Real like/view ratios hover near 95%+ on most platforms, so we compress
+ * raw (likes/views) into a YouTube-style 85-99% band — keeps the UI honest
+ * while staying readable.
+ */
+function fmtLikeRatio(likes: number, views: number): number {
+  if (views <= 0) return 100;
+  const ratio = (likes / views) * 100;
+  return Math.max(85, Math.min(99, Math.round(95 - (100 - ratio) / 5)));
 }
 
 /** Map an arbitrary /api/feed forYou post to a video item. */
@@ -158,6 +195,12 @@ function forYouToVideo(
   const isShort = duration < 60;
   const isMusic = h % 7 === 0;
   const cat = pick(CATEGORIES, h);
+  // Deterministic upload timestamp in the past 0..45 days — drives the
+  // "2 days ago" relative-time pill on every video card.
+  const createdAt = Date.now() - ((h % 45) * 24 * 60 * 60 * 1000) - (h % (24 * 60 * 60 * 1000));
+  // ~1 in 5 videos is partially watched (5..95% progress) — drives the red
+  // watch-progress bar pinned to the bottom edge of the thumbnail.
+  const watchProgress = (h % 5 === 0) ? 5 + (h % 90) : undefined;
   return {
     id: `vid-${post.id}`,
     title: post.body.length > 60 ? post.body.slice(0, 60) + "…" : post.body,
@@ -181,6 +224,8 @@ function forYouToVideo(
     subscribers: creator.subs,
     growth: 5 + (h % 220),
     why: `Cirkle Brain AI surfaced this because it matches your interest in ${cat.toLowerCase()} + trending in your region right now`,
+    createdAt,
+    watchProgress,
   };
 }
 
@@ -978,6 +1023,13 @@ function ReelCard(props: ReelCardProps) {
       <GradientThumb className="absolute inset-0 w-full h-full transition group-hover:scale-105" />
       <div className="absolute inset-0 bg-gradient-to-t from-charcoal/90 via-charcoal/30 to-charcoal/10" />
 
+      {/* Watch progress bar — top edge of the reel, partially-watched only */}
+      {typeof v.watchProgress === "number" && v.watchProgress > 0 && (
+        <div className="absolute top-0 left-0 right-0 h-1 bg-white/15 z-[5]" aria-label={`${v.watchProgress}% watched`}>
+          <div className="h-full bg-accent transition-all" style={{ width: `${v.watchProgress}%` }} />
+        </div>
+      )}
+
       {/* Top-left badges */}
       <div className="absolute top-3 left-3 flex flex-col gap-2">
         <div className="glass text-[10px] px-2 py-1 rounded-full flex items-center gap-1">
@@ -1083,7 +1135,15 @@ function ReelCard(props: ReelCardProps) {
               {v.creator}
               {v.verified && <BadgeCheck className="w-3.5 h-3.5 text-secondary" />}
             </div>
-            <div className="text-[10px] opacity-80">{v.subscribers} subscribers · {fmtCount(v.views)} views</div>
+            <div className="text-[10px] opacity-80 flex items-center gap-1 flex-wrap">
+              <span>{v.subscribers} subscribers</span>
+              <span className="opacity-40">·</span>
+              <span className="inline-flex items-center gap-0.5"><Eye className="w-2.5 h-2.5" /> {fmtCount(v.views)} views</span>
+              <span className="opacity-40">·</span>
+              <span className="inline-flex items-center gap-0.5"><Clock className="w-2.5 h-2.5" /> {fmtRelativeTime(v.createdAt)}</span>
+              <span className="opacity-40">·</span>
+              <span className="inline-flex items-center gap-0.5 text-secondary"><ThumbsUp className="w-2.5 h-2.5" /> {fmtLikeRatio(v.likes, v.views)}%</span>
+            </div>
           </div>
           <button
             onClick={(e) => { e.stopPropagation(); props.onSubscribe(); }}
@@ -1273,45 +1333,83 @@ function MyVideosGrid({ videos, loading, searchQuery, onCreate, onPlay, onManage
             transition={{ delay: i * 0.05 }}
             // Visually distinct from the shared feed: gold (secondary) border
             // instead of the regular border-token used elsewhere.
-            className="rounded-2xl overflow-hidden border-2 border-secondary bg-card shadow-float flex flex-col"
+            className="rounded-2xl overflow-hidden border-2 border-secondary bg-card shadow-float flex flex-col group hover:shadow-float/80 transition"
           >
+            {/* ── Thumbnail (gradient placeholder + play overlay + badges) ── */}
             <button
               onClick={() => onPlay(v)}
               className="block w-full text-start relative"
               aria-label={`Play ${v.title}`}
             >
-              <div className="relative aspect-video">
-                <GradientThumb className="absolute inset-0 w-full h-full" />
+              <div className="relative aspect-video overflow-hidden">
+                <GradientThumb className="absolute inset-0 w-full h-full transition group-hover:scale-105" />
                 <div className="absolute inset-0 bg-gradient-to-t from-charcoal/80 via-charcoal/20 to-transparent" />
-                {/* "Your upload" gold badge */}
-                <div className="absolute top-2 left-2 text-[10px] px-2 py-1 rounded-full bg-secondary text-primary-foreground flex items-center gap-1 font-medium">
+                {/* "Your upload" gold badge — top-left */}
+                <div className="absolute top-2 left-2 text-[10px] px-2 py-1 rounded-full bg-secondary text-primary-foreground flex items-center gap-1 font-medium shadow-sm">
                   <Crown className="w-3 h-3" /> Your upload
                 </div>
-                {/* Duration / short badge */}
-                <div className="absolute top-2 right-2 text-[10px] px-2 py-1 rounded-full glass-strong text-cream">
-                  {v.isShort ? "SHORT" : fmtDuration(v.duration)}
-                </div>
-                {/* Play overlay */}
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition pointer-events-none">
+                {/* LIVE badge — top-left, stacked under "Your upload" (red, pulsing) */}
+                {v.isLive && (
+                  <div className="absolute top-9 left-2 text-[10px] px-2 py-1 rounded-full bg-accent text-accent-foreground flex items-center gap-1 font-semibold shadow-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" /> LIVE · {fmtCount(v.views)}
+                  </div>
+                )}
+                {/* Monetized pill — top-right (replaces duration badge there) */}
+                {v.monetized && (
+                  <div className="absolute top-2 right-2 text-[10px] px-2 py-1 rounded-full glass-strong text-secondary flex items-center gap-1" title="This creator is monetized via Creator Studio">
+                    <Coins className="w-3 h-3" /> Monetized
+                  </div>
+                )}
+                {/* Play overlay (hover) */}
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition pointer-events-none">
                   <span className="w-12 h-12 rounded-full bg-secondary text-primary-foreground flex items-center justify-center shadow-float">
                     <Play className="w-5 h-5 ml-0.5" fill="currentColor" />
                   </span>
                 </div>
-                <div className="absolute bottom-2 left-2 right-2 text-cream">
-                  <div className="text-sm font-medium line-clamp-2">{v.title}</div>
-                </div>
+                {/* Duration badge — bottom-right corner (YouTube-style dark pill) */}
+                {!v.isLive && (
+                  <div className="absolute bottom-2 right-2 text-[10px] px-1.5 py-0.5 rounded-md bg-black/75 text-cream font-medium tabular-nums">
+                    {v.isShort ? "SHORT" : fmtDuration(v.duration)}
+                  </div>
+                )}
+                {/* Watch progress bar — bottom edge, partially-watched videos only */}
+                {typeof v.watchProgress === "number" && v.watchProgress > 0 && (
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20" aria-label={`${v.watchProgress}% watched`}>
+                    <div className="h-full bg-accent transition-all" style={{ width: `${v.watchProgress}%` }} />
+                  </div>
+                )}
               </div>
             </button>
-            <div className="p-3 flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
-                  <Eye className="w-3 h-3" /> {fmtCount(v.views)}
-                  <span className="opacity-40">·</span>
-                  <Heart className="w-3 h-3" /> {fmtCount(v.likes)}
-                  <span className="opacity-40">·</span>
-                  <MessageCircle className="w-3 h-3" /> {fmtCount(v.comments)}
+            {/* ── Meta row — YouTube-style avatar + title + creator + stats ── */}
+            <div className="p-3 flex items-start gap-2.5">
+              {/* Creator avatar (small circle) */}
+              <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-mesh shrink-0 mt-0.5" title={v.creator}>
+                <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center font-display text-xs text-cream">
+                  {(v.creator || "?")[0]?.toUpperCase()}
                 </div>
-                <div className="text-[10px] text-muted-foreground mt-0.5 truncate">
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium line-clamp-2 leading-snug">{v.title}</div>
+                <div className="text-[11px] text-muted-foreground flex items-center gap-1 mt-1">
+                  <span className="truncate">{v.creator}</span>
+                  {v.verified && <BadgeCheck className="w-3 h-3 text-secondary shrink-0" aria-label="Verified creator" />}
+                  {v.mintNft && <Crown className="w-2.5 h-2.5 text-secondary shrink-0" aria-label="Mint NFT verified" />}
+                </div>
+                {/* Meta row: views · upload time · like ratio */}
+                <div className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-1 flex-wrap">
+                  <span className="inline-flex items-center gap-0.5">
+                    <Eye className="w-2.5 h-2.5" /> {fmtCount(v.views)} views
+                  </span>
+                  <span className="opacity-40">·</span>
+                  <span className="inline-flex items-center gap-0.5">
+                    <Clock className="w-2.5 h-2.5" /> {fmtRelativeTime(v.createdAt)}
+                  </span>
+                  <span className="opacity-40">·</span>
+                  <span className="inline-flex items-center gap-0.5 text-secondary">
+                    <ThumbsUp className="w-2.5 h-2.5" /> {fmtLikeRatio(v.likes, v.views)}%
+                  </span>
+                </div>
+                <div className="text-[10px] text-muted-foreground mt-1 truncate">
                   {v.tags.slice(0, 3).join(" · ")}
                 </div>
               </div>
@@ -1428,22 +1526,64 @@ function MusicGrid({ videos, onPlay }: { videos: VideoItem[]; onPlay: (v: VideoI
             onClick={() => onPlay(v)}
             className="text-start rounded-2xl overflow-hidden glass hover:shadow-float transition group"
           >
-            <div className="relative aspect-square">
-              <GradientThumb className="absolute inset-0 w-full h-full" />
-              <div className="absolute inset-0 bg-gradient-to-t from-charcoal/80 to-transparent" />
+            <div className="relative aspect-square overflow-hidden">
+              <GradientThumb className="absolute inset-0 w-full h-full transition group-hover:scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-t from-charcoal/85 via-charcoal/20 to-transparent" />
+              {/* LIVE badge — top-left, pulsing red */}
+              {v.isLive && (
+                <div className="absolute top-2 left-2 text-[9px] px-1.5 py-0.5 rounded-full bg-accent text-accent-foreground flex items-center gap-1 font-semibold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" /> LIVE
+                </div>
+              )}
+              {/* Monetized pill — top-right */}
+              {v.monetized && (
+                <div className="absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded-full glass-strong text-secondary flex items-center gap-0.5" title="Monetized">
+                  <Coins className="w-2.5 h-2.5" />
+                </div>
+              )}
+              {/* Play overlay (hover) */}
               <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
                 <span className="w-12 h-12 rounded-full bg-secondary text-primary-foreground flex items-center justify-center">
                   <Play className="w-5 h-5 ml-0.5" fill="currentColor" />
                 </span>
               </div>
-              <div className="absolute bottom-2 left-2 right-2 text-cream">
-                <div className="text-xs font-medium line-clamp-1">{v.music}</div>
-                <div className="text-[10px] opacity-70 line-clamp-1">{v.creator}</div>
+              {/* Music info — bottom-left of thumbnail (kept) */}
+              <div className="absolute bottom-2 left-2 right-12 text-cream">
+                <div className="text-xs font-medium line-clamp-1 flex items-center gap-1">
+                  <Music className="w-3 h-3 shrink-0" /> {v.music}
+                </div>
+                <div className="text-[10px] opacity-80 line-clamp-1 flex items-center gap-0.5">
+                  {v.creator}
+                  {v.verified && <BadgeCheck className="w-2.5 h-2.5 text-secondary shrink-0" />}
+                </div>
               </div>
+              {/* Duration badge — bottom-right corner */}
+              <div className="absolute bottom-2 right-2 text-[9px] px-1.5 py-0.5 rounded bg-black/75 text-cream font-medium tabular-nums">
+                {fmtDuration(v.duration)}
+              </div>
+              {/* Watch progress bar — bottom edge */}
+              {typeof v.watchProgress === "number" && v.watchProgress > 0 && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/20" aria-label={`${v.watchProgress}% watched`}>
+                  <div className="h-full bg-accent" style={{ width: `${v.watchProgress}%` }} />
+                </div>
+              )}
             </div>
-            <div className="p-2">
-              <div className="text-[11px] line-clamp-1">{v.title}</div>
-              <div className="text-[10px] text-muted-foreground">{fmtCount(v.views)} plays</div>
+            <div className="p-2.5">
+              <div className="text-[11px] line-clamp-1 font-medium">{v.title}</div>
+              {/* Meta row: views · upload time · like ratio */}
+              <div className="text-[9.5px] text-muted-foreground mt-1 flex items-center gap-1 flex-wrap">
+                <span className="inline-flex items-center gap-0.5">
+                  <Eye className="w-2.5 h-2.5" /> {fmtCount(v.views)}
+                </span>
+                <span className="opacity-40">·</span>
+                <span className="inline-flex items-center gap-0.5">
+                  <Clock className="w-2.5 h-2.5" /> {fmtRelativeTime(v.createdAt)}
+                </span>
+                <span className="opacity-40">·</span>
+                <span className="inline-flex items-center gap-0.5 text-secondary">
+                  <ThumbsUp className="w-2.5 h-2.5" /> {fmtLikeRatio(v.likes, v.views)}%
+                </span>
+              </div>
             </div>
           </motion.button>
         ))}
@@ -1538,21 +1678,63 @@ function TrendingPanel({
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.05 }}
               onClick={() => onPlay(v)}
-              className="w-full text-start flex items-center gap-3 p-2 rounded-2xl glass hover:bg-muted/40 transition"
+              className="w-full text-start flex items-center gap-3 p-2 rounded-2xl glass hover:bg-muted/40 transition group"
             >
               <div className="font-display text-2xl text-secondary w-8 text-center">{i + 1}</div>
-              <div className="w-24 h-14 rounded-xl overflow-hidden shrink-0 relative">
-                <GradientThumb className="w-full h-full" />
-                <div className="absolute bottom-1 right-1 text-[9px] px-1 rounded bg-black/60 text-cream">{fmtDuration(v.duration)}</div>
+              {/* Thumbnail with duration + live + watch-progress overlays */}
+              <div className="w-28 h-16 rounded-xl overflow-hidden shrink-0 relative">
+                <GradientThumb className="absolute inset-0 w-full h-full transition group-hover:scale-105" />
+                <div className="absolute inset-0 bg-gradient-to-t from-charcoal/70 to-transparent" />
+                {/* LIVE badge — top-left */}
+                {v.isLive && (
+                  <div className="absolute top-1 left-1 text-[8px] px-1 py-0.5 rounded bg-accent text-accent-foreground flex items-center gap-0.5 font-semibold">
+                    <span className="w-1 h-1 rounded-full bg-white animate-pulse" /> LIVE
+                  </div>
+                )}
+                {/* Play overlay */}
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                  <span className="w-8 h-8 rounded-full bg-secondary/90 text-primary-foreground flex items-center justify-center">
+                    <Play className="w-3.5 h-3.5 ml-0.5" fill="currentColor" />
+                  </span>
+                </div>
+                {/* Duration badge — bottom-right */}
+                <div className="absolute bottom-1 right-1 text-[9px] px-1 rounded bg-black/75 text-cream tabular-nums">{fmtDuration(v.duration)}</div>
+                {/* Watch progress bar — bottom edge */}
+                {typeof v.watchProgress === "number" && v.watchProgress > 0 && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/20" aria-label={`${v.watchProgress}% watched`}>
+                    <div className="h-full bg-accent" style={{ width: `${v.watchProgress}%` }} />
+                  </div>
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium line-clamp-1">{v.title}</div>
-                <div className="text-[10px] text-muted-foreground">{v.creator} · {fmtCount(v.views)} views</div>
+                {/* Creator row — avatar + name + verified */}
+                <div className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                  <div className="w-3.5 h-3.5 rounded-full overflow-hidden shrink-0 flex items-center justify-center font-display text-[8px] text-cream bg-gradient-mesh">
+                    {(v.creator || "?")[0]?.toUpperCase()}
+                  </div>
+                  <span className="truncate">{v.creator}</span>
+                  {v.verified && <BadgeCheck className="w-2.5 h-2.5 text-secondary shrink-0" />}
+                </div>
+                {/* Meta row — views · upload time · like ratio */}
+                <div className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                  <span className="inline-flex items-center gap-0.5">
+                    <Eye className="w-2.5 h-2.5" /> {fmtCount(v.views)}
+                  </span>
+                  <span className="opacity-40">·</span>
+                  <span className="inline-flex items-center gap-0.5">
+                    <Clock className="w-2.5 h-2.5" /> {fmtRelativeTime(v.createdAt)}
+                  </span>
+                  <span className="opacity-40">·</span>
+                  <span className="inline-flex items-center gap-0.5 text-secondary">
+                    <ThumbsUp className="w-2.5 h-2.5" /> {fmtLikeRatio(v.likes, v.views)}%
+                  </span>
+                </div>
               </div>
-              <div className="text-[10px] text-green-600 dark:text-green-400 flex items-center gap-0.5">
+              <div className="text-[10px] text-green-600 dark:text-green-400 flex items-center gap-0.5 shrink-0">
                 <TrendingUp className="w-3 h-3" /> +{v.growth || 0}%
               </div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
             </motion.button>
           ))}
         </div>

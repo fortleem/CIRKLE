@@ -72,7 +72,10 @@ export async function GET(req: NextRequest) {
         participants: meta?.participants ?? row._count.participants,
         lastMessage: last?.body,
         lastSender: last?.senderName,
+        lastSenderId: last?.senderId ?? undefined,
         lastTimestamp: last?.createdAt.toISOString(),
+        lastMessageStatus:
+          (last?.status as Conversation["lastMessageStatus"]) ?? undefined,
         unread: unreadByConv.get(row.id) ?? 0,
         encrypted: row.encrypted,
         pinned: meta?.pinned,

@@ -224,16 +224,57 @@ export function WaslScreen() {
 
   // Invalidate the conversation list when a presence or message:received event
   // arrives (so unread counts + last-message preview stay fresh).
+  // Also track typing state per conversation so list previews can show the
+  // animated "typing…" indicator in real time.
+  const [convTyping, setConvTyping] = useState<
+    Record<string, { name: string; at: number } | undefined>
+  >({});
   useEffect(() => {
     if (!socket.socket) return;
     const onPresence = (_p: PresenceUpdatePayload) => {
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
     };
+    const onTyping = (p: TypingUpdatePayload) => {
+      // Don't surface typing echoes for the current user — only show when
+      // the *other* party is typing.
+      if (p.userId === me.id) return;
+      setConvTyping((prev) => {
+        const next = { ...prev };
+        if (p.isTyping) {
+          next[p.conversationId] = { name: p.senderName, at: Date.now() };
+        } else {
+          delete next[p.conversationId];
+        }
+        return next;
+      });
+    };
     socket.socket.on("presence:update", onPresence);
+    socket.socket.on("typing:update", onTyping);
     return () => {
       socket.socket?.off("presence:update", onPresence);
+      socket.socket?.off("typing:update", onTyping);
     };
-  }, [socket.socket, queryClient]);
+  }, [socket.socket, queryClient, me.id]);
+
+  // Expire stale typing indicators (peer never sent a typing:stop).
+  useEffect(() => {
+    const id = setInterval(() => {
+      setConvTyping((prev) => {
+        const now = Date.now();
+        let changed = false;
+        const next: typeof prev = {};
+        for (const [k, v] of Object.entries(prev)) {
+          if (v && now - v.at < 6_000) {
+            next[k] = v;
+          } else {
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    }, 3_000);
+    return () => clearInterval(id);
+  }, []);
 
   // ── Incoming call listener ────────────────────────────────────────────
   // When the callManager fires onIncomingCall (a `call:incoming` socket
@@ -481,6 +522,8 @@ export function WaslScreen() {
                     onClick={() => setActive(c.id)}
                     onArchive={() => toast.success("Archived")}
                     onPin={() => toast.success("Pinned")}
+                    typingName={convTyping[c.id]?.name}
+                    currentUserId={me.id}
                   />
                 </motion.li>
               ))}
@@ -520,8 +563,34 @@ export function WaslScreen() {
 }
 
 // ============================================================================
-// ConversationListItem
+// ConversationListItem — WhatsApp-grade preview card
 // ============================================================================
+//
+// Visual hierarchy per card (left → right):
+//   [Avatar + presence dot]   [Name + meta icons / status+preview or typing]
+//                              [Timestamp / unread badge or muted dot]
+//
+// Features:
+//   • Last-message preview (truncated, sender-prefixed in groups)
+//   • WhatsApp-style status icons: clock / ✓ / ✓✓ / blue ✓✓
+//   • Animated "typing…" indicator (3 bouncing dots)
+//   • Pulse-animated online dot (emerald) + steel dot for away
+//   • Gradient gold unread badge (with 99+ cap) or dim dot for muted
+//   • Pinned pin + muted bell-off in the name row
+//   • ShieldCheck icon for E2EE indicator
+//   • Active highlight + swipe-to-archive / swipe-to-pin (preserved)
+
+function MessageStatusIcon({ status }: { status?: MessageStatus }) {
+  if (!status) return null;
+  if (status === "pending")
+    return <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />;
+  if (status === "sent")
+    return <Check className="w-3.5 h-3.5 text-muted-foreground shrink-0" />;
+  if (status === "delivered")
+    return <CheckCheck className="w-3.5 h-3.5 text-muted-foreground shrink-0" />;
+  // "read" — blue double-check (use brand secondary/gold for premium tint)
+  return <CheckCheck className="w-3.5 h-3.5 text-secondary shrink-0" />;
+}
 
 function ConversationListItem({
   conversation,
@@ -529,13 +598,41 @@ function ConversationListItem({
   onClick,
   onArchive,
   onPin,
+  typingName,
+  currentUserId,
 }: {
   conversation: Conversation;
   active: boolean;
   onClick: () => void;
   onArchive: () => void;
   onPin: () => void;
+  /** Display name of whoever is currently typing in this conversation
+   * (undefined when nobody is). Drives the animated "typing…" preview. */
+  typingName?: string;
+  /** Authenticated user id — used to detect outgoing last messages so we can
+   * show the WhatsApp-style status icon next to the preview. */
+  currentUserId?: string;
 }) {
+  const unread = conversation.unread ?? 0;
+  const isMuted = !!conversation.muted;
+  const isPinned = !!conversation.pinned;
+  const isOnline = conversation.presence === "online";
+  const isAway = conversation.presence === "away";
+  const isTyping = !!typingName;
+  const isOutgoing = !!conversation.lastSenderId && conversation.lastSenderId === currentUserId;
+  const lastStatus = conversation.lastMessageStatus;
+  const isGroupLike = conversation.type === "group" || conversation.type === "channel";
+  const hasUnread = unread > 0;
+
+  // Sender prefix for group/channel previews ("Ahmed: hello"), mirroring
+  // WhatsApp. Skipped for DMs and for outgoing messages (where the prefix
+  // would be "You:" — the status icon already conveys that).
+  const previewBody = conversation.lastMessage ?? "No messages yet";
+  const senderPrefix =
+    !isOutgoing && isGroupLike && conversation.lastSender
+      ? `${conversation.lastSender.split(" ")[0]}: `
+      : "";
+
   return (
     <motion.div
       drag="x"
@@ -562,61 +659,153 @@ function ConversationListItem({
         <Pin className="w-5 h-5 text-yellow-400" />
         <Star className="w-5 h-5 text-yellow-400" />
       </div>
-    <button
-      onClick={onClick}
-      className={`relative z-10 w-full text-start px-5 py-3 hover:bg-muted/40 transition flex items-center gap-3 ${
-        active ? "bg-muted/60" : ""
-      }`}
-    >
-      <div className="relative shrink-0">
-        {conversation.isCircle ? (
-          <div
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center font-display text-lg text-primary-foreground ${
-              AVATAR_BG[conversation.avatarColor] ?? "bg-primary"
-            }`}
-          >
-            <Users className="w-5 h-5" />
-          </div>
-        ) : (
-          <div
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center font-display text-lg text-primary-foreground ${
-              AVATAR_BG[conversation.avatarColor] ?? "bg-primary"
-            }`}
-          >
-            {conversation.avatarInitials}
-          </div>
-        )}
-        {conversation.presence === "online" && (
-          <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-secondary border-2 border-background" />
-        )}
-        {conversation.presence === "away" && (
-          <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-steel border-2 border-background" />
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
-          <span className="font-medium truncate">{conversation.name}</span>
-          {conversation.pinned && <Pin className="w-3 h-3 text-muted-foreground shrink-0" />}
-          {conversation.muted && <BellOff className="w-3 h-3 text-muted-foreground shrink-0" />}
-          {conversation.encrypted && (
-            <Shield className="w-3 h-3 text-secondary/70 shrink-0" />
+      <button
+        onClick={onClick}
+        className={`relative z-10 w-full text-start px-5 py-3 hover:bg-muted/40 transition flex items-center gap-3 rounded-2xl ${
+          active ? "bg-muted/60 ring-1 ring-secondary/30" : ""
+        }`}
+      >
+        {/* ── Avatar + presence dot ─────────────────────────────────── */}
+        <div className="relative shrink-0">
+          {conversation.isCircle ? (
+            <div
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center font-display text-lg text-primary-foreground ${
+                AVATAR_BG[conversation.avatarColor] ?? "bg-primary"
+              }`}
+            >
+              <Users className="w-5 h-5" />
+            </div>
+          ) : (
+            <div
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center font-display text-lg text-primary-foreground ${
+                AVATAR_BG[conversation.avatarColor] ?? "bg-primary"
+              }`}
+            >
+              {conversation.avatarInitials}
+            </div>
+          )}
+          {isOnline && (
+            <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-background flex items-center justify-center">
+              <motion.span
+                className="w-2.5 h-2.5 rounded-full bg-emerald-500"
+                animate={{ scale: [1, 1.18, 1], opacity: [1, 0.75, 1] }}
+                transition={{
+                  duration: 2.2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+              />
+            </span>
+          )}
+          {isAway && (
+            <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-steel border-2 border-background" />
           )}
         </div>
-        <p className="text-sm text-muted-foreground truncate">
-          {conversation.lastMessage ?? "No messages yet"}
-        </p>
-      </div>
-      <div className="flex flex-col items-end gap-1.5 shrink-0">
-        <span className="text-[10px] text-muted-foreground">
-          {relativeTime(conversation.lastTimestamp)}
-        </span>
-        {conversation.unread && conversation.unread > 0 ? (
-          <span className="text-[10px] min-w-5 h-5 px-1.5 rounded-full bg-accent text-accent-foreground flex items-center justify-center font-medium">
-            {conversation.unread}
+
+        {/* ── Main column: name + meta / preview or typing ─────────── */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span
+              className={`truncate ${
+                hasUnread ? "font-semibold text-foreground" : "font-medium"
+              }`}
+            >
+              {conversation.name}
+            </span>
+            {isPinned && (
+              <Pin
+                className="w-3 h-3 text-secondary shrink-0"
+                aria-label="Pinned"
+              />
+            )}
+            {isMuted && (
+              <BellOff
+                className="w-3 h-3 text-muted-foreground shrink-0"
+                aria-label="Muted"
+              />
+            )}
+            {conversation.encrypted && (
+              <ShieldCheck
+                className="w-3 h-3 text-secondary/80 shrink-0"
+                aria-label="End-to-end encrypted"
+              />
+            )}
+          </div>
+
+          {isTyping ? (
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="flex items-center gap-[2px]" aria-hidden>
+                {[0, 1, 2].map((i) => (
+                  <motion.span
+                    key={i}
+                    className="w-1 h-1 rounded-full bg-secondary"
+                    animate={{ opacity: [0.3, 1, 0.3], y: [0, -1.5, 0] }}
+                    transition={{
+                      duration: 1,
+                      repeat: Infinity,
+                      delay: i * 0.18,
+                      ease: "easeInOut",
+                    }}
+                  />
+                ))}
+              </span>
+              <span className="text-xs text-secondary font-medium">
+                {typingName?.split(" ")[0]
+                  ? `${typingName.split(" ")[0]} is typing…`
+                  : "typing…"}
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 mt-0.5 min-w-0">
+              {isOutgoing && <MessageStatusIcon status={lastStatus} />}
+              <p
+                className={`text-sm truncate ${
+                  hasUnread
+                    ? "text-foreground/85 font-medium"
+                    : "text-muted-foreground"
+                }`}
+              >
+                {senderPrefix}
+                {previewBody}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* ── Right column: timestamp + unread badge ───────────────── */}
+        <div className="flex flex-col items-end gap-1.5 shrink-0">
+          <span
+            className={`text-[10px] ${
+              hasUnread
+                ? "text-secondary font-semibold"
+                : "text-muted-foreground"
+            }`}
+          >
+            {relativeTime(conversation.lastTimestamp)}
           </span>
-        ) : null}
-      </div>
-    </button>
+          {hasUnread ? (
+            isMuted ? (
+              // Muted conversations get a discreet dim dot — no noisy badge.
+              <span
+                className="w-2.5 h-2.5 rounded-full bg-muted-foreground/60"
+                aria-label={`${unread} unread (muted)`}
+              />
+            ) : (
+              <span
+                className="text-[10px] min-w-[20px] h-5 px-1.5 rounded-full bg-gradient-gold text-secondary-foreground flex items-center justify-center font-semibold shadow-sm ring-1 ring-secondary/30"
+                aria-label={`${unread} unread`}
+              >
+                {unread > 99 ? "99+" : unread}
+              </span>
+            )
+          ) : isPinned ? (
+            <Pin
+              className="w-3 h-3 text-muted-foreground/70"
+              aria-label="Pinned"
+            />
+          ) : null}
+        </div>
+      </button>
     </motion.div>
   );
 }

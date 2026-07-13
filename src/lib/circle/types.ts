@@ -29,7 +29,12 @@ export interface Conversation {
   participants: number;
   lastMessage?: string;
   lastSender?: string;
+  lastSenderId?: ID;
   lastTimestamp?: string;
+  /** Status of the most recent message — used by conversation previews to
+   * show the WhatsApp-style clock / single-check / double-check / blue
+   * double-check icons when the last message was sent by the current user. */
+  lastMessageStatus?: MessageStatus;
   unread?: number;
   encrypted: boolean;
   pinned?: boolean;

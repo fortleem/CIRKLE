@@ -7020,3 +7020,235 @@ All three platforms are now verified and working:
 The Vercel build failure was caused by `prisma db push` in the build script (needs DATABASE_URL at build time). Fixed by removing it — the database is initialized at runtime via db-init.ts. The CI failure was caused by npm 10 blocking install scripts. Fixed with .npmrc `allow-scripts=true`. Both are now passing.
 
 Git is rollback-proof: 1 commit, 1 branch, 1 tag, 0 reflog, 0 old objects. One fresh backup. Pre-push guard + git config hardening prevent any future rollback.
+
+---
+Task ID: UI-WASL-UPGRADE
+Agent: general-purpose
+Task: Upgrade Wasl conversation preview cards
+
+Work Log:
+- Read worklog.md for project context (CIRKLE super-app, glass design system, sand-gold + deep-teal brand, Fraunces/Inter/Tajawal fonts).
+- Inspected wasl-screen.tsx (3,298 lines). Located conversation list rendering at `<ul>` block (line 460) and the `ConversationListItem` component (was lines 526–622). Confirmed it already had: avatar with presence dot, name + pinned/muted/encrypted icons, last-message preview, relative timestamp, and a basic unread count badge.
+- Enhanced the canonical `Conversation` type in `src/lib/circle/types.ts` with two new optional fields:
+  - `lastSenderId?: ID` — so the UI can detect outgoing messages and show status icons.
+  - `lastMessageStatus?: MessageStatus` — drives the WhatsApp-style clock / ✓ / ✓✓ / blue ✓✓ icons.
+- Updated `GET /api/conversations` in `src/app/api/conversations/route.ts` to populate `lastSenderId` and `lastMessageStatus` from the latest message row (already fetched for the preview).
+- Added a per-conversation typing tracker inside `WaslScreen`:
+  - New `convTyping: Record<conversationId, { name, at } | undefined>` state.
+  - Subscribes to the existing `typing:update` socket event via `useCircleSocket`. Ignores echoes of the current user (only shows when the *other* party is typing).
+  - A 3-second interval GCs stale typing entries (>6s with no refresh) so a peer that never sends `typing:stop` doesn't leave the indicator stuck on.
+  - Wires `typingName={convTyping[c.id]?.name}` and `currentUserId={me.id}` into each `ConversationListItem`.
+- Rewrote `ConversationListItem` (now ~225 lines including a `MessageStatusIcon` helper) to ship every requested feature, preserving all existing behavior (drag-to-archive / drag-to-pin, active highlight, avatar logic, etc.):
+  1. **Last message preview** — truncated `truncate`, with sender prefix in group/channel cards (e.g. "Ahmed: hello") mirroring WhatsApp. Sender prefix is suppressed for DMs and for outgoing messages (where the status icon already conveys ownership).
+  2. **Unread badge** — replaced flat `bg-accent` pill with a premium `bg-gradient-gold` pill (`text-secondary-foreground`, ring + shadow). Caps at "99+". When the conversation is **muted**, the badge is replaced by a discreet dim dot — no noisy count for muted threads.
+  3. **Timestamp** — kept the existing `relativeTime()` helper (already returns "just now" / "2m" / "1h" / "1d" / "Yesterday" / "Sep 5"). Promoted to `text-secondary font-semibold` when unread so the eye is drawn to fresh threads.
+  4. **Online status dot** — swapped gold dot for an **emerald** dot (per the task spec — green = online) and added a subtle pulse animation (scale 1 → 1.18 → 1, opacity 1 → 0.75 → 1, 2.2s loop) wrapped in a `bg-background` ring so it pops against any avatar color. Away dot is unchanged (steel).
+  5. **Typing indicator** — three bouncing dots (`bg-secondary`) with staggered 0.18s delays + "X is typing…" label in brand secondary gold, replacing the last-message preview while active. Renders above the timestamp column.
+  6. **Message status icons** — new `MessageStatusIcon` helper renders `Clock` (pending), `Check` (sent), `CheckCheck` in muted gray (delivered), or `CheckCheck` in brand gold (read) — placed before the preview text only when the last message was outgoing (`lastSenderId === me.id`).
+  7. **Pinned indicator** — gold `Pin` in the name row, plus a secondary pin in the timestamp column when there's no unread badge (so pinned-but-read threads still have a visual marker on the right).
+  8. **Muted indicator** — `BellOff` in muted gray in the name row.
+  9. **E2EE indicator** — replaced the generic `Shield` icon with `ShieldCheck` (already imported but unused) for a stronger, more recognizable end-to-end-encrypted affordance. Tinted `text-secondary/80` to match the brand gold.
+- Bonus polish: name row uses `font-semibold` when unread (vs. `font-medium` otherwise) for stronger visual hierarchy; the active card now has a `ring-1 ring-secondary/30` outline in addition to the existing `bg-muted/60` fill; the whole button is `rounded-2xl` so it sits cleanly inside the existing `space-y-1` list.
+- Ran `bun run lint` — **0 errors, exit 0**.
+
+Stage Summary:
+- **Files modified (3):**
+  - `src/lib/circle/types.ts` — added `lastSenderId?` and `lastMessageStatus?` to the `Conversation` interface.
+  - `src/app/api/conversations/route.ts` — populate the two new fields from the latest message row.
+  - `src/screens/wasl-screen.tsx` — added `convTyping` socket subscription + GC interval in `WaslScreen`; rewrote `ConversationListItem` and added a `MessageStatusIcon` helper.
+- **Key additions:** per-conversation typing tracker, animated typing dots, WhatsApp status-icon set, gradient-gold unread badge with 99+ cap, emerald pulsing online dot, muted-dot variant of unread indicator, sender-prefixed previews in groups, ShieldCheck E2EE indicator, secondary pinned marker in the timestamp column.
+- **Preserved:** all existing functionality — drag-to-archive, drag-to-pin, active highlight, smart-folder filtering, search, stories strip, official-channels strip, channel/conversation routing, the entire ChatView + message-thread + settings sheet + AIKE integration.
+- **Lint:** clean (0 errors).
+
+---
+Task ID: UI-MASHAHD-UPGRADE
+Agent: general-purpose
+Task: Upgrade Mashahd video thumbnail grid
+
+Work Log:
+- Read worklog.md for project context (Circle super-app, Mashahd = video module, prior MASHAHD-SEARCH-MYVIDEOS task left the file at 2,191 lines).
+- Read the full 2,199-line src/screens/mashahd-screen.tsx to map every video-rendering surface: ReelCard (snap-scroll reels), MyVideosGrid (gold-bordered user-uploads grid), MusicGrid (square thumbnails), TrendingPanel viral list (horizontal rows). Confirmed VideoItem type already had everything needed except `createdAt` and `watchProgress`.
+- Added `ThumbsUp` + `Clock` to the existing `lucide-react` import block (only addition to imports).
+- Extended the `VideoItem` interface with `createdAt: number` (epoch ms, drives "2 days ago") and `watchProgress?: number` (0..100, drives the red watch-progress bar).
+- Enhanced `fmtDuration` to render hours when duration ≥ 3600s ("1:23:45") — preserves the existing "12:34" shape for sub-hour videos.
+- Added two new helpers next to `fmtDuration`: `fmtRelativeTime(ts)` ("just now"/"2 days ago"/"1 week ago"/"3 months ago") and `fmtLikeRatio(likes, views)` (compresses raw like/view ratio into a YouTube-style 85–99% band so cards always render a sensible "98%").
+- Updated `forYouToVideo()` to populate `createdAt` (deterministic 0..45 days ago via the existing hash) and `watchProgress` (~1 in 5 videos partially watched, 5..95% progress). Infinite-scroll `loadMore` spreads `...base` so the new fields propagate automatically.
+- Upgraded MyVideosGrid cards to YouTube-style: gradient thumbnail with hover play overlay, "Your upload" gold badge (kept, top-left), new LIVE badge (top-left, stacked under "Your upload", pulsing red), Monetized pill (top-right), YouTube-style dark duration badge bottom-right (replaces the old top-right rounded-full), watch-progress bar pinned to bottom edge, then a meta row with a small gradient creator avatar (gradient-mesh ring), title (now below the thumbnail), creator name + BadgeCheck verified + Mint NFT crown, and a meta line of "1.2M views · 2 days ago · 98%". The "Manage" button + gold border + tag row are preserved.
+- Upgraded MusicGrid cards (square tiles): added LIVE badge (top-left), Monetized pill (top-right, icon-only since the tile is small), watch-progress bar at bottom edge, dark duration badge bottom-right, Music icon next to the track name, BadgeCheck next to creator name on the thumbnail overlay. Replaced the bare "{views} plays" line below the thumbnail with a meta row of views + upload time + like ratio (ThumbsUp).
+- Upgraded TrendingPanel viral rows: enlarged the thumbnail to 28×16 with hover play overlay, added LIVE badge + watch-progress bar to the thumbnail, kept the dark duration badge bottom-right. Under the title, replaced the old single "{creator} · {views} views" line with a creator row (mini gradient avatar + name + verified check) and a separate meta row (views · upload time · like ratio). The trending % growth + ChevronRight are preserved.
+- Upgraded the snap-scroll ReelCard: added a watch-progress bar at the top edge (full-width, accent-colored, only on partially-watched reels), and expanded the creator meta line from "{subscribers} subscribers · {views} views" to a wrapped row including subscribers · views · upload time · like ratio (with Eye, Clock, ThumbsUp icons). All existing overlays (Why? button, fullscreen, bullet comments, double-tap-to-like, action rail, AI captions, monetized + Mint NFT pills, LIVE + SHORT/duration badge, bullet-comment input) preserved.
+- Verified the header still keeps the "Brain AI" badge + "No ads" badge (untouched).
+- `bun run lint` → 0 errors, 0 warnings (exit code 0).
+- `bunx tsc --noEmit 2>&1 | grep mashahd` → empty (zero TypeScript errors in the upgraded file).
+
+Stage Summary:
+- File modified: src/screens/mashahd-screen.tsx (grew from 2,199 → 2,381 lines, +182 lines of targeted enhancement; no existing features removed).
+- All 9 required features shipped across every video-bearing surface (ReelCard, MyVideosGrid, MusicGrid, TrendingPanel viral list): (1) gradient thumbnail + play overlay, (2) duration badge bottom-right with hour support, (3) view count with Eye icon ("1.2M views"), (4) like ratio with ThumbsUp icon ("98%"), (5) upload time via Clock icon + fmtRelativeTime ("2 days ago"), (6) small gradient creator avatar next to title, (7) BadgeCheck verified badge next to creator name, (8) red pulsing LIVE badge with viewer count, (9) accent-colored watch-progress bar at the thumbnail bottom edge.
+- New helpers added: fmtRelativeTime, fmtLikeRatio. fmtDuration upgraded to render hours. VideoItem extended with createdAt + watchProgress. forYouToVideo seeds both deterministically from the existing hash so cards always show realistic metadata without needing API changes.
+- Header "Brain AI" + "No ads" badges, subtabs, search bar, Create dropdown, channel rail, ChannelSheet, CreateFlows (Upload/Live/Short/Playlist), SummaryModal, bullet comments (danmaku), watch-party invite, double-tap-to-like, infinite-scroll sentinel — all untouched and functional.
+- Lint clean (0 errors, 0 warnings). TypeScript clean (0 errors in mashahd-screen.tsx).
+
+---
+Task ID: UI-LAMAHAT-UPGRADE
+Agent: general-purpose
+Task: Upgrade Lamahat masonry photo grid
+
+Work Log:
+- Read worklog.md for project context (Circle super-app; Lamahat = photos module; brand tokens gold/teal/rose/cream/accent; glass design system in globals.css; masonry container `columns-2 sm:columns-3 md:columns-4` + `break-inside-avoid` already present).
+- Read the full 315-line src/screens/lamahat-screen.tsx. Confirmed the existing grid was already masonry-shaped (CSS columns + break-inside-avoid + ratioFor → tall/wide/square aspect ratios) but each card only showed a basic gradient placeholder, a hover-only like heart, and a single fake "likes + layers" hover row. No author avatar, no author name, no category, no comment count, no view count, no time posted.
+- Added `MessageCircle` + `Eye` to the lucide-react import line (only import change). All existing imports (Sparkles, Layers, Heart, Plus, Grid3x3, Bookmark, Film, Camera, Loader2, Brain, ShieldCheck) preserved — `Layers` still used by the "Tagged" tab.
+- Added a deterministic mock-data layer above the component:
+  - `CATEGORIES` (8 entries: Travel, Food, Nature, Friends, Studio, Sunsets, Architecture, Art) — each carries a 3-stop `bg-*` gradient for the photo placeholder + a matching colored `pill` class (bg/text/border) for the category tag.
+  - `AVATAR_GRADIENTS` (6 entries) — pairs of brand tokens (gold/rose/teal/accent) rendered via inline `linear-gradient(135deg, hsl(var(--gold)), hsl(var(--rose)))` so avatars stay on-brand and avoid Tailwind `from-*`/`to-*` ambiguity with the default Tailwind `rose` palette.
+  - `TIME_AGO` (16 relative strings: 5m → 1mo).
+  - `hashStr(s)` — stable 32-bit hash (same algorithm as the existing `ratioFor`).
+  - `formatCount(n)` — 1.2k / 12.4k / 1.2M compression for engagement numbers.
+  - `enrichPhoto(p)` — derives category, likes (48..9,567), comments (2..481), views (1,200..59,999), timeAgo, avatar gradient, and 2-letter initials from `p.id`. Same id → same metrics every render (no API changes needed).
+- Rewrote the photo card markup (kept the outer `<button>` + onClick viewer + `break-inside-avoid` + aspect-ratio logic untouched) into a layered Pinterest-style card:
+  1. **Masonry layout** — preserved the existing `columns-2 sm:columns-3 md:columns-4 gap-2` container + `break-inside-avoid mb-2` per card + `ratioFor`-driven `aspect-[3/4]` / `aspect-[4/3]` / `aspect-square` heights.
+  2. **Photo placeholder** — replaced the flat `from-primary/20 to-secondary/10` with a category-tinted 3-stop gradient that scales 1.10× on hover (`duration-500`), plus a soft-light radial sheen overlay (cream + gold radials) so the placeholder reads as a real photo rather than a swatch.
+  3. **Author avatar** — 28px circle, top-left, inline-style brand-token gradient, 2-letter initials in `text-brand-charcoal`, `ring-2 ring-white/40` + shadow for separation. Always visible.
+  4. **Author name** — `text-[11px] font-semibold text-cream truncate drop-shadow-md`, next to the avatar. Always visible.
+  5. **Time posted** — `text-[9px] text-cream/80` relative string ("2h ago") under the author name. Always visible.
+  6. **Like heart** — top-right, 32px `glass-strong` circle, always visible (was hover-only before). Heart fills accent-rose + scales 1.10× when liked; `aria-label` toggles "Like"/"Unlike". `stopPropagation` preserves the existing toggleLike + sonner toast behavior.
+  7. **Category tag** — bottom-left colored pill (`bg-{color}-500/30 text-{color}-100 border-{color}-300/40 backdrop-blur-sm`), always visible, derived from the category.
+  8. **Hover overlay** — full-card `bg-gradient-to-t from-black/85 via-black/25 to-transparent` fading in over 300ms on `group-hover`, sitting at `z-[5]` so it sits beneath the always-visible UI but above the placeholder.
+  9. **Engagement stats** — bottom-right row that fades in on hover: ♥ likes (with `formatCount`, +1 when liked, accent-filled heart), 💬 comments (`MessageCircle`), 👁 views (`Eye`). Each stat has a `title` tooltip with the full count + label.
+  10. Top legibility scrim (`h-16 from-black/55`) added so the always-visible author/time text stays readable over the bright category gradient.
+- Preserved every existing feature: the `No filters · No tracking · Your photos, your control` header tagline (with ShieldCheck), Brain AI recommend button + toast flow, Create + Capture composer buttons, Stories strip (Your story + 6 story bubbles with conic-gradient rings), AI Memories banner, the 4 tabs (Feed / Lamahat Reels / Saved / Tagged) with their tab-specific `grid` slicing, loading + empty states, the like toggle state, and the `LamahatViewer` overlay wiring.
+- `bun run lint` → **0 errors, exit 0**. `bunx tsc --noEmit | grep lamahat` → empty (0 TypeScript errors in the file).
+
+Stage Summary:
+- **File modified (1):** `src/screens/lamahat-screen.tsx` (grew from 315 → 433 lines, +118 lines of targeted enhancement; no existing features removed).
+- **New helpers added:** `CATEGORIES` (8 category color defs), `AVATAR_GRADIENTS` (6 brand-token avatar gradients), `TIME_AGO` (16 relative strings), `hashStr`, `formatCount`, `enrichPhoto`. All deterministic from `p.id` so cards render stable, realistic metadata with zero API changes.
+- **All 9 required features shipped:** (1) masonry CSS-columns layout preserved + cards rounded-2xl with `break-inside-avoid`; (2) like count with Heart icon — heart always visible, count on hover, accent-rose fill when liked; (3) comment count with MessageCircle icon; (4) view count with Eye icon; (5) author avatar — 28px brand-gradient circle with initials, top-left, always visible; (6) author name — `font-semibold text-cream` next to avatar, always visible; (7) category tag — colored pill bottom-left (Travel/Food/Nature/Friends/Studio/Sunsets/Architecture/Art); (8) time posted — relative string under author name ("2h ago"); (9) hover overlay — dark bottom-up gradient lifting in over 300ms with the engagement stats row (♥ 💬 👁) fading in alongside.
+- **Bonus polish:** category-tinted 3-stop gradient placeholder that scales 1.10× on hover, soft-light radial sheen overlay so the placeholder reads as a photo, top legibility scrim for author/time readability, `ring-1 ring-white/5` card border, per-stat `title` tooltips with full counts, `aria-label` toggling on the like button.
+- **Preserved:** header tagline + Brain AI + Create + Capture buttons, Stories strip, AI Memories banner, 4-tab switcher + tab-specific grid slicing, loading + empty states, like toggle state, `LamahatViewer` overlay wiring, the `brainRecommendPhotos` helper + `circle:brain-query` CustomEvent telemetry.
+- **Lint:** clean (0 errors, 0 warnings). **TypeScript:** clean (0 errors in lamahat-screen.tsx).
+
+---
+Task ID: UI-MIDAN-UPGRADE
+Agent: general-purpose
+Task: Upgrade Midan trending posts + compose CTA
+
+Work Log:
+- Read worklog + existing midan-screen.tsx (~905 lines) to understand the current header / filter / composer / feed / sheets architecture.
+- Enhanced the **Compose CTA** from a one-line "Share to the public square" button into a Twitter-style "What's happening, [name]?" composer card with a larger ringed avatar, a sub-header ("Share to the public square · No algorithm boost"), a six-icon action row (photo / poll / emoji / location / schedule / voice), and a gold-gradient Post button. All actions still dispatch the existing `circle:composer` CustomEvent so the global composer sheet keeps working.
+- Added a **Trending Now** horizontal-snap rail above the feed showing the top 8 posts by weighted engagement score (`likes + reposts*2.5 + comments*1.8`). Each trending card has a "#N · TRENDING" pill, author avatar + verified badge + handle + time, line-clamped body (3 lines), and a 4-stat engagement strip (likes / reposts / replies / views) with compact `fmt()` formatting (1.2K / 12.4K / 3.1M).
+- Rewrote the **post cards** in the feed:
+  - Larger 44×44 avatar with a ring tinted by verified status (gold ring for verified, neutral ring otherwise).
+  - Header row now includes a "Why am I seeing this?" Info button (rotates 6 deterministic, hash-picked reasons like "People you follow are engaging with this" / "Suggested by the Brain — no ad targeting") plus a 3-dot MoreHorizontal menu (mute/block/report/embed/pin).
+  - Body uses `line-clamp-5` with `whitespace-pre-wrap` to preserve paragraph breaks for long posts.
+  - Engagement bar rebuilt with Twitter-style pill hover backgrounds on every action and a full set: replies · reposts · likes · views (Eye icon, estimated from engagement) · bookmark (toggles state) · share · support (Coins, hidden on own posts) · analytics (BarChart3, pushed right with `ms-auto`). All counts use compact `fmt()` formatting.
+  - Added a `toggleBookmark` action and extended the `PostState` interface with `bookmarked: boolean`.
+- Added a **Who to follow** rail that intersperses mid-feed after the 3rd post (Twitter pattern). Picks 3 distinct authors the user doesn't already follow, prefers verified + high-engagement authors, and renders each row with avatar / verified badge / handle / Follow-Following toggle. The rail reuses the existing `handleFollow()` flow so the optimistic /api/follow sync works.
+- Added a **Trends for you** glass card section below the feed showing the top 6 trending hashtags. Hashtags are mined live from the feed via a Unicode-aware `#[\p{L}\d_]+` regex; if the feed has no hashtags yet it falls back to a curated GCC-context list (Vision2030, RiyadhSeason, NEOM, SaudiCup, Diriyah, LEAP). Each trend row shows category / #tag / post count / rank, and the card footer reinforces the no-promoted-trends promise.
+- Added helper utilities at the top of the file: `engagementScore()`, `fmt()` (compact number formatter), `estimateViews()`, and a `FALLBACK_TRENDS` constant.
+- Fixed a pre-existing latent bug: the `states` `useState` lazy initializer ran at mount when `allPosts` was still empty (React Query hadn't resolved yet), so newly-loaded posts had no `PostState` and the feed rendered nothing. Added a defensive `useEffect` that hydrates state entries for any new post the API returns, gated by a `changed` flag so it's a no-op when states already exist.
+- Preserved every existing feature: header with the "Ad-free · No algorithm manipulation" badge, Brain AI button, Spaces button + sheet, all four sheets (Comment / Share / Support / Spaces), view+dwell tracking via IntersectionObserver, follow sync, filter chips, and the existing empty/loading states.
+
+Stage Summary:
+- File modified: `src/screens/midan-screen.tsx` (905 → ~1453 lines).
+- Imports extended: added `Fragment` from React + 11 new lucide-react icons (`TrendingUp`, `Hash`, `Bookmark`, `Eye`, `Image as ImageIcon`, `Smile`, `MapPin`, `CalendarClock`, `Sparkles`, `Info`, `MoreHorizontal`).
+- New helpers: `engagementScore`, `fmt`, `estimateViews`, `FALLBACK_TRENDS`.
+- New state: `bookmarked` on `PostState` + `toggleBookmark`; sync `useEffect` to hydrate per-post state from API.
+- New derived data: `trendingPosts`, `trendingTopics`, `suggestedFollows`, `whySeeing` (deterministic per-post reason picker).
+- New UI sections: enhanced "What's happening?" compose CTA, Trending Now horizontal rail, enhanced post cards with pill-hover engagement bar + Why-am-I-seeing + 3-dot menu, mid-feed Who-to-follow rail, post-feed Trends-for-you card.
+- Lint passes (`bun run lint` exit 0); no new TypeScript errors introduced in `src/`.
+
+---
+Task ID: UI-PAY-UPGRADE
+Agent: general-purpose
+Task: Upgrade Pay transaction history with visual charts
+
+Work Log:
+- Added a complete spending-analytics layer to the Pay screen without removing any existing feature (header tagline, 3D-tilt balance card, Brain AI banner, quick actions, contacts, payment methods, split bill, federation banner, and all sheets preserved).
+- New pure helper functions derive chart-ready data from the existing `Tx[]` stream: `inferCategory` (regex over memo+method → Food/Transport/Shopping/Bills/Entertainment/Other), `getLast7DaysSpending`, `getCategoryBreakdown`, `getQuickStats` (week/month spend + lifetime saved), `getSmartInsight` (compares this week vs last week, returns positive/neutral/warning tone + localized text), `getMethodIcon`, `buildDonutStops` (conic-gradient string builder), and a `StatusBadge` component (settled/pending/failed dot + label).
+- New "Spending analytics" section inserted between the payment-methods list and the Recent activity list:
+  • Quick Stats row — 3 glass cards (This Week / This Month / Total Saved) each with a tinted icon chip (TrendingUp, Wallet, PiggyBank) and brand-currency formatted value.
+  • Smart Insight card — locally-computed (no API) insight that adapts its border gradient + icon (TrendingDown/Sparkles/TrendingUp) by tone.
+  • 7-day spending bar chart — pure CSS bars (`height: %`), today's bar highlighted with the brand secondary gradient, day labels + per-bar amount labels + avg/day summary.
+  • Category breakdown donut — CSS `conic-gradient` ring with a `bg-card` inner hole showing the total, plus a legend (color dot + category icon + name + % + amount).
+- Enhanced the transaction cards in the Recent activity list: counterparty avatar (gradient circle using `tx.counterpartyColor` + initials) with an overlaid directional type badge (emerald ArrowDownLeft for incoming, rose ArrowUpRight for outgoing); counterparty name; second row with category icon + inferred category + clock + formatted date/time; third row with payment-method icon + method label + optional fee; right-aligned amount colored emerald (in) / rose (out) with tabular-nums; status badge underneath. Kept the existing click-to-open detail sheet behavior intact.
+- All charts are CSS-only (divs with height %, conic-gradient, rounded-full masks) — no recharts / chart.js / d3 added.
+- Lint passes (`bun run lint` exit 0); no new TypeScript errors.
+
+Stage Summary:
+- Files modified: `src/screens/pay-screen.tsx` (687 → 1069 lines).
+- Key additions: ~180 lines of pure analytics helpers + `StatusBadge` component, 4 new UI sub-sections (quick stats, smart insight, 7-day bar chart, category donut) grouped under a "Spending analytics" header, and a fully redesigned transaction card row.
+- New lucide-react icons used: TrendingDown, TrendingUp, Sparkles, Clock, Zap, CreditCard, Banknote, QrCode, Landmark, Utensils, Bus, ShoppingBag, Receipt, Film, Package, PiggyBank, BarChart3, PieChart.
+- Design system honored: `glass` cards, `bg-gradient-gold` / `bg-gradient-mesh` / `var(--gradient-mesh)` accents, `font-display` headings, `text-secondary` accent, `text-cream` on gradients, HSL brand tokens for category colors (#C06070 rose, #4A6A8A steel, #C2A060 gold, #1A4A5A teal).
+
+---
+Task ID: UI-RIHLA-UPGRADE
+Agent: general-purpose
+Task: Upgrade Rihla destination cards with prices + ratings
+
+Work Log:
+- Read worklog.md for project context (CIRKLE super-app, glass design system, sand-gold + deep-teal brand, Fraunces/Inter/Tajawal fonts; prior LAMAHAT/MASHAHD/WASL/MIDAN/PAY upgrade tasks established the same enhancement pattern).
+- Read the full 2,591-line src/screens/rihla-screen.tsx. Mapped every section in the main RihlaScreen return: header → BrainDashboard (live weather/visa/currency/time + AI tip) → map dashboard → quick-tools 5-button grid → SmartTripPlanner → DestinationDiscovery → DocumentVault → CulturalIntel → ExpenseTracker → local-transport grid → saved-trips → tool/destination/trip sheets. Confirmed no existing destination cards with prices + ratings existed (DestinationDiscovery had bare country tiles with a from-price chip only).
+- Added 5 new lucide-react icons to the import block: Flame (Hot Deals header), BadgePercent (discount badge), Timer (countdown), Heart (favorite destination toggle), Package (package-deal type).
+- Added a new typed data layer above the main screen:
+  • PopularDestination interface (code, city, priceTier 1-4, fromPrice USD/day, rating 0-5, reviews count, bestTime, visaRequired, tempC, weather, gradient, tags, optional trendPct).
+  • TravelDeal interface (id, type flight|hotel|package, title, destination, originalPrice, discountedPrice, currency, endsAt epoch ms, gradient, rating?, nights?).
+  • POPULAR_DESTINATIONS — 6 curated cities (Istanbul, Dubai, Tokyo, London, Paris, Cairo) with full price/rating/reviews/best-time/visa/temp metadata and distinct gradient covers.
+  • HOT_DEALS — 5 live deals across flight/hotel/package types with real future end timestamps (1-6 days out).
+  • TRENDING_BY_REGION — 5 region buckets (MENA / EUROPE / ASIA / AMERICAS / AFRICA), 3-4 trending cities each, with trendPct growth numbers.
+  • regionForCountry(code) — buckets any of 70+ ISO-2 codes into one of the 5 regions (defaults to AFRICA).
+  • priceTierLabel(tier) — renders "$".."$$$$" price-tier string.
+  • formatReviews(n) — compresses 284,593 → "284.6K" and 7,103,000 → "7.1M".
+  • useCountdown(target) — 1-second ticking hook returning {days, hours, minutes, seconds, ended}.
+- Built 4 new components, all matching the existing glass + font-display + brand-token design system:
+  1. **AITravelInsights** — editorial Brain AI card titled "Based on your preferences". Calls /api/brain for 3 personalized bullet insights (budget/timing, etiquette, hidden gems) about the active destination for the user's home country; falls back to 3 deterministic localized insights on any error. Renders each insight in a numbered glass card with staggered motion-in. Includes a "More →" CTA that dispatches the existing `circle:ai` CustomEvent to open Cirkle Brain. Distinct from the live-data BrainDashboard (which shows weather/visa/currency/time + a single tip).
+  2. **DestinationCardsGrid** — Booking.com-style 1- or 2-column grid of the 6 popular destinations. Each card has: gradient cover with hover scale-105 + dark scrim, weather badge top-right (CloudSun + tempC°), visa indicator top-left (emerald "Visa-free" with ShieldCheck or rose "Visa req" with FileCheck), heart save toggle bottom-right (persists to localStorage `rihla:fav-destinations`, fills rose when saved), city name + flag + country bottom-left, then a body with 5-star rating row (filled gold stars for Math.round(rating), empty muted for the rest) + rating number + compressed review count, a "Best: <months>" Calendar pill + "$$ $65" from-/day price block, and 2 colored category tags.
+  3. **HotDealsRail** — horizontal snap-x snap-mandatory rail of 5 deal cards (scrollbar hidden via the existing `.scrollbar-hide` utility). Each DealCard has: gradient cover with hover scale, rose "-{discountPct}%" BadgePercent badge top-left (computed live from original vs discounted), deal-type pill top-right (Plane/Hotel/Package icon + label), bookmark toggle bottom-right, title + destination bottom-left over a cream-on-charcoal scrim. Body has star rating + nights, strikethrough original price + large gold discounted price + emerald "You save" amount, a live 1-second countdown pill ("Ends in 2d 4h 12m 43s") that flips to "Deal ended" at zero, and a primary "Book now" CTA that toasts a reservation confirmation.
+  4. **TrendingDestinations** — horizontal snap rail of 3-4 region-specific trending cities. Each card shows the gradient cover, a secondary "+{trendPct}%" TrendingUp pill top-right (brand-gold background), city + flag + country, then a 5-star mini rating row + weather pill + price-tier + per-day price.
+- Inserted all 4 new sections into the main RihlaScreen JSX between the existing quick-tools 5-button grid and the SmartTripPlanner — a prominent near-the-top position that flows naturally after the live-data dashboard, map, and quick tools, before the trip planner takes over. The new sections reuse the existing `destDetail` state (so clicking any destination card or trending card opens the existing DestinationDetailSheet) and pass `country` for region-aware trending.
+- Preserved every existing feature: header tagline, BrainDashboard, map dashboard with markers, quick-tools grid (Flights/Stays/Visa/Translate/Currency), SmartTripPlanner + DayCard, DestinationDiscovery, DocumentVault (with AES-GCM encryption), CulturalIntel, ExpenseTracker + ExpensePie, FlightSearchSheet, HotelSearchSheet, CurrencySheet, TranslateSheet, DestinationDetailSheet, saved-trips sheet, all localStorage keys, all CustomEvent dispatches (`circle:ai`, `circle:visa-explorer`, `share-to-wasl`).
+- `bun run lint` → **0 errors, exit 0**. `bunx tsc --noEmit | grep "^src/"` → empty (0 TypeScript errors in src/; the only TS errors are in the unrelated `download/cirkle-brain-ai/` mini-services tree which is pre-existing).
+
+Stage Summary:
+- **File modified (1):** `src/screens/rihla-screen.tsx` (2,591 → 3,334 lines, +743 lines of targeted enhancement; no existing features removed).
+- **Imports extended:** +5 lucide-react icons (Flame, BadgePercent, Timer, Heart, Package).
+- **New types:** `PopularDestination`, `TravelDeal`.
+- **New static data:** `POPULAR_DESTINATIONS` (6 cities), `HOT_DEALS` (5 live deals), `TRENDING_BY_REGION` (5 regions × 3-4 cities = 18 trending entries).
+- **New helpers:** `regionForCountry`, `priceTierLabel`, `formatReviews`, `useCountdown`.
+- **New components:** `AITravelInsights`, `DestinationCardsGrid`, `DealCard`, `HotDealsRail`, `TrendingDestinations`.
+- **All 4 requested sections shipped** between the quick-tools grid and the Smart Trip Planner:
+  1. **AI Travel Insights** — "Based on your preferences" Brain card with 3 numbered insight bullets (live /api/brain call + deterministic fallback) + "More →" CTA into Cirkle Brain.
+  2. **Hot Deals** — horizontal snap rail of 5 deals with -{pct}% badges, strikethrough→discounted price, emerald "You save" amount, live 1-second countdown pill (d/h/m/s), deal-type pill (Flight/Hotel/Package), bookmark toggle, Book-now CTA.
+  3. **Destination Cards Grid** — 2-col grid of 6 popular destinations, each with gradient cover, weather badge, visa indicator (free vs required), heart save toggle (persisted), 5-star rating + compressed review count, "Best: <months>" pill, "$$ $65" price-tier + per-day price, category tags.
+  4. **Trending Destinations** — region-aware horizontal rail (MENA/EUROPE/ASIA/AMERICAS/AFRICA) showing 3-4 cities per region with +{trendPct}% growth pills, mini 5-star ratings, weather + price chips.
+- **Design system honored:** `glass` cards, `bg-gradient-mesh` / `bg-gradient-to-br from-X/55 via-X/15 to-transparent` covers, `font-display` headings, `text-secondary` accent, `text-cream` on gradient covers, `shadow-soft` → `shadow-float` hover, `scrollbar-hide` utility for horizontal rails, brand tokens (gold/teal/rose/steel/charcoal/cream), `snap-x snap-mandatory` snapping, framer-motion staggered entrances.
+- **Preserved:** header tagline + BrainDashboard (live data), map dashboard with markers, quick-tools 5-button grid, SmartTripPlanner + DayCard, DestinationDiscovery, DocumentVault (AES-GCM), CulturalIntel, ExpenseTracker + ExpensePie, all 4 tool sheets + DestinationDetailSheet + saved-trips sheet, all localStorage keys (`rihla:docs`, `rihla:saved-trips`, `rihla:fav-destinations`), all CustomEvent dispatches.
+- **Lint:** clean (0 errors, exit 0). **TypeScript:** clean (0 errors in `src/`).
+
+---
+Task ID: UI-PROFILE-UPGRADE
+Agent: general-purpose
+Task: Upgrade Profile with cover photo + stats grid + posts grid
+
+Work Log:
+- Read worklog + existing profile-screen.tsx (~835 lines) and the brand design system in globals.css to confirm tokens (gold/teal/rose/steel/charcoal HSL vars, gradient-hero/aurora/gold, glass, shadow-float, scrollbar-hide, gradient-text-gold).
+- Confirmed baseline `bun run lint` exits 0 before changes.
+- Expanded lucide-react imports: added Image (as ImageIcon), Video, Type, Heart, MessageCircle, Share2, Settings (as SettingsIcon), Pencil, Trophy, Crown, Rocket, Zap, Star, Award, Camera.
+- Added `import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"` for the achievement badge tooltips.
+- ENHANCED the existing profile header card: split the previously single-block card into a dedicated COVER PHOTO BANNER (h-32) on top + profile content (avatar overlapping cover) below. Cover uses a 4-stop inline gradient (teal → steel → rose → gold), the existing `bg-gradient-aurora` overlay, three radial color accents, a 20×20 dot-grid pattern overlay, and a diagonal sheen — visually striking, better than FB/IG covers. Added an "Edit cover" affordance (top-right pill button with Camera icon) and a "Cover photo" label.
+- Preserved ALL existing header features: gold-ring avatar, online status dot, display name, BadgeCheck verified icon, "Verified Human" pill, handle + region line, followers/following/tier line, and the three privacy badges (Data on device / No tracking / 100% free).
+- ENHANCED the existing 3-column stats grid (Trust score / Workspaces / Verified items): each glass card now renders its Lucide icon in a small rounded `bg-secondary/15` tile above the value (previously icons were defined but never rendered). Kept the `setDetailSheet` onClick + StatDetail wiring intact.
+- ADDED a NEW 4-column Activity Stats grid: Posts (247, steel/FileText), Followers (1.2K, gold/Users), Following (384, rose/UserPlus), Circles joined (12, teal/Grid3x3). Each is a glass card with icon tile + gradient-text-gold value + uppercase label, and routes to the same StatDetail sheet as the existing grid.
+- ADDED a NEW Quick Actions Row (3-col): Edit Profile (Pencil, toast), Share Profile (Share2, copies profile URL to clipboard + toast), Settings (SettingsIcon, dispatches `circle:settings` CustomEvent to match existing privacy-center opener).
+- ADDED a NEW Achievement Badges row inside a glass card with horizontal scroll: Early Adopter (Rocket, violet→indigo), Verified Human (ShieldCheck, emerald→teal), Privacy Champion (Lock, sky→blue), Circle Creator (Crown, amber→orange), Top Contributor (Heart, rose→pink), Quick Responder (Zap, yellow→amber), Rising Star (Star, fuchsia→purple, locked), Legend (Award, slate→zinc, locked). Locked badges render grayscale with a small Lock pin. Each badge uses the shadcn Tooltip component to show its name + lock state on hover.
+- ADDED a NEW Posts Grid section (3-column, IG-style): header with Grid3x3 icon + "View all" affordance; 9 mock posts rendered via PostGridItem cards (min-h-130px) — each card shows a color-coded type icon (text=steel/Type, photo=rose/ImageIcon, video=teal/Video), timestamp, 3-line clamped post text, and engagement counts (Heart likes / MessageCircle comments / Share2 shares) above a hairline divider. Color legend row below the grid.
+- Added four new helper definitions at the bottom of the file: `QuickActionButton`, `AchievementBadge`, `MOCK_POSTS` constant + `PostType`/`MockPost` types, and `PostGridItem`. All use the existing glass design system + Lucide icons.
+- Did NOT touch any of the existing Brain AI banner, Account / Appearance / Privacy & Data / About cards, the region sheet, detail sheet, sign-out sheet, or account-deletion AlertDialog — all existing functionality preserved.
+- Ran `bun run lint` after changes: exits 0 (no errors).
+
+Stage Summary:
+- Files modified: `src/screens/profile-screen.tsx` (grew from ~835 lines to ~1115 lines).
+- Imports: +1 shadcn Tooltip import, +15 new Lucide icons.
+- Header card: restructured into cover banner + profile content; 6 layered overlays (gradient + aurora + 3 radials + dot grid + sheen) + Edit-cover pill + Cover-photo label.
+- Existing stats grid: enhanced with icon tiles (no behavioral change).
+- New sections added (in render order): Activity Stats 4-col grid, Quick Actions row, Achievement Badges row, Posts Grid (3-col).
+- New helper components: QuickActionButton, AchievementBadge (with Tooltip), PostGridItem. New constants/types: MOCK_POSTS, PostType, MockPost.
+- Lint clean (exit 0). All existing features (verified badge, privacy badges, Brain AI banner, all 4 settings cards, region sheet, sign-out, account deletion) preserved.
