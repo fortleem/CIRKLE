@@ -102,6 +102,93 @@ function getCountrySources(country: string): string[] {
   return countryInfo.newsSources.slice(0, 5).map(s => s.name);
 }
 
+// ── Tier 0: Google News RSS (free, no API key, all 246 countries) ─────────
+
+/**
+ * Fetch real news articles from Google News RSS feeds.
+ * This is FREE, needs NO API key, and works for ALL 246 countries.
+ * Returns real article URLs + titles + sources that can be scraped.
+ */
+async function newsViaGoogleRSS(country: string, city: string | undefined, category: string, count: number): Promise<NewsArticle[]> {
+  const countryInfo = getCountry(country);
+  const location = city ? `${city} ${countryInfo.name}` : countryInfo.name;
+  const catClause = category && category !== "general" && category !== "breaking" ? `${category} ` : "";
+  const query = encodeURIComponent(`${catClause}${location}`);
+
+  // Google News RSS — gl=country, hl=language, ceid=country:language
+  const gl = country.toLowerCase();
+  const hl = "en";
+  const rssUrl = `https://news.google.com/rss/search?q=${query}+when:1d&hl=${hl}&gl=${gl}&ceid=${gl}:${hl}`;
+
+  try {
+    const res = await fetch(rssUrl, {
+      signal: AbortSignal.timeout(10000),
+      headers: {
+        "User-Agent": "CIRKLE-Brain-AI/1.0 (News Bot; +https://cirkle.app)",
+        "Accept": "application/rss+xml, application/xml, text/xml",
+      },
+    });
+    if (!res.ok) return [];
+
+    const xml = await res.text();
+
+    // Parse RSS XML — extract <item> elements
+    const items: NewsArticle[] = [];
+    const itemRegex = /<item>([\s\S]*?)<\/item>/gi;
+    let match: RegExpExecArray | null;
+
+    while ((match = itemRegex.exec(xml)) !== null && items.length < count) {
+      const itemXml = match[1];
+
+      // Extract title
+      const titleMatch = itemXml.match(/<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/title>/i);
+      const title = titleMatch ? titleMatch[1].trim() : "";
+      if (!title) continue;
+
+      // Extract link
+      const linkMatch = itemXml.match(/<link>(.*?)<\/link>/i);
+      const link = linkMatch ? linkMatch[1].trim() : "";
+
+      // Extract source (from title pattern " - Source Name")
+      const sourceMatch = title.match(/\s-\s([^-]+)$/);
+      const source = sourceMatch ? sourceMatch[1].trim() : "Google News";
+
+      // Extract pubDate
+      const dateMatch = itemXml.match(/<pubDate>(.*?)<\/pubDate>/i);
+      const pubDate = dateMatch ? new Date(dateMatch[1].trim()).toISOString() : new Date().toISOString();
+
+      // Extract description (snippet)
+      const descMatch = itemXml.match(/<description>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/description>/i);
+      let summary = "";
+      if (descMatch) {
+        // Strip HTML tags from description
+        summary = descMatch[1].replace(/<[^>]+>/g, "").trim().slice(0, 280);
+      }
+
+      // Clean title (remove " - Source" suffix)
+      const cleanTitle = sourceMatch ? title.replace(/\s-\s[^-]+$/, "").trim() : title;
+
+      items.push({
+        id: `rss-${country}-${category}-${items.length}`,
+        title: cleanTitle.slice(0, 200),
+        summary: summary || cleanTitle.slice(0, 280),
+        source,
+        sourceUrl: link || "#",
+        category: category || "general",
+        publishedAt: pubDate,
+        country,
+        city,
+        provider: "google-rss",
+        scraped: false,
+      });
+    }
+
+    return items;
+  } catch {
+    return [];
+  }
+}
+
 // ── Web Scraping ──────────────────────────────────────────────────────────
 
 /**
@@ -445,8 +532,9 @@ export async function orchestrateNews(opts: {
   // Build query
   const query = buildNewsQuery(country, city || undefined, category, language);
 
-  // Run all 4 providers in parallel
-  const [openRouterResults, geminiResults, groqResults, hfResults] = await Promise.allSettled([
+  // Run all 5 sources in parallel (Tier 0: Google RSS + 4 AI providers)
+  const [rssResults, openRouterResults, geminiResults, groqResults, hfResults] = await Promise.allSettled([
+    newsViaGoogleRSS(country, city || undefined, category, safeCount),
     newsViaOpenRouter(query, country, city || undefined, category, safeCount),
     newsViaGemini(query, country, city || undefined, category, safeCount),
     newsViaGroq(query, country, city || undefined, category, safeCount),
@@ -454,16 +542,17 @@ export async function orchestrateNews(opts: {
   ]);
 
   // Collect results
+  const rssArticles = rssResults.status === "fulfilled" ? rssResults.value : [];
   const orArticles = openRouterResults.status === "fulfilled" ? openRouterResults.value : [];
   const gemArticles = geminiResults.status === "fulfilled" ? geminiResults.value : [];
   const groqArticles = groqResults.status === "fulfilled" ? groqResults.value : [];
   const hfArticles = hfResults.status === "fulfilled" ? hfResults.value : [];
 
-  // Merge + deduplicate (prioritize OpenRouter > Gemini > Groq > HuggingFace)
+  // Merge + deduplicate (prioritize Google RSS > OpenRouter > Gemini > Groq > HuggingFace)
   const seen = new Set<string>();
   const merged: NewsArticle[] = [];
 
-  for (const article of [...orArticles, ...gemArticles, ...groqArticles, ...hfArticles]) {
+  for (const article of [...rssArticles, ...orArticles, ...gemArticles, ...groqArticles, ...hfArticles]) {
     if (!article.title) continue;
     const dedupeKey = (article.sourceUrl !== "#" ? article.sourceUrl : article.title.toLowerCase()).trim();
     if (seen.has(dedupeKey)) continue;
@@ -475,7 +564,7 @@ export async function orchestrateNews(opts: {
   // If we got results from web-search providers (OpenRouter/Gemini), scrape the URLs
   if (merged.length > 0) {
     const urlsToScrape = merged
-      .filter(a => a.sourceUrl && a.sourceUrl !== "#" && (a.provider === "openrouter" || a.provider === "gemini"))
+      .filter(a => a.sourceUrl && a.sourceUrl !== "#" && (a.provider === "google-rss" || a.provider === "openrouter" || a.provider === "gemini"))
       .map(a => a.sourceUrl)
       .slice(0, 3);
 
@@ -521,6 +610,7 @@ export function getNewsOrchestratorStatus(): {
 } {
   return {
     providers: [
+      { name: "google-rss", available: true, role: "Google News RSS — FREE, no API key, real article URLs for all 246 countries" },
       { name: "openrouter", available: !!process.env.OPENROUTER_API_KEY, role: "Web search (`:online` model) — discovers real article URLs" },
       { name: "gemini", available: !!process.env.GEMINI_API_KEY, role: "Google Search grounding — real-time news via Google" },
       { name: "groq", available: !!process.env.GROQ_API_KEY, role: "Fast generation — Arabic + English news articles" },
