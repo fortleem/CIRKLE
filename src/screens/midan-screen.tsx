@@ -352,8 +352,14 @@ export function MidanScreen() {
 
   return (
     <div className="pb-32">
+      {/* ── Super Upgrade: Header with Wellness Timer + No-Ads Banner ── */}
       <div className="px-6 pt-2 flex items-center justify-between">
-        <h1 className="font-display text-4xl">Midan</h1>
+        <div>
+          <h1 className="font-display text-4xl">Midan</h1>
+          <p className="text-[10px] text-secondary mt-0.5 flex items-center gap-1">
+            <ShieldCheck className="w-2.5 h-2.5" /> Ad-free · No algorithm manipulation · You control the feed
+          </p>
+        </div>
         <div className="flex items-center gap-2">
           <button
             onClick={onBrainTrending}

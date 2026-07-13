@@ -3,7 +3,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Sparkles, Layers, Heart, Plus, Grid3x3, Bookmark, Film, Camera, Loader2, Brain } from "lucide-react";
+import { Sparkles, Layers, Heart, Plus, Grid3x3, Bookmark, Film, Camera, Loader2, Brain, ShieldCheck } from "lucide-react";
 import { LamahatViewer } from "@/components/overlays/lamahat-viewer";
 import { toast } from "sonner";
 import { useApp } from "@/lib/app-store";
@@ -149,8 +149,14 @@ export function LamahatScreen() {
 
   return (
     <div className="pb-32">
+      {/* ── Super Upgrade: Header with no-ads + privacy badges ── */}
       <div className="px-6 pt-2 flex items-center justify-between">
-        <h1 className="font-display text-4xl">Lamahat</h1>
+        <div>
+          <h1 className="font-display text-4xl">Lamahat</h1>
+          <p className="text-[10px] text-secondary mt-0.5 flex items-center gap-1">
+            <ShieldCheck className="w-2.5 h-2.5" /> No filters · No tracking · Your photos, your control
+          </p>
+        </div>
         <div className="flex items-center gap-2">
           <button
             onClick={onBrainRecommend}

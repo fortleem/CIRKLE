@@ -244,23 +244,46 @@ export function ProfileScreen() {
 
   return (
     <div className="pb-32">
-      {/* Header card */}
+      {/* ── Super Upgrade: Profile header with cover + verified human + privacy badges ── */}
       <div className="mx-4 mt-3 rounded-3xl overflow-hidden relative bg-gradient-hero shadow-float" style={{ color: "hsl(var(--cream))" }}>
         <div className="absolute inset-0 bg-gradient-aurora opacity-60" />
+        {/* Cover pattern */}
+        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "radial-gradient(circle at 20% 30%, hsl(var(--secondary)) 0%, transparent 40%), radial-gradient(circle at 80% 70%, hsl(var(--primary)) 0%, transparent 40%)" }} />
         <div className="relative p-6 flex items-center gap-4">
-          <div className="w-20 h-20 rounded-full bg-gradient-gold p-1">
-            <div className="w-full h-full rounded-full bg-background flex items-center justify-center font-display text-3xl text-foreground">{initials}</div>
+          <div className="relative">
+            <div className="w-20 h-20 rounded-full bg-gradient-gold p-1">
+              <div className="w-full h-full rounded-full bg-background flex items-center justify-center font-display text-3xl text-foreground">{initials}</div>
+            </div>
+            {/* Online status */}
+            <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-green-500 border-2 border-background flex items-center justify-center">
+              <ShieldCheck className="w-2.5 h-2.5 text-white" />
+            </div>
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <h2 className="font-display text-2xl truncate">{displayName}</h2>
               {user?.verified && <BadgeCheck className="w-5 h-5" />}
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-secondary/20 text-secondary border border-secondary/30 font-medium flex items-center gap-0.5">
+                <ShieldCheck className="w-2.5 h-2.5" /> Verified Human
+              </span>
             </div>
             <div className="text-xs opacity-80 font-mono">{handle} · {regionLabel} {regionCity}</div>
             <div className="flex gap-4 mt-2 text-xs">
               <span><b className="font-display text-base">0</b> followers</span>
               <span><b className="font-display text-base">0</b> following</span>
               <span><b className="font-display text-base">{user?.verified ? "Verified" : "New"}</b> tier</span>
+            </div>
+            {/* Privacy badges */}
+            <div className="flex items-center gap-1.5 mt-2">
+              <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/10 border border-white/20 flex items-center gap-0.5">
+                <ShieldCheck className="w-2 h-2" /> Data on device
+              </span>
+              <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/10 border border-white/20 flex items-center gap-0.5">
+                <ShieldCheck className="w-2 h-2" /> No tracking
+              </span>
+              <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/10 border border-white/20 flex items-center gap-0.5">
+                <ShieldCheck className="w-2 h-2" /> 100% free
+              </span>
             </div>
           </div>
         </div>

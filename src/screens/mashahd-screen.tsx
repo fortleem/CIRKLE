@@ -21,7 +21,8 @@ import {
   Upload, Video as VideoIcon, RadioTower, ListVideo, Camera, Plus,
   TrendingUp, Flame, Users, Eye, Bookmark, BookmarkCheck, Zap,
   BadgeCheck, Coins, Film, Hash, Crown, Send, Loader2, Info,
-  Scissors, UsersRound, ChevronRight, Tv, ListMusic, Search, Settings, type LucideIcon,
+  Scissors, UsersRound, ChevronRight, Tv, ListMusic, Search, Settings,
+  ShieldCheck, type LucideIcon,
 } from "lucide-react";
 import { MashahdPlayer } from "@/components/overlays/mashahd-player";
 import { toast } from "sonner";
@@ -599,25 +600,32 @@ export function MashahdScreen() {
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="pb-24">
-      {/* Header */}
+      {/* ── Super Upgrade: Header with no-ads + wellness + Brain AI ── */}
       <div className="px-6 pt-2 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <h1 className="font-display text-4xl">Mashahd</h1>
-          {/* Brain AI badge — like home screen */}
           <div className="flex items-center gap-1.5 text-[10px] text-secondary bg-secondary/10 px-2 py-1 rounded-full" title={brainReason}>
             <Sparkles className="w-3 h-3" />
             <span>Brain AI</span>
             <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
           </div>
         </div>
-        <button
-          onClick={openPlayerEvt}
-          className="flex items-center gap-2 text-xs text-secondary"
-          aria-label="Live now"
-        >
-          <Radio className="w-3.5 h-3.5 animate-pulse" /> {videos.filter((v) => v.isLive).length || 2} live now
-        </button>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-secondary glass rounded-full px-2.5 py-1 flex items-center gap-1" title="No ads, ever">
+            <ShieldCheck className="w-2.5 h-2.5" /> No ads
+          </span>
+          <button
+            onClick={openPlayerEvt}
+            className="flex items-center gap-2 text-xs text-secondary"
+            aria-label="Live now"
+          >
+            <Radio className="w-3.5 h-3.5 animate-pulse" /> {videos.filter((v) => v.isLive).length || 2} live
+          </button>
+        </div>
       </div>
+      <p className="px-6 text-[10px] text-secondary mt-0.5 flex items-center gap-1">
+        <ShieldCheck className="w-2.5 h-2.5" /> Ad-free · No algorithm manipulation · P2P streaming · 0% creator fees
+      </p>
 
       {/* Brain reason strip */}
       <div className="px-6 mt-2">
