@@ -1,5 +1,5 @@
 import "server-only";
-import ZAI from "z-ai-web-dev-sdk";
+// ZAI removed — uses CIRKLE Brain AI orchestrator
 import { getCountry, getDefaultCountry, type CountryInfo } from "@/lib/countries";
 import { buildCountryNewsQuery, getCountryNewsSources } from "@/lib/country-news-sources";
 import { hasConsent } from "@/lib/consent";
