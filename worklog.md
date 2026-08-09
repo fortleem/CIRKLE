@@ -7645,3 +7645,68 @@ Stage Summary:
 - The codebase has significantly over-invested in the CIRKLE Brain AI cognitive architecture (TGSE, CIE, TEE, LIEE, UOB, AHG, IRDE, CRIE, PCPF, federated learning framework, autonomous-intelligence data-source registry) — which is NOT in the blueprint v12.0 — at the expense of the blueprint's core pillars (OIDC, Mail, Translation, Moderation, Self-Learning on-device training).
 - Recommend: rebalance toward blueprint core by deploying Ory Hydra for OIDC, integrating Mailcow for real email, adding ONNX runtime + NSFW/NLLB/Whisper models, and wiring on-device matrix-factorization training into the existing `feed-algorithm.ts`.
 
+
+---
+Task ID: AUDIT-DOCS
+Agent: general-purpose
+Task: Create ADR + compliance docs
+
+Work Log:
+- Read worklog.md (Tasks AUDIT-BLUEPRINT-1 Parts 1-10 + AUDIT-BLUEPRINT-2 Parts 11-36 gap analyses) to understand the current compliance state.
+- Verified git history: audit baseline `cf1845b` → intermediate `1058a8a` (worklog-only sync) → HEAD `be6755e` (P0.1 env/secret persistence fix).
+- Verified filesystem state at HEAD: `webz-news.ts` deleted, `middleware.ts` deleted, `env-validation.ts` added (188 LOC), `.env` read-only (chmod 444), `.env.example` 33 lines.
+- Verified feature counts: 8 screens, 96 overlays, 173 API routes, 67 Prisma models, 227 lib modules (228 → 227 after webz-news.ts deletion; env-validation.ts classified as infrastructure/config not a lib module to match audit methodology).
+- Confirmed ZAI import removed from news-service.ts (0 active z-ai-web-dev-sdk imports; 7 remaining matches are env-var references + code comments only).
+
+Created 5 documentation files in /home/z/my-project/docs/:
+
+1. `docs/ADR-001-platform-strategy.md` — Architecture Decision Record for platform strategy.
+   - Status: PROPOSED (awaiting CTO approval).
+   - Compares Option A (Web-first PWA continuing current Next.js 16 stack) vs Option B (Flutter + Next.js migration per blueprint v12.0) vs Option C (Hybrid: PWA + thin native wrapper).
+   - Evaluates 13 Web APIs (Service Workers, Web Bluetooth, WebRTC, WebGPU, WebAssembly, Web Push, IndexedDB, Web Crypto, etc.) against blueprint requirements.
+   - Recommends Option A (Web-first PWA) as pragmatic given existing investment (8 screens + 96 overlays + 227 lib modules + 173 routes + cognitive-AI architecture exceeding blueprint).
+   - Lists 8 known limitations accepted (BLE mesh no iOS Safari, Wi-Fi Direct impossible in browsers, large ONNX models degraded on iOS Safari, etc.) with mitigations.
+   - Records positive/negative/neutral consequences, compliance notes, and references.
+
+2. `docs/CIRKLE-DEPENDENCY-MATRIX.md` — Feature dependency matrix.
+   - 56 major features catalogued with: State, Depends On, Blocks, Security Risk, Architecture Risk.
+   - Critical path analysis identifies 3 blockers for Year-1 Egypt launch: AI Safety & Moderation (§17), Circle Groups creation (§10), Circle Payments regional provider integration (§19.6).
+   - 5 features deferred pending ADR-001: E2EE, Federation, IPFS, PeerTube, Local Mesh, Self-hosted Mapping, Mailcow, ONNX on-device AI.
+   - Cross-feature risk amplification table (e.g., E2EE × Mesh, Circle Groups × E2EE, Mini Apps × Sandboxed WebView).
+
+3. `docs/CIRKLE-BLUEPRINT-COMPLIANCE.md` — Full compliance matrix for Blueprint Parts 1-30+.
+   - 242 sub-sections audited (97 from Parts 1-10 + 145 from Parts 11-36).
+   - Columns: Section | Requirement | Current State | Evidence | Status | Gap | Planned Phase.
+   - Status values: IMPLEMENTED / PARTIAL / MISSING / BLOCKED / DEFERRED.
+   - Summary: 27 IMPLEMENTED (11.2%), 101 PARTIAL (41.7%), 114 MISSING (47.1%).
+   - 8 features explicitly tagged DEFERRED in Planned Phase column (Matrix E2EE, ActivityPub, IPFS, PeerTube, Local Mesh, Self-hosted Mapping, Mailcow, ONNX AI).
+   - Tier 1/2/3 priority gaps with section references.
+   - 8 architectural divergences from blueprint v12.0 documented (Next.js vs Flutter, no Matrix/ActivityPub/IPFS, no Olm/Megolm, no ONNX runtime, custom JWT instead of Ory Hydra, single-region deployment, generic aiComplete, over-investment in Brain AI cognitive architecture beyond blueprint).
+
+4. `docs/DEFERRED_FEATURES.md` — Deferred features list.
+   - 8 features with full justifications: Matrix/Synapse E2EE, ActivityPub Federation, IPFS Storage, PeerTube Video, Local Mesh (BLE/Wi-Fi Direct), Self-hosted Mapping, Mailcow Real Email, ONNX On-Device AI (14 models).
+   - Each entry: Feature, Blueprint reference, Current status, Reason deferred, Dependencies, Security risk (with rating), Estimated effort, Strategic value, Approval status.
+   - All 8 deferred features blocked on CTO sign-off of ADR-001; Local Mesh also blocked on future ADR-002 (Native Wrapper).
+   - Total estimated effort post-approval: 33-48 weeks engineering.
+   - Un-deferral process documented (CTO approval → revised ADR → feature spec → threat model → Architecture Council review → sprint planning).
+   - Aggregate deferral risks documented: marketing honesty, covenant drift, technical debt accumulation, user expectation management.
+
+5. `docs/CURRENT-STATE-DELTA-REPORT.md` — Delta from audit baseline.
+   - Audit baseline: commit `cf1845b` (2026-08-06). Current HEAD: `be6755e` (2026-08-09). Intermediate: `1058a8a` (worklog-only).
+   - File-level changes: `middleware.ts` deleted (audit baseline), `webz-news.ts` deleted (audit baseline), `env-validation.ts` added (188 LOC), `.env.example` updated (+29 lines), `.env` made read-only (chmod 444), `news-service.ts` ZAI import removed (7 legacy refs remain as comments/env-vars only — no active imports).
+   - Feature counts at HEAD verified: 8 screens, 96 overlays, 173 API routes, 67 models, 227 lib modules (was 228, -1 webz-news.ts; env-validation.ts reclassified as infrastructure/config to match audit methodology).
+   - Functional state at HEAD: app boots, all 8 screens + 96 overlays + 173 routes + 67 models working; P0.1 hotfix restored API keys and added env-validation to prevent silent degradation.
+   - Compliance drift check: no drift; audit baseline cleanup intact; P0.1 hotfix improved operational resilience without touching blueprint feature scope.
+   - 7 open action items including CTO review of ADR-001 and drafting of ADR-002 (Native Wrapper) + ADR-003 (Federated Back-end).
+
+Stage Summary:
+- Created 5 documentation files in /home/z/my-project/docs/:
+  - `ADR-001-platform-strategy.md` (PROPOSED, awaiting CTO approval) — recommends Web-first PWA continuing current Next.js 16 stack.
+  - `CIRKLE-DEPENDENCY-MATRIX.md` — 56 features with deps/blocks/risk analysis; 3 critical-path blockers identified for Year-1 Egypt launch.
+  - `CIRKLE-BLUEPRINT-COMPLIANCE.md` — 242 sub-sections audited across Parts 1-30+; 27 IMPL / 101 PARTIAL / 114 MISSING; 8 features explicitly DEFERRED.
+  - `DEFERRED_FEATURES.md` — 8 features (Matrix E2EE, ActivityPub, IPFS, PeerTube, Local Mesh, Self-hosted Mapping, Mailcow, ONNX AI) blocked on ADR-001 approval; 33-48 wk total effort post-approval.
+  - `CURRENT-STATE-DELTA-REPORT.md` — delta from audit baseline cf1845b → HEAD be6755e; confirms cleanup intact, P0.1 hotfix improved env resilience, no compliance drift.
+- All 5 documents are well-structured markdown with clear headings, tables, status legends, change logs, and cross-references between documents.
+- Total documentation: ~2,500 lines of structured compliance/decision content.
+- Documents form a coherent set: ADR-001 (decision) → DEFERRED_FEATURES (what's blocked on the decision) → CIRKLE-BLUEPRINT-COMPLIANCE (full audit) → CIRKLE-DEPENDENCY-MATRIX (technical deps) → CURRENT-STATE-DELTA-REPORT (codebase state at HEAD).
+- Next actions for the team: (1) CTO reviews ADR-001, (2) CTO reviews DEFERRED_FEATURES list, (3) Engineering addresses Tier 1 critical gaps (AI Safety §17, Circle Groups §10, Verify §16.5, Payments §19.6, Emergency Alerts §11.3), (4) After ADR-001 approval, draft ADR-002 (Native Wrapper) and ADR-003 (Federated Back-end).
