@@ -1611,7 +1611,7 @@ function TrendingPanel({
         <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-1.5">
           <Hash className="w-3 h-3 text-secondary" /> Trending hashtags · Cirkle Brain AI
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
           {tags.map((t, i) => (
             <motion.div
               key={t.id}
@@ -1774,8 +1774,8 @@ function ChannelSheet({ name, onClose }: { name: string; onClose: () => void }) 
               </div>
               <div className="text-xs text-muted-foreground">128K subscribers · Verified creator · Monetized</div>
             </div>
-            <button onClick={onClose} className="w-9 h-9 rounded-full hover:bg-muted/60 flex items-center justify-center" aria-label="Close">
-              <X className="w-4 h-4" />
+            <button onClick={onClose} className="w-9 h-9 rounded-full hover:bg-muted/60 flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Close">
+              <X className="w-4 h-4" aria-hidden />
             </button>
           </div>
 
@@ -1903,8 +1903,8 @@ function UploadFlow({ onClose }: { onClose: () => void }) {
         <div className="font-display text-xl flex items-center gap-2">
           <Upload className="w-5 h-5 text-secondary" /> Upload video
         </div>
-        <button onClick={onClose} className="w-9 h-9 rounded-full hover:bg-muted/60 flex items-center justify-center" aria-label="Close">
-          <X className="w-4 h-4" />
+        <button onClick={onClose} className="w-9 h-9 rounded-full hover:bg-muted/60 flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Close">
+          <X className="w-4 h-4" aria-hidden />
         </button>
       </div>
 
@@ -2013,8 +2013,8 @@ function LiveFlow({ onClose }: { onClose: () => void }) {
         <div className="font-display text-xl flex items-center gap-2">
           <RadioTower className="w-5 h-5 text-accent" /> Go Live
         </div>
-        <button onClick={onClose} className="w-9 h-9 rounded-full hover:bg-muted/60 flex items-center justify-center" aria-label="Close">
-          <X className="w-4 h-4" />
+        <button onClick={onClose} className="w-9 h-9 rounded-full hover:bg-muted/60 flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Close">
+          <X className="w-4 h-4" aria-hidden />
         </button>
       </div>
 
@@ -2123,8 +2123,8 @@ function ShortFlow({ onClose }: { onClose: () => void }) {
         <div className="font-display text-xl flex items-center gap-2">
           <Camera className="w-5 h-5 text-secondary" /> Create Short
         </div>
-        <button onClick={onClose} className="w-9 h-9 rounded-full hover:bg-muted/60 flex items-center justify-center" aria-label="Close">
-          <X className="w-4 h-4" />
+        <button onClick={onClose} className="w-9 h-9 rounded-full hover:bg-muted/60 flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Close">
+          <X className="w-4 h-4" aria-hidden />
         </button>
       </div>
 
@@ -2185,8 +2185,8 @@ function PlaylistFlow({ onClose, videos }: { onClose: () => void; videos: VideoI
         <div className="font-display text-xl flex items-center gap-2">
           <ListVideo className="w-5 h-5 text-secondary" /> New playlist
         </div>
-        <button onClick={onClose} className="w-9 h-9 rounded-full hover:bg-muted/60 flex items-center justify-center" aria-label="Close">
-          <X className="w-4 h-4" />
+        <button onClick={onClose} className="w-9 h-9 rounded-full hover:bg-muted/60 flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Close">
+          <X className="w-4 h-4" aria-hidden />
         </button>
       </div>
 
@@ -2323,8 +2323,8 @@ function SummaryModal({ video, onClose }: { video: VideoItem; onClose: () => voi
             <div className="font-display text-xl flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-secondary" /> AI Video Summary
             </div>
-            <button onClick={onClose} className="w-9 h-9 rounded-full hover:bg-muted/60 flex items-center justify-center" aria-label="Close">
-              <X className="w-4 h-4" />
+            <button onClick={onClose} className="w-9 h-9 rounded-full hover:bg-muted/60 flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Close">
+              <X className="w-4 h-4" aria-hidden />
             </button>
           </div>
 

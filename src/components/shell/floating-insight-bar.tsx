@@ -71,24 +71,25 @@ export function FloatingInsightBar({ onOpenAI }: { onOpenAI?: () => void }) {
               onOpenAI?.();
             }
           }}
-          className="glass-strong rounded-full pl-3 pr-2 py-2 flex items-center gap-2 shadow-float border border-secondary/20 hover:border-secondary/40 transition group w-full"
+          className="glass-strong rounded-full pl-3 pr-2 py-2 flex items-center gap-2 shadow-float border border-secondary/20 hover:border-secondary/40 transition group w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          aria-label={`${insight.text}. Open ${insight.overlay || "Cirkle Brain AI"}`}
         >
-          <span className="text-lg shrink-0">{insight.emoji}</span>
+          <span className="text-lg shrink-0" aria-hidden>{insight.emoji}</span>
           <span className="text-xs text-foreground/90 flex-1 text-start truncate">
             {insight.text}
           </span>
-          <span className="text-[10px] text-secondary flex items-center gap-0.5 shrink-0 group-hover:gap-1 transition-all">
+          <span className="text-[10px] text-secondary flex items-center gap-0.5 shrink-0 group-hover:gap-1 transition-all" aria-hidden>
             Open <ChevronRight className="w-3 h-3" />
           </span>
           <span
             role="button"
             tabIndex={0}
             onClick={(e) => { e.stopPropagation(); dismiss(); }}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); dismiss(); } }}
-            className="w-5 h-5 rounded-full hover:bg-muted/60 flex items-center justify-center shrink-0 text-muted-foreground"
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); e.preventDefault(); dismiss(); } }}
+            className="w-5 h-5 rounded-full hover:bg-muted/60 flex items-center justify-center shrink-0 text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label="Dismiss insight"
           >
-            <X className="w-3 h-3" />
+            <X className="w-3 h-3" aria-hidden />
           </span>
         </button>
       </motion.div>

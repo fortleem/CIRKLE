@@ -1765,18 +1765,18 @@ function ChatView({ conversation, socket, onBack }: ChatViewProps) {
             setSearchMode((v) => !v);
             setSearchQuery("");
           }}
-          className={`w-9 h-9 rounded-full hover:bg-muted/60 flex items-center justify-center transition ${
+          className={`w-9 h-9 rounded-full hover:bg-muted/60 flex items-center justify-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
             searchMode ? "bg-secondary/20 text-secondary" : ""
           }`}
           aria-label="Search in conversation"
         >
-          <Search className="w-4 h-4" />
+          <Search className="w-4 h-4" aria-hidden />
         </button>
 
         {/* Starred messages */}
         <button
           onClick={() => setStarredOpen(true)}
-          className="w-9 h-9 rounded-full hover:bg-muted/60 flex items-center justify-center transition"
+          className="w-9 h-9 rounded-full hover:bg-muted/60 flex items-center justify-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label="Starred messages"
         >
           <Star className="w-4 h-4" />
@@ -1786,7 +1786,7 @@ function ChatView({ conversation, socket, onBack }: ChatViewProps) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
-              className="w-9 h-9 rounded-full hover:bg-muted/60 flex items-center justify-center transition"
+              className="w-9 h-9 rounded-full hover:bg-muted/60 flex items-center justify-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label="More options"
             >
               <MoreVertical className="w-4 h-4" />

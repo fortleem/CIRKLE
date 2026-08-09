@@ -362,15 +362,15 @@ export function PayScreen() {
   return (
     <div className="pb-32">
       {/* ── Super Upgrade: Header with fee-free + privacy badges ── */}
-      <div className="px-5 pt-2 flex items-start justify-between">
+      <div className="px-5 pt-2 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h1 className="font-display text-4xl">Cirkle Pay</h1>
-          <p className="text-xs text-secondary mt-1 flex items-center gap-1.5">
-            <ShieldCheck className="w-3 h-3" />
+          <h1 className="font-display text-4xl md:text-5xl">Cirkle Pay</h1>
+          <p className="text-xs md:text-sm text-secondary mt-1 flex items-center gap-1.5">
+            <ShieldCheck className="w-3 h-3 md:w-3.5 md:h-3.5" />
             0% fees · Non-custodial · Your keys, your money
           </p>
         </div>
-        <span className="text-[10px] glass rounded-full px-3 py-1.5 flex items-center gap-1.5 text-secondary">
+        <span className="text-[10px] glass rounded-full px-3 py-1.5 flex items-center gap-1.5 text-secondary self-start sm:self-auto">
           <ShieldCheck className="w-3 h-3" /> Cirkle ID
         </span>
       </div>
@@ -411,10 +411,10 @@ export function PayScreen() {
               </div>
               <button
                 onClick={() => toast("Tap a contactless reader — Coming soon")}
-                className="flex items-center gap-1.5"
-                aria-label="NFC"
+                className="flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
+                aria-label="Tap to pay via NFC — coming soon"
               >
-                <Nfc className="w-6 h-6 opacity-80" />
+                <Nfc className="w-6 h-6 opacity-80" aria-hidden />
                 <span className="text-[10px] uppercase tracking-widest opacity-80">Tap to pay</span>
               </button>
             </div>
@@ -526,13 +526,13 @@ export function PayScreen() {
 
       {/* ── Spending Analytics: quick stats + smart insight + 7-day chart + category donut ── */}
       <div className="px-5 mt-6">
-        <h2 className="font-display text-xl flex items-center gap-2 mb-3">
+        <h2 className="font-display text-xl md:text-2xl flex items-center gap-2 mb-3">
           <BarChart3 className="w-5 h-5 text-secondary" />
           Spending analytics
         </h2>
 
-        {/* Quick stats row — 3 cards */}
-        <div className="grid grid-cols-3 gap-2 mb-3">
+        {/* Quick stats row — 3 cards (scale up to 3 across on tablet+) */}
+        <div className="grid grid-cols-3 gap-2 md:gap-3 mb-3">
           <div className="glass rounded-2xl p-3">
             <div className="w-7 h-7 rounded-lg bg-rose-500/15 flex items-center justify-center mb-1.5">
               <TrendingUp className="w-3.5 h-3.5 text-rose-500" />
@@ -580,8 +580,10 @@ export function PayScreen() {
           </div>
         </div>
 
+        {/* 7-day spending bar chart + category donut — side-by-side on lg+ screens */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
         {/* 7-day spending bar chart — pure CSS bars. */}
-        <div className="glass rounded-2xl p-4 mb-3">
+        <div className="glass rounded-2xl p-4">
           <div className="flex items-center justify-between mb-3">
             <div>
               <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Last 7 days</div>
@@ -653,15 +655,17 @@ export function PayScreen() {
             </div>
           )}
         </div>
+        </div>{/* end 7-day + donut grid (lg:grid-cols-2) */}
       </div>
 
       {/* Transactions */}
       <div className="px-5 mt-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-display text-xl">Recent activity</h2>
+          <h2 className="font-display text-xl md:text-2xl">Recent activity</h2>
           <button
             onClick={() => toast("Full history — Coming soon")}
-            className="text-xs text-secondary"
+            className="text-xs text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1 py-0.5"
+            aria-label="See all transactions — coming soon"
           >
             See all
           </button>
@@ -902,7 +906,8 @@ export function PayScreen() {
                 </div>
                 <button
                   onClick={() => { toast.success("Receipt downloaded"); setTxSheet(null); }}
-                  className="w-full py-2.5 rounded-full bg-primary text-primary-foreground text-xs"
+                  className="w-full py-2.5 rounded-full bg-primary text-primary-foreground text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  aria-label="Download transaction receipt"
                 >
                   Download receipt
                 </button>

@@ -1446,8 +1446,11 @@ export function HomeScreen() {
                     </div>
                     <span className="text-[10px] text-muted-foreground">{p.handle} · {p.time}</span>
                   </div>
-                  <button className="w-8 h-8 rounded-full hover:bg-muted/40 flex items-center justify-center text-muted-foreground transition shrink-0">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+                  <button
+                    className="w-8 h-8 rounded-full hover:bg-muted/40 flex items-center justify-center text-muted-foreground transition shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={`More options for post by ${p.handle}`}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
                   </button>
                 </div>
                 {/* Post body */}
@@ -1558,7 +1561,8 @@ export function HomeScreen() {
                 const el = document.getElementById(chip.target);
                 if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
               }}
-              className="text-xs px-3 py-1.5 rounded-full glass hover:bg-muted/40 whitespace-nowrap transition"
+              className="text-xs px-3 py-1.5 rounded-full glass hover:bg-muted/40 whitespace-nowrap transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label={`Jump to ${chip.label.replace(/^[^\s]+\s/, "")} section`}
             >
               {chip.label}
             </button>
@@ -1612,7 +1616,7 @@ export function HomeScreen() {
       {/* Cirkle Exclusives — compact (6 by default, expandable) */}
       <section id="cirkle-exclusives" className="px-6">
         <SectionHeader icon={Sparkles} title="Cirkle Exclusives" inline brain />
-        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {EXCLUSIVES.slice(0, showAllExclusives ? EXCLUSIVES.length : 6).map((ex, i) => (
             <motion.button
               key={ex.id}

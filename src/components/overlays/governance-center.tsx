@@ -93,7 +93,7 @@ export function GovernanceCenter({ open, onClose }: { open: boolean; onClose: ()
             initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 32, stiffness: 320 }}
             role="dialog" aria-label="Governance center"
-            className="fixed bottom-0 inset-x-0 z-[150] max-h-[92vh] rounded-t-[28px] glass-strong shadow-float overflow-hidden flex flex-col"
+            className="fixed bottom-0 inset-x-0 z-[150] max-h-[92vh] rounded-t-[28px] glass-strong shadow-float overflow-hidden flex flex-col md:max-w-2xl md:mx-auto md:inset-y-[4vh] md:bottom-auto md:rounded-3xl"
           >
             <div className="flex justify-center pt-2">
               <span className="w-10 h-1 rounded-full bg-muted-foreground/30" />

@@ -65,6 +65,7 @@ import { TermsOfService } from "@/components/overlays/terms-of-service";
 import { DSRRequest } from "@/components/overlays/dsr-request";
 import { CookieConsentBanner } from "@/components/cookie-consent-banner";
 import { FirstLaunchTour, TOUR_STORAGE_KEY } from "@/components/first-launch-tour";
+import { WhatsNew } from "@/components/overlays/whats-new";
 // CitizenShield loaded dynamically
 import type { TabId } from "@/lib/tabs";
 
@@ -355,6 +356,7 @@ export default function Page() {
   const [privacyPolicyOpen, setPrivacyPolicyOpen] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
   const [dsrOpen, setDsrOpen] = useState(false);
+  const [whatsNewOpen, setWhatsNewOpen] = useState(false);
   const [composer, setComposer] = useState<{ open: boolean; kind?: "post" | "poll" | "media"; draft?: string }>({ open: false });
   const Screen = screens[tab];
 
@@ -631,6 +633,8 @@ export default function Page() {
     window.addEventListener("circle:privacy-policy", onPrivacyPolicy);
     window.addEventListener("circle:terms", onTerms);
     window.addEventListener("circle:dsr-request", onDSR);
+    const onWhatsNew = () => setWhatsNewOpen(true);
+    window.addEventListener("circle:whats-new", onWhatsNew);
 
     window.addEventListener("circle:navigate", onNavigate as any);
 
@@ -749,6 +753,7 @@ export default function Page() {
       window.removeEventListener("circle:privacy-policy", onPrivacyPolicy);
       window.removeEventListener("circle:terms", onTerms);
       window.removeEventListener("circle:dsr-request", onDSR);
+      window.removeEventListener("circle:whats-new", onWhatsNew);
 
       window.removeEventListener("circle:navigate", onNavigate as any);
       window.removeEventListener("share-to-wasl", onShareWasl as any);
@@ -799,6 +804,14 @@ export default function Page() {
     <div className="min-h-screen bg-background relative">
       {/* Single smooth aurora background — no split, no hard edges */}
       <div className="fixed inset-0 -z-10 aurora-bg opacity-25 pointer-events-none" />
+      {/* Skip-to-content link — keyboard / screen-reader users can jump past
+          the top bar + dock straight to the active screen. */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[200] focus:px-4 focus:py-2 focus:rounded-full focus:bg-background focus:border focus:border-border focus:shadow-float focus:text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+      >
+        Skip to main content
+      </a>
       <div className="max-w-[1600px] mx-auto relative">
         <TopBar title={titles[tab]} onSearch={() => setPaletteOpen(true)} onSettings={() => setSettingsOpen(true)} />
         {/* Global offline banner — shown when navigator.onLine is false */}
@@ -818,7 +831,7 @@ export default function Page() {
           )}
         </AnimatePresence>
         <AnimatePresence mode="wait">
-          <motion.main key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }} className="pt-4 xl:px-4">
+          <motion.main key={tab} id="main-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }} className="pt-4 xl:px-4 focus:outline-none" tabIndex={-1}>
             <Screen />
           </motion.main>
         </AnimatePresence>
@@ -827,10 +840,10 @@ export default function Page() {
       {/* R5: Floating Post FAB — always accessible compose button */}
       <button
         onClick={() => window.dispatchEvent(new CustomEvent("circle:composer", { detail: { kind: "post" } }))}
-        className="fixed bottom-24 right-4 z-40 w-14 h-14 rounded-full bg-gradient-gold text-charcoal shadow-float flex items-center justify-center hover:scale-105 transition md:bottom-28"
+        className="fixed bottom-24 right-4 z-40 w-14 h-14 rounded-full bg-gradient-gold text-charcoal shadow-float flex items-center justify-center hover:scale-105 transition md:bottom-28 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         aria-label="Create post"
       >
-        <Plus className="w-6 h-6" />
+        <Plus className="w-6 h-6" aria-hidden />
       </button>
       {/* R5: Floating AI Insight Bar — rotating Brain AI suggestions above the dock */}
       <FloatingInsightBar onOpenAI={() => setAiOpen(true)} />
@@ -945,6 +958,9 @@ export default function Page() {
       <PrivacyPolicy open={privacyPolicyOpen} onClose={() => setPrivacyPolicyOpen(false)} />
       <TermsOfService open={termsOpen} onClose={() => setTermsOpen(false)} />
       <DSRRequest open={dsrOpen} onClose={() => setDsrOpen(false)} />
+
+      {/* P0.4: What's New — feature discoverability overlay */}
+      <WhatsNew open={whatsNewOpen} onClose={() => setWhatsNewOpen(false)} />
 
       {/* Cookie consent banner — always mounted so it can show on first visit. */}
       <CookieConsentBanner />

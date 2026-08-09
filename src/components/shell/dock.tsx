@@ -232,7 +232,29 @@ export function Dock({ active, onChange }: { active: TabId; onChange: (id: TabId
   return (
     <div className="fixed bottom-0 inset-x-0 z-50 pb-[env(safe-area-inset-bottom)] pointer-events-none">
       <div className="px-3 pb-3 flex justify-center pointer-events-auto">
-        <nav className={`shadow-float rounded-full px-2 py-2 flex items-center gap-0.5 max-w-full overflow-x-auto scrollbar-hide transition-all duration-300 ${isScrolling ? "glass-strong" : "bg-background/95 backdrop-blur-md border border-border/40"}`}>
+        <nav
+          role="tablist"
+          aria-label="Primary navigation"
+          aria-orientation="horizontal"
+          onKeyDown={(e) => {
+            // Arrow-key navigation between dock tabs — roving-tabindex style.
+            const idx = TABS.findIndex((tt) => tt.id === active);
+            const next = e.key === "ArrowRight" ? (idx + 1) % TABS.length
+                       : e.key === "ArrowLeft"  ? (idx - 1 + TABS.length) % TABS.length
+                       : e.key === "Home"      ? 0
+                       : e.key === "End"       ? TABS.length - 1
+                       : -1;
+            if (next >= 0) {
+              e.preventDefault();
+              onChange(TABS[next].id);
+              // Move DOM focus to the newly active tab button.
+              const nav = e.currentTarget as HTMLElement;
+              const btns = Array.from(nav.querySelectorAll<HTMLButtonElement>("button[role='tab']"));
+              btns[next]?.focus();
+            }
+          }}
+          className={`shadow-float rounded-full px-2 py-2 flex items-center gap-0.5 max-w-full overflow-x-auto scrollbar-hide transition-all duration-300 ${isScrolling ? "glass-strong" : "bg-background/95 backdrop-blur-md border border-border/40"}`}
+        >
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const isActive = active === tab.id;
@@ -240,6 +262,10 @@ export function Dock({ active, onChange }: { active: TabId; onChange: (id: TabId
             return (
               <button
                 key={tab.id}
+                role="tab"
+                aria-selected={isActive}
+                aria-label={t[tab.labelKey as keyof typeof t]}
+                tabIndex={isActive ? 0 : -1}
                 onClick={() => handleButtonClick(tab.id)}
                 onContextMenu={(e) => handleContextMenu(tab.id, e)}
                 onPointerDown={(e) => startLongPress(tab.id, e)}
@@ -247,16 +273,18 @@ export function Dock({ active, onChange }: { active: TabId; onChange: (id: TabId
                 onPointerLeave={cancelLongPress}
                 onPointerMove={onPointerMove}
                 onPointerCancel={cancelLongPress}
-                className="relative flex items-center justify-center min-w-11 h-11 px-3 rounded-full transition-colors select-none"
-                aria-label={t[tab.labelKey as keyof typeof t]}
+                className="relative flex items-center justify-center min-w-11 h-11 px-3 rounded-full transition-colors select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 {isActive && <motion.span layoutId="dock-pill" className="absolute inset-0 rounded-full bg-gradient-hero" transition={{ type: "spring", stiffness: 400, damping: 32 }} />}
                 <span className={`relative flex items-center gap-2 ${isActive ? "text-primary-foreground" : "text-muted-foreground"}`}>
-                  <Icon className="w-5 h-5" strokeWidth={isActive ? 2.4 : 1.8} />
+                  <Icon className="w-5 h-5" strokeWidth={isActive ? 2.4 : 1.8} aria-hidden />
                   {isActive && <motion.span initial={{ opacity: 0, width: 0 }} animate={{ opacity: 1, width: "auto" }} className="text-xs font-medium whitespace-nowrap pr-1">{t[tab.labelKey as keyof typeof t]}</motion.span>}
                 </span>
                 {badge > 0 && !isActive && (
-                  <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-accent text-accent-foreground text-[9px] font-bold flex items-center justify-center">
+                  <span
+                    className="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-accent text-accent-foreground text-[9px] font-bold flex items-center justify-center"
+                    aria-label={`${badge} unread`}
+                  >
                     {badge > 9 ? "9+" : badge}
                   </span>
                 )}
@@ -286,6 +314,20 @@ export function Dock({ active, onChange }: { active: TabId; onChange: (id: TabId
               }}
               role="menu"
               aria-label="Quick actions"
+              onKeyDown={(e) => {
+                // Arrow-key navigation between radial menu items.
+                const idx = actions.findIndex((a) => a.label === (document.activeElement as HTMLElement)?.getAttribute("aria-label"));
+                const next = e.key === "ArrowRight" || e.key === "ArrowDown" ? (idx + 1) % actions.length
+                           : e.key === "ArrowLeft"  || e.key === "ArrowUp"   ? (idx - 1 + actions.length) % actions.length
+                           : e.key === "Home" ? 0
+                           : e.key === "End"  ? actions.length - 1
+                           : -1;
+                if (next >= 0) {
+                  e.preventDefault();
+                  const items = (e.currentTarget as HTMLElement).querySelectorAll<HTMLButtonElement>("button[role='menuitem']");
+                  items[next]?.focus();
+                }
+              }}
             >
               {/* Center anchor dot */}
               <motion.div
@@ -294,6 +336,7 @@ export function Dock({ active, onChange }: { active: TabId; onChange: (id: TabId
                 exit={{ scale: 0, opacity: 0 }}
                 transition={{ type: "spring", stiffness: 500, damping: 30 }}
                 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-accent"
+                aria-hidden
               />
 
               {actions.map((action, i) => {
@@ -304,6 +347,7 @@ export function Dock({ active, onChange }: { active: TabId; onChange: (id: TabId
                     key={action.label}
                     type="button"
                     role="menuitem"
+                    tabIndex={i === 0 ? 0 : -1}
                     initial={{ x: 0, y: 0, opacity: 0, scale: 0.3 }}
                     animate={{ x: pos.x, y: pos.y, opacity: 1, scale: 1 }}
                     exit={{ x: 0, y: 0, opacity: 0, scale: 0.3 }}
@@ -313,7 +357,7 @@ export function Dock({ active, onChange }: { active: TabId; onChange: (id: TabId
                       e.stopPropagation();
                       dispatchAction(action);
                     }}
-                    className="absolute top-1/2 left-1/2 pointer-events-auto flex flex-col items-center justify-center gap-0.5 rounded-full glass-strong shadow-float"
+                    className="absolute top-1/2 left-1/2 pointer-events-auto flex flex-col items-center justify-center gap-0.5 rounded-full glass-strong shadow-float focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     style={{
                       width: RADIAL_BUTTON_SIZE,
                       height: RADIAL_BUTTON_SIZE,
@@ -323,7 +367,7 @@ export function Dock({ active, onChange }: { active: TabId; onChange: (id: TabId
                     aria-label={action.label}
                     title={action.label}
                   >
-                    <ActionIcon className="w-5 h-5 text-foreground" strokeWidth={2.1} />
+                    <ActionIcon className="w-5 h-5 text-foreground" strokeWidth={2.1} aria-hidden />
                     <span className="text-[8px] leading-none font-medium text-muted-foreground truncate max-w-[44px]">
                       {action.label}
                     </span>

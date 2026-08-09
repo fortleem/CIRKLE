@@ -160,17 +160,17 @@ export function OverlayBrowser({ open, onClose }: Props) {
               </div>
               <button
                 onClick={onClose}
-                className="w-9 h-9 rounded-full hover:bg-muted/60 flex items-center justify-center transition"
+                className="w-9 h-9 rounded-full hover:bg-muted/60 flex items-center justify-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 aria-label="Close"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4" aria-hidden />
               </button>
             </header>
 
             {/* Search bar */}
             <div className="px-5 py-3 border-b border-border/50">
               <div className="flex items-center gap-3 px-4 py-2.5 rounded-full glass">
-                <Search className="w-4 h-4 text-muted-foreground shrink-0" />
+                <Search className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden />
                 <input
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
@@ -186,7 +186,7 @@ export function OverlayBrowser({ open, onClose }: Props) {
                       className="text-[10px] text-secondary hover:text-secondary/80 transition flex items-center gap-1 disabled:opacity-50"
                       aria-label="Ask Brain AI"
                     >
-                      <Brain className="w-3 h-3" /> {brainLoading ? "..." : "Ask Brain"}
+                      <Brain className="w-3 h-3" aria-hidden /> {brainLoading ? "..." : "Ask Brain"}
                     </button>
                     <button
                       onClick={() => setQ("")}
@@ -215,7 +215,7 @@ export function OverlayBrowser({ open, onClose }: Props) {
                     onClick={() => setQ("")}
                     className="mt-3 text-xs px-3 py-1.5 rounded-full glass hover:bg-muted/60 transition inline-flex items-center gap-1.5"
                   >
-                    <Sparkles className="w-3 h-3 text-secondary" /> Show all
+                    <Sparkles className="w-3 h-3 text-secondary" aria-hidden /> Show all
                   </button>
                 </div>
               ) : (
@@ -291,7 +291,7 @@ export function OverlayBrowser({ open, onClose }: Props) {
                 close
               </span>
               <span className="flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-secondary" /> {OVERLAY_REGISTRY.length} overlays · 9 categories
+                <Sparkles className="w-3 h-3 text-secondary" aria-hidden /> {OVERLAY_REGISTRY.length} overlays · 9 categories
               </span>
             </div>
           </motion.div>
