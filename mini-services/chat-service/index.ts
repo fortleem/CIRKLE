@@ -29,6 +29,10 @@ interface CircleSocket extends Socket {
   circleUserId?: string;
   circleUserName?: string;
   circleConversations?: Set<string>;
+  /** P2.7 — Mesh deviceId this socket announced (for routing `mesh:signal`). */
+  circleMeshDeviceId?: string;
+  /** P2.7 — E2EE fingerprint the peer advertised. */
+  circleMeshFingerprint?: string;
 }
 
 interface JoinPayload {
@@ -521,6 +525,68 @@ io.on("connection", (socket: CircleSocket) => {
 
   socket.on("error", (err: unknown) => {
     console.error(`[chat] socket error socket=${socket.id}`, err);
+  });
+
+  // =========================================================================
+  // P2.7 — Local Mesh signaling relay (ADR-001 WebRTC transport).
+  //
+  // The chat service acts as a signaling relay for the WebRTC-based local
+  // mesh. It is OPINION-FREE about message content: it forwards opaque
+  // SDP/ICE blobs between two peers by `deviceId` and relays presence
+  // announcements. It NEVER sees the encrypted payload (which travels
+  // peer-to-peer over RTCDataChannel — see src/lib/mesh-network.ts).
+  // =========================================================================
+
+  socket.on("mesh:announce", (payload: { deviceId?: string; fingerprint?: string }) => {
+    if (!payload?.deviceId) return;
+    // Stash the mesh deviceId on the socket so we can route signals to it.
+    socket.circleMeshDeviceId = payload.deviceId;
+    socket.circleMeshFingerprint = payload.fingerprint;
+    // Broadcast to all OTHER sockets so they learn about this peer.
+    socket.broadcast.emit("mesh:announce", {
+      deviceId: payload.deviceId,
+      fingerprint: payload.fingerprint,
+    });
+    console.log(
+      `[chat][mesh] announce socket=${socket.id} device=${payload.deviceId}`,
+    );
+  });
+
+  socket.on("mesh:discover", (payload: { from?: string }) => {
+    // A new peer is asking who's online — broadcast the request to all OTHER
+    // sockets so they each reply with their own `mesh:announce` (handled
+    // above). The announce handler then rebroadcasts to everyone including
+    // the original requester.
+    if (!payload?.from) return;
+    socket.broadcast.emit("mesh:discover", { from: payload.from });
+  });
+
+  socket.on(
+    "mesh:signal",
+    (payload: { to?: string; from?: string; data?: unknown }) => {
+      if (!payload?.to || !payload.from || !payload.data) return;
+      // Relay the opaque signaling payload to the targeted peer.
+      // Find the socket whose circleMeshDeviceId === payload.to.
+      const sockets = Array.from(io.sockets.sockets.values()) as CircleSocket[];
+      for (const target of sockets) {
+        if (target.circleMeshDeviceId === payload.to) {
+          target.emit("mesh:signal", {
+            to: payload.to,
+            from: payload.from,
+            data: payload.data,
+          });
+          break;
+        }
+      }
+    },
+  );
+
+  socket.on("mesh:leave", (payload: { deviceId?: string }) => {
+    if (!payload?.deviceId) return;
+    socket.broadcast.emit("mesh:leave", { deviceId: payload.deviceId });
+    console.log(
+      `[chat][mesh] leave socket=${socket.id} device=${payload.deviceId}`,
+    );
   });
 });
 

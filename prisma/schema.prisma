@@ -66,7 +66,16 @@ model Message {
   senderName     String
   senderInitials String
   senderColor    String   @default("teal")
-  body           String
+  // `body` holds the message text. For E2EE messages (encrypted=true) the
+  // server stores ONLY the opaque `ciphertext` payload here and `body` is
+  // null — the server never sees plaintext. For non-encrypted / system
+  // messages, `body` carries the plaintext as before. The server NEVER
+  // decrypts `ciphertext`; only the recipient's client can.
+  body           String?
+  // Opaque E2EE ciphertext blob (JSON envelope from src/lib/e2ee-service.ts).
+  // The server treats this as an opaque string; it is never parsed, logged,
+  // or decrypted server-side. See ADR-002 §5.3.
+  ciphertext     String?
   status         String   @default("sent") // pending|sent|delivered|read
   encrypted      Boolean  @default(true)
   replyToId      String?
@@ -1373,4 +1382,267 @@ model CircleMember {
   @@unique([circleId, userLabel])
   @@index([circleId])
   @@index([userLabel])
+}
+
+/// Device public-key directory (P2.1 / ADR-002).
+///
+/// Stores ONLY the public halves of a user's device identity so peers can
+/// encrypt messages to them. The private keys NEVER leave the client and are
+/// never written to this table. The server treats `identityPublicKey` /
+/// `signingPublicKey` as opaque JSON blobs — it does not parse them.
+///
+/// One row per (userLabel, deviceId). A user may publish multiple device
+/// keys (phone + laptop); the client picks the most recent for encryption
+/// unless it has a session pinned to a specific deviceId.
+model DevicePublicKey {
+  id                 String   @id @default(cuid())
+  /// Cirkle username (lowercase) the device belongs to.
+  userLabel          String
+  /// Stable opaque device id from the client (e.g. `dev_a1b2c3...`).
+  deviceId           String
+  /// ECDH P-256 public key as JSON JWK. Future: Curve25519 from libolm.
+  identityPublicKey  String
+  /// ECDSA P-256 public key as JSON JWK. Future: Ed25519 from libolm.
+  signingPublicKey   String
+  /// 12-char hex fingerprint for SAS verification (ADR-002 §5.2).
+  fingerprint        String
+  publishedAt        DateTime @default(now())
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([userLabel, deviceId])
+  @@index([userLabel])
+  @@index([fingerprint])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ActivityPub Federation (P2.3).
+//
+// `FederatedActor` records each local user's federated identity (their
+// actor URL, public signing key, etc.). `Follow` records both inbound
+// (someone is following a local user) and outbound (a local user is
+// following someone) follow relationships. `FederatedActivity` is the
+// activity log — every activity the local server sends or receives.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model FederatedActor {
+  id              String   @id @default(cuid())
+  username        String   @unique // local username
+  actorUri        String   @unique // https://circle.app/api/federation/actor/{username}
+  inboxUri        String
+  outboxUri       String
+  followersUri    String
+  followingUri    String
+  /// E2EE signing public key (JWK JSON) — used to sign outgoing activities
+  /// per ADR-002. The matching private key NEVER leaves the client.
+  publicKeyJwk    String
+  fingerprint     String
+  summary         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([username])
+}
+
+model FederatedFollow {
+  id           String   @id @default(cuid())
+  /// Direction: "outbound" = local user follows remote actor;
+  /// "inbound" = remote actor follows local user.
+  direction    String
+  /// Local username on this server.
+  localUser    String
+  /// Federated actor URI of the remote party.
+  remoteActor  String
+  remoteHandle String?  // user@domain for display
+  accepted     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([direction, localUser, remoteActor])
+  @@index([direction, localUser])
+}
+
+model FederatedActivity {
+  id           String   @id @default(cuid())
+  /// Stable activity URI (used as the ActivityPub `id` field).
+  activityUri  String   @unique
+  /// Local username that owns this activity (sender for outbound,
+  /// recipient for inbound).
+  owner        String
+  direction    String   // "outbound" | "inbound"
+  type         String   // Create|Update|Delete|Follow|Undo|Accept|Reject|Like|Announce
+  /// JSON-serialised ActivityPub activity object.
+  payload      String
+  /// Optional link to the local Post this activity is about.
+  postId       String?
+  delivered    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@index([owner, direction])
+  @@index([type])
+  @@index([postId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Community Governance (P2.4).
+//
+// `GovernanceProposal` is a community proposal (covenant changes, treasury
+// spend, feature flags, moderation policy). `GovernanceVote` records each
+// user's vote (one-vote-per-user). `ModerationAppeal` is an appeal against
+// an automated moderation decision; `AppealVote` is the jury's vote.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model GovernanceProposal {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  /// Proposal type: "covenant" | "treasury" | "feature" | "moderation" | "other"
+  type        String   @default("other")
+  author      String
+  status      String   @default("voting") // voting|passed|rejected|closed
+  /// ISO timestamp after which the proposal auto-closes.
+  closesAt    DateTime
+  yesVotes    Int      @default(0)
+  noVotes     Int      @default(0)
+  abstainVotes Int     @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  votes       GovernanceVote[]
+
+  @@index([status])
+  @@index([type])
+  @@index([author])
+}
+
+model GovernanceVote {
+  id          String   @id @default(cuid())
+  proposalId  String
+  proposal    GovernanceProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  voter       String
+  /// "yes" | "no" | "abstain"
+  vote        String
+  /// E2EE signature of `${proposalId}|${vote}` — proves the vote came from
+  /// the holder of the voter's signing key (ADR-002).
+  signature   String?
+  createdAt   DateTime @default(now())
+
+  @@unique([proposalId, voter])
+  @@index([proposalId, vote])
+}
+
+model ModerationAppeal {
+  id          String   @id @default(cuid())
+  /// ID of the moderated content (Post, Comment, etc.).
+  contentId   String
+  contentType String   @default("post") // post|comment|account
+  /// Username filing the appeal.
+  appellant   String
+  reason      String
+  /// Original moderation action being appealed.
+  originalAction String
+  status      String   @default("open") // open|upheld|overturned|closed
+  upholdVotes    Int   @default(0)
+  overturnVotes  Int   @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  votes       AppealVote[]
+
+  @@index([status])
+  @@index([appellant])
+  @@index([contentId])
+}
+
+model AppealVote {
+  id          String   @id @default(cuid())
+  appealId    String
+  appeal      ModerationAppeal @relation(fields: [appealId], references: [id], onDelete: Cascade)
+  voter       String
+  /// "uphold" | "overturn"
+  vote        String
+  signature   String?
+  createdAt   DateTime @default(now())
+
+  @@unique([appealId, voter])
+  @@index([appealId, vote])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// P2.5 — Decentralised Storage (IPFS abstraction).
+//
+// `StoragePin` records a content-addressed blob (CID = SHA-256 of content).
+// The blob itself lives either in localStorage (small files, < 1MB) or on
+// the server filesystem (large files). The upgrade path is a real IPFS
+// node — the `cid` field is the IPFS CIDv1 equivalent so the migration is
+// a no-op for callers.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model StoragePin {
+  id          String   @id @default(cuid())
+  /// Content-addressed ID (multibase SHA-256 hex today, CIDv1 tomorrow).
+  cid         String   @unique
+  filename    String
+  mimeType    String
+  size        Int
+  /// "local" (server filesystem) | "client" (localStorage only) | "ipfs" (future)
+  storageTier String   @default("local")
+  /// Relative path on the server filesystem for `local` tier. Null for
+  /// `client` tier (the data lives only in the uploader's localStorage).
+  filePath    String?
+  /// Username of the original uploader.
+  uploadedBy  String?
+  pinned      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([uploadedBy])
+  @@index([storageTier])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// P2.6 — P2P Video (PeerTube abstraction).
+//
+// Videos are stored as `Post` rows with `module=mashahd` (the existing
+// Mashahd module). `VideoSeed` records which devices are actively seeding
+// a video via WebRTC (the existing mesh-network.ts layer). The upgrade
+// path is a real PeerTube instance — the video metadata shape stays the
+// same.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model VideoSeed {
+  id          String   @id @default(cuid())
+  /// Post ID of the video being seeded.
+  videoId     String
+  /// Stable opaque device id from the seeding client.
+  deviceId    String
+  /// Optional username (when the seeder is logged in).
+  username    String?
+  /// WebRTC peer connection status.
+  status      String   @default("active") // active|idle|closed
+  /// Bitmask of which chunks the seeder has (bitmap hex). For chunked
+  /// seeding future; today `ffff` means "full file".
+  chunks       String   @default("ffff")
+  lastSeen    DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@unique([videoId, deviceId])
+  @@index([videoId, status])
+  @@index([deviceId])
+}
+
+model VideoTranscode {
+  id          String   @id @default(cuid())
+  videoId     String
+  /// "pending" | "processing" | "ready" | "failed"
+  status      String   @default("pending")
+  /// Output renditions JSON: [{resolution, bitrate, url}] when ready.
+  renditions  String?
+  progress    Int      @default(0) // 0..100
+  error       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([videoId])
+  @@index([status])
 }

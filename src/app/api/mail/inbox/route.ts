@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import {
   getInbox,
+  getInboxPaged,
   normalizeUsername,
   VALID_FOLDERS,
   type MailFolder,
@@ -9,7 +10,12 @@ import {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // /api/mail/inbox — GET the current user's inbox (or any folder).
-// GET /api/mail/inbox?username=layla&folder=inbox
+// GET /api/mail/inbox?username=layla&folder=inbox&page=1
+//
+// P2.2 — adds `page` query param for pagination. The response is backwards
+// compatible: when `page` is omitted the legacy `messages` array shape is
+// returned (newest 200). When `page` is supplied, the response includes
+// `total`, `page`, and `pageSize` so the client can render a pager.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
@@ -26,6 +32,21 @@ export async function GET(req: NextRequest) {
     const folder = (VALID_FOLDERS as readonly string[]).includes(folderRaw)
       ? (folderRaw as MailFolder)
       : "inbox";
+
+    const pageRaw = sp.get("page");
+    const page = pageRaw ? Number(pageRaw) : undefined;
+
+    if (page !== undefined && Number.isFinite(page) && page > 0) {
+      const result = await getInboxPaged(username, folder, page);
+      return NextResponse.json({
+        folder,
+        username,
+        messages: result.messages,
+        total: result.total,
+        page: result.page,
+        pageSize: result.pageSize,
+      });
+    }
 
     const messages = await getInbox(username, folder);
     return NextResponse.json({ folder, username, messages });

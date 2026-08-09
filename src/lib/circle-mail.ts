@@ -34,9 +34,20 @@ export interface SendMailOpts {
   from: string;     // sender username
   subject: string;
   body: string;
+  /**
+   * P2.2 — optional folder override. The only honoured values are:
+   *   • "draft" — saves a single row to the sender's Drafts folder (no
+   *     recipient copy is written). The recipient (`to`) is still validated
+   *     so the user gets an error if they typed a bad username.
+   *   • "spam" — explicitly route the recipient's copy to their Spam folder
+   *     (skipping the keyword classifier).
+   * Any other value falls through to the default behaviour (classifier
+   * decides inbox vs. spam).
+   */
+  folder?: MailFolder;
 }
 
-export type MailFolder = "inbox" | "sent" | "draft" | "trash";
+export type MailFolder = "inbox" | "sent" | "draft" | "spam" | "trash";
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -45,8 +56,43 @@ export const VALID_FOLDERS: readonly MailFolder[] = [
   "inbox",
   "sent",
   "draft",
+  "spam",
   "trash",
 ];
+
+/**
+ * P2.2 — Simple keyword-based spam classifier.
+ *
+ * This is a coarse-grained filter that flags obvious spam patterns. The
+ * upgrade path is to plug in an on-device ONNX classifier (ADR-003) or a
+ * server-side rspamd/Sieve rule set on a real Mailcow deployment — the
+ * `classifySpam` shape stays the same so call sites don't change.
+ */
+const SPAM_KEYWORDS = [
+  "viagra", "cialis", "lottery", "winner", "you've won", "claim your prize",
+  "free money", "nigerian prince", "crypto giveaway", "double your",
+  "click here to claim", "urgent fund transfer", "dating singles",
+  "adult content", "escort service", "cheap meds", "discount pharmacy",
+  "make money fast", "work from home earn", "investment opportunity guaranteed",
+  "bitcoin bonus", "unlock your account", "verify your password",
+];
+
+export interface SpamVerdict {
+  isSpam: boolean;
+  score: number; // 0..1 confidence
+  matchedKeywords: string[];
+}
+
+export function classifySpam(subject: string, body: string): SpamVerdict {
+  const text = `${subject || ""} ${body || ""}`.toLowerCase();
+  const matched: string[] = [];
+  for (const kw of SPAM_KEYWORDS) {
+    if (text.includes(kw)) matched.push(kw);
+  }
+  // Crude score: each match contributes 0.2, capped at 1.
+  const score = Math.min(1, matched.length * 0.2);
+  return { isSpam: matched.length >= 2 || score >= 0.4, score, matchedKeywords: matched };
+}
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -128,7 +174,38 @@ export async function sendMail(opts: SendMailOpts): Promise<MailMessage> {
   const body = (opts.body || "").slice(0, 50_000);
   const fromEmail = mailAddressFor(from);
 
-  // Two rows: one in the recipient's inbox, one in the sender's sent folder.
+  // P2.2 — Drafts path. When the caller passes folder=draft, we save a
+  // single row to the sender's Drafts folder and skip the recipient write.
+  // This mirrors the IMAP \Drafts folder semantics.
+  if (opts.folder === "draft") {
+    const draftRow = await db.mailMessage.create({
+      data: {
+        toUsername: to,
+        fromUsername: from,
+        fromEmail,
+        subject,
+        body,
+        read: true,
+        starred: false,
+        folder: "draft",
+      },
+    });
+    logger.info("[circle-mail] draft saved", {
+      id: draftRow.id,
+      from,
+      to,
+      subject: subject.slice(0, 80),
+    });
+    return rowToMail(draftRow);
+  }
+
+  // P2.2 — spam classification. The recipient's copy lands in their `spam`
+  // folder if the verdict is positive (or if the caller explicitly passed
+  // folder=spam); the sender still gets a `sent` row.
+  const spam = opts.folder === "spam" ? { isSpam: true, score: 1, matchedKeywords: [] } : classifySpam(subject, body);
+  const recipientFolder = spam.isSpam ? "spam" : "inbox";
+
+  // Two rows: one in the recipient's inbox (or spam), one in the sender's sent folder.
   // We write them sequentially so a recipient-side failure still leaves the
   // sender with their sent copy (and vice-versa).
   const inboxRow = await db.mailMessage.create({
@@ -140,7 +217,7 @@ export async function sendMail(opts: SendMailOpts): Promise<MailMessage> {
       body,
       read: false,
       starred: false,
-      folder: "inbox",
+      folder: recipientFolder,
     },
   });
 
@@ -162,6 +239,7 @@ export async function sendMail(opts: SendMailOpts): Promise<MailMessage> {
     from,
     to,
     subject: subject.slice(0, 80),
+    spam: spam.isSpam,
   });
 
   return rowToMail(inboxRow);
@@ -184,7 +262,9 @@ export async function getInbox(
       ? { fromUsername: user, folder: "sent" }
       : folder === "draft"
         ? { fromUsername: user, folder: "draft" }
-        : { toUsername: user, folder: "trash" };
+        : folder === "spam"
+          ? { toUsername: user, folder: "spam" }
+          : { toUsername: user, folder: "trash" };
 
   const rows = await db.mailMessage.findMany({
     where,
@@ -193,6 +273,144 @@ export async function getInbox(
   });
 
   return rows.map(rowToMail);
+}
+
+/**
+ * Paginated variant of `getInbox` for the mail-service abstraction (P2.2).
+ * Returns `{ messages, total, page, pageSize }` so the client can render
+ * a pager. The `page` is 1-indexed.
+ */
+export async function getInboxPaged(
+  username: string,
+  folder: MailFolder = "inbox",
+  page = 1,
+  pageSize = 25,
+): Promise<{ messages: MailMessage[]; total: number; page: number; pageSize: number }> {
+  const user = normalizeUsername(username);
+  if (!user) return { messages: [], total: 0, page, pageSize };
+  if (!(VALID_FOLDERS as readonly string[]).includes(folder)) {
+    return { messages: [], total: 0, page, pageSize };
+  }
+  const safePage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
+  const safeSize = Number.isFinite(pageSize) && pageSize > 0 && pageSize <= 200
+    ? Math.floor(pageSize)
+    : 25;
+
+  const where = folder === "inbox"
+    ? { toUsername: user, folder: "inbox" }
+    : folder === "sent"
+      ? { fromUsername: user, folder: "sent" }
+      : folder === "draft"
+        ? { fromUsername: user, folder: "draft" }
+        : folder === "spam"
+          ? { toUsername: user, folder: "spam" }
+          : { toUsername: user, folder: "trash" };
+
+  const [total, rows] = await Promise.all([
+    db.mailMessage.count({ where }),
+    db.mailMessage.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (safePage - 1) * safeSize,
+      take: safeSize,
+    }),
+  ]);
+  return { messages: rows.map(rowToMail), total, page: safePage, pageSize: safeSize };
+}
+
+/**
+ * P2.2 — Search mail messages by free-text query within a folder (or all
+ * folders when `folder` is omitted). SQLite LIKE-based; the upgrade path is
+ * FTS5 on a real Mailcow + rspamd deployment.
+ */
+export async function searchMail(
+  username: string,
+  query: string,
+  folder?: MailFolder | "all",
+): Promise<MailMessage[]> {
+  const user = normalizeUsername(username);
+  if (!user) return [];
+  const q = (query || "").trim();
+  if (!q) return [];
+
+  // Folder-aware filter — only return rows the user owns (as recipient or sender).
+  const folderClause = folder && folder !== "all" ? { folder } : {};
+  const rows = await db.mailMessage.findMany({
+    where: {
+      AND: [
+        { OR: [{ toUsername: user }, { fromUsername: user }] },
+        folderClause,
+        {
+          OR: [
+            { subject: { contains: q } },
+            { body: { contains: q } },
+            { fromUsername: { contains: q } },
+            { fromEmail: { contains: q } },
+          ],
+        },
+      ],
+    },
+    orderBy: { createdAt: "desc" },
+    take: 100,
+  });
+  return rows.map(rowToMail);
+}
+
+/**
+ * P2.2 — Folder summary with unread + total counts. Used by the folders API.
+ */
+export async function getFolderCounts(
+  username: string,
+): Promise<Record<MailFolder, { total: number; unread: number }>> {
+  const user = normalizeUsername(username);
+  const empty = {
+    inbox: { total: 0, unread: 0 },
+    sent: { total: 0, unread: 0 },
+    draft: { total: 0, unread: 0 },
+    spam: { total: 0, unread: 0 },
+    trash: { total: 0, unread: 0 },
+  };
+  if (!user) return empty;
+  const rows = await db.mailMessage.groupBy({
+    by: ["folder"],
+    where: {
+      OR: [{ toUsername: user }, { fromUsername: user }],
+    },
+    _count: { _all: true },
+  });
+  const unreadRows = await db.mailMessage.groupBy({
+    by: ["folder"],
+    where: {
+      OR: [{ toUsername: user }, { fromUsername: user }],
+      read: false,
+    },
+    _count: { _all: true },
+  });
+  const out = { ...empty };
+  for (const r of rows) {
+    if (r.folder in out) {
+      (out as Record<string, { total: number; unread: number }>)[r.folder].total = r._count._all;
+    }
+  }
+  for (const r of unreadRows) {
+    if (r.folder in out) {
+      (out as Record<string, { total: number; unread: number }>)[r.folder].unread = r._count._all;
+    }
+  }
+  return out;
+}
+
+/**
+ * P2.2 — Hard-delete a message (vs. `trashMessage` which only moves it).
+ */
+export async function deleteMessage(id: string): Promise<boolean> {
+  if (!id) return false;
+  try {
+    await db.mailMessage.delete({ where: { id } });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**

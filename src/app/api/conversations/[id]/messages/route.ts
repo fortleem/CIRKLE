@@ -11,7 +11,8 @@ interface MessageRow {
   senderName: string;
   senderInitials: string;
   senderColor: string;
-  body: string;
+  body: string | null;
+  ciphertext: string | null;
   status: string;
   encrypted: boolean;
   replyToId: string | null;
@@ -52,7 +53,7 @@ function toChatShape(
     senderName: m.senderName,
     senderInitials: m.senderInitials,
     senderColor: m.senderColor,
-    body: m.body,
+    body: m.body ?? m.ciphertext ?? "",
     timestamp: m.createdAt.toISOString(),
     status: m.status as ChatMessage["status"],
     encrypted: m.encrypted,
@@ -118,11 +119,15 @@ export async function GET(
       refIds.size > 0
         ? await db.message.findMany({
             where: { id: { in: Array.from(refIds) } },
-            select: { id: true, senderName: true, body: true },
+            // For E2EE messages the server only stores ciphertext — we surface
+            // it as the "body" so the recipient's client can decrypt locally.
+            select: { id: true, senderName: true, body: true, ciphertext: true },
           })
         : [];
     const refMap = new Map<string, { senderName: string; body: string }>();
-    for (const r of refs) refMap.set(r.id, { senderName: r.senderName, body: r.body });
+    for (const r of refs) {
+      refMap.set(r.id, { senderName: r.senderName, body: r.body ?? r.ciphertext ?? "" });
+    }
 
     const out = messages.map((m) => {
       const base = toChatShape(m as unknown as MessageRow, m.replyToId ? refMap.get(m.replyToId) ?? null : null);
@@ -144,7 +149,14 @@ export async function GET(
 }
 
 interface PostBody {
+  /** Plaintext body. Optional — used ONLY for non-encrypted / system messages.
+   *  When `ciphertext` is provided, `body` is ignored so the server never
+   *  stores plaintext. */
   body?: string;
+  /** Opaque E2EE ciphertext blob (JSON envelope from src/lib/e2ee-service.ts).
+   *  When present, the server stores ONLY this field and sets `encrypted=true`.
+   *  The server never parses, logs, or decrypts this blob. */
+  ciphertext?: string;
   senderId?: string;
   senderName?: string;
   senderInitials?: string;
@@ -163,8 +175,14 @@ interface PostBody {
 /**
  * POST /api/conversations/:id/messages
  * Body: PostBody
- * Creates a Message with status "sent", encrypted true. Supports reply,
- * attachment (image/audio/file/location/payment), forwarding, and TTL.
+ *
+ * Creates a Message with status "sent". Supports E2EE ciphertext, plaintext
+ * body (non-encrypted only), reply, attachment, forwarding, and TTL.
+ *
+ * CRITICAL (ADR-002): when `ciphertext` is provided the server stores ONLY
+ * the ciphertext blob — `body` is left null so the server never persists
+ * plaintext. The `encrypted` flag is set true. Decryption happens entirely
+ * client-side using the recipient's private key (never sent to the server).
  */
 export async function POST(
   req: NextRequest,
@@ -176,14 +194,30 @@ export async function POST(
 
     const body = (await req.json().catch(() => null)) as PostBody | null;
 
+    const ciphertext = body?.ciphertext?.trim() ?? "";
     const text = body?.body?.trim() ?? "";
     const hasAttachment = !!body?.attachmentKind;
     const hasForward = !!body?.forwardedFromId;
+    const hasSystemEvent = !!body?.systemEvent;
 
-    if (!text && !hasAttachment && !hasForward) {
+    // E2EE ciphertext takes precedence — when present, no plaintext is
+    // accepted on this request (defence in depth: callers should omit `body`
+    // when sending ciphertext, but we enforce it server-side too).
+    const isEncrypted = ciphertext.length > 0;
+    const effectiveBody = isEncrypted ? null : text || (body?.attachmentName ?? "");
+
+    if (!ciphertext && !effectiveBody && !hasAttachment && !hasForward && !hasSystemEvent) {
       return NextResponse.json(
-        { error: "body or attachment is required" },
+        { error: "ciphertext or body or attachment is required" },
         { status: 400 },
+      );
+    }
+
+    // Cap ciphertext size to protect the SQLite DB (matches Family Vault bound).
+    if (ciphertext.length > 8 * 1024 * 1024) {
+      return NextResponse.json(
+        { error: "ciphertext too large (max 8 MB)" },
+        { status: 413 },
       );
     }
 
@@ -217,9 +251,11 @@ export async function POST(
         senderName: body?.senderName ?? "You",
         senderInitials: body?.senderInitials ?? "ME",
         senderColor: body?.senderColor ?? "rose",
-        body: text || (body?.attachmentName ?? ""),
+        // Store ONLY ciphertext when encrypted; plaintext body otherwise.
+        body: effectiveBody,
+        ciphertext: isEncrypted ? ciphertext : null,
         status: "sent",
-        encrypted: true,
+        encrypted: isEncrypted ? true : (effectiveBody ? false : true),
         replyToId: body?.replyToId ?? null,
         attachmentKind: body?.attachmentKind ?? null,
         attachmentName: body?.attachmentName ?? null,
@@ -240,7 +276,9 @@ export async function POST(
       data: { updatedAt: created.createdAt },
     });
 
-    // Resolve reply + forward snapshots for the response shape.
+    // Resolve reply + forward snapshots for the response shape. We surface
+    // ciphertext as the body for E2EE messages so the recipient's client can
+    // decrypt locally — the server never decrypts.
     const refIds = new Set<string>();
     if (created.replyToId) refIds.add(created.replyToId);
     if (created.forwardedFromId) refIds.add(created.forwardedFromId);
@@ -248,11 +286,13 @@ export async function POST(
       refIds.size > 0
         ? await db.message.findMany({
             where: { id: { in: Array.from(refIds) } },
-            select: { id: true, senderName: true, body: true },
+            select: { id: true, senderName: true, body: true, ciphertext: true },
           })
         : [];
     const refMap = new Map<string, { senderName: string; body: string }>();
-    for (const r of refs) refMap.set(r.id, { senderName: r.senderName, body: r.body });
+    for (const r of refs) {
+      refMap.set(r.id, { senderName: r.senderName, body: r.body ?? r.ciphertext ?? "" });
+    }
 
     const out = toChatShape(
       created as unknown as MessageRow,

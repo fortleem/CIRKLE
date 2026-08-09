@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
-import { markRead, toggleStar, trashMessage } from "@/lib/circle-mail";
+import {
+  markRead,
+  toggleStar,
+  trashMessage,
+  deleteMessage,
+} from "@/lib/circle-mail";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // /api/mail/[id]/read — PATCH to mark read/unread.
-//   PATCH /api/mail/[id]/read  body: { read: boolean }    → mark read/unread
-//   PATCH /api/mail/[id]/read  body: { action: "star" }   → toggle star
-//   PATCH /api/mail/[id]/read  body: { action: "trash" }  → move to/from trash
+//   PATCH /api/mail/[id]/read  body: { read: boolean }            → mark read/unread
+//   PATCH /api/mail/[id]/read  body: { action: "star" }           → toggle star
+//   PATCH /api/mail/[id]/read  body: { action: "trash" }          → move to/from trash
+//   PATCH /api/mail/[id]/read  body: { action: "delete" }         → P2.2 hard-delete
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function PATCH(
@@ -35,6 +41,15 @@ export async function PATCH(
         return NextResponse.json({ error: "not found" }, { status: 404 });
       }
       return NextResponse.json({ ok: true, message });
+    }
+
+    if (body.action === "delete") {
+      // P2.2 — hard-delete (vs `trash` which only moves to Trash).
+      const ok = await deleteMessage(id);
+      if (!ok) {
+        return NextResponse.json({ error: "not found" }, { status: 404 });
+      }
+      return NextResponse.json({ ok: true });
     }
 
     // Default: toggle the read flag.

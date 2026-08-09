@@ -1233,11 +1233,34 @@ function ChatView({ conversation, socket, onBack }: ChatViewProps) {
         size?: number;
       };
     }) => {
+      // ── E2EE (P2.1 / ADR-002): attempt client-side encryption before POST.
+      // For direct conversations, encrypt to the peer's published device
+      // public key. If the peer hasn't published a key (or the conversation
+      // isn't direct), we fall back to plaintext `body` — the server still
+      // accepts plaintext for non-encrypted / legacy messages. The server
+      // NEVER receives plaintext when ciphertext is provided.
+      let ciphertext: string | null = null;
+      if (conversation.type === "direct" && input.body && conversation.encrypted) {
+        try {
+          const { encryptForConversation } = await import("@/lib/e2ee-service");
+          const result = await encryptForConversation(
+            input.body,
+            conversation.id,
+            getMe().id,
+          );
+          ciphertext = result?.ciphertext ?? null;
+        } catch {
+          // Graceful degradation — send plaintext if E2EE unavailable.
+          ciphertext = null;
+        }
+      }
       const r = await fetch(`/api/conversations/${conversation.id}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          body: input.body,
+          // When ciphertext is present, the server stores ONLY ciphertext
+          // (body is omitted). Otherwise we send plaintext body as before.
+          ...(ciphertext ? { ciphertext } : { body: input.body }),
           senderId: getMe().id,
           senderName: getMe().displayName,
           senderInitials: getMe().avatarInitials,
