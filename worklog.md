@@ -7710,3 +7710,37 @@ Stage Summary:
 - Total documentation: ~2,500 lines of structured compliance/decision content.
 - Documents form a coherent set: ADR-001 (decision) → DEFERRED_FEATURES (what's blocked on the decision) → CIRKLE-BLUEPRINT-COMPLIANCE (full audit) → CIRKLE-DEPENDENCY-MATRIX (technical deps) → CURRENT-STATE-DELTA-REPORT (codebase state at HEAD).
 - Next actions for the team: (1) CTO reviews ADR-001, (2) CTO reviews DEFERRED_FEATURES list, (3) Engineering addresses Tier 1 critical gaps (AI Safety §17, Circle Groups §10, Verify §16.5, Payments §19.6, Emergency Alerts §11.3), (4) After ADR-001 approval, draft ADR-002 (Native Wrapper) and ADR-003 (Federated Back-end).
+
+
+---
+Task ID: P0-2-LAMAHAT
+Agent: general-purpose
+Task: Expand Lamahat to ≥8/10 audit score
+
+Work Log:
+- Read /home/z/my-project/worklog.md (last 100 lines) for audit context — codebase is Next.js 16 PWA implementation of CIRKLE blueprint v12.0 (~12% full / 41% partial / 46% missing coverage).
+- Read existing /home/z/my-project/src/screens/lamahat-screen.tsx (433 lines, scored 6/10 in audit) and /home/z/my-project/src/components/overlays/lamahat-viewer.tsx (388 lines) for context.
+- Verified available shadcn/ui components, glass design tokens (`--gold/--rose/--teal/--accent/--charcoal/--cream`, `glass`, `glass-strong`, `bg-gradient-gold/mesh/hero`, `scrollbar-hide`, `font-display`), and existing screen line counts (8 screens, 1000-3487 lines average; lamahat was smallest at 433).
+- Implemented 6 new feature modules in /home/z/my-project/src/screens/lamahat-screen.tsx:
+  1. **Stories (ephemeral 24h)** — STORY_USERS dataset (8 users), reusable StoryRing component (gradient progress ring + count badge + seen/un-seen styling + own-story dashed ring), full-screen StoryViewer overlay (auto-advancing per-segment progress bars, tap-zones prev/next, reply + react + share inputs, keyboard nav).
+  2. **Collections** — COLLECTIONS dataset (6 curated albums), horizontal scroll of cover cards with gradient cover + title + photo count + collaborator avatar stack + pinned star + Private/Shared indicator + "Create new" button.
+  3. **Memories (On this day)** — MEMORIES dataset (1y/2y/3y ago), horizontal carousel of memory cards with gradient cover + year-ago badge + AI-sparkles icon + photo count + "Relive" CTA, opens LamahatViewer in story mode.
+  4. **Improved Discovery** — search bar with clear button, sort dropdown (Recent/Popular/Most Liked with icons), category filter chips (All/Travel/Food/Nature/Friends/Art/Architecture) with active gold state, discovery summary line with filter count.
+  5. **Improved Gallery** — varying card sizes (every 5th card Featured with `sm:column-span-2` + Featured badge on hover), preserved masonry/hover/engagement, added IntersectionObserver-based infinite scroll + "Load more" fallback + "You're all caught up" end-of-feed state.
+  6. **Moments (permanent posts)** — MOMENTS dataset (3 posts with full engagement: likes/comments/shares/views + location + pinned Crown badge), each card with author row + gradient photo cover + caption + Like/Comment/Share/Views action bar + Save bookmark, opens LamahatViewer post mode.
+- Preserved ALL existing features: masonry grid, category-tinted gradients, author avatars, engagement metrics, hover overlays, "No filters · No tracking" tagline, Brain AI button + cross-evaluate API call, Capture/Create composer dispatches, 4 tabs (Feed/Reels/Saved/Tagged), useQuery /api/posts?module=lamahat, useApp/useAuth hooks, toast feedback, empty-state messaging.
+- Did NOT implement any forbidden tech: Matrix, IPFS, ONNX, CLIP, decentralized storage, or local mesh.
+- Did NOT use line count as acceptance criterion — feature completeness drove expansion.
+- Added only lucide-react icons (no new icon library); used IntersectionObserver (native browser API) for infinite scroll (no new deps).
+- Fixed initial `react-hooks/set-state-in-effect` lint error by switching StoryViewer's reset logic from `useEffect` to the derived-state-with-prevKey pattern already used in LamahatViewer.
+- Verified lint: `bun run lint` — passes (0 errors, 0 warnings).
+
+Stage Summary:
+- Files modified: /home/z/my-project/src/screens/lamahat-screen.tsx (single file; 433 → 1270 lines, +837 lines, ~3× expansion).
+- Features added: 6 new feature modules (Stories bar + viewer, Collections carousel, Memories carousel, Discovery bar with search+sort+chips, Improved Gallery with featured cards + infinite scroll, Moments section with full engagement posts).
+- New components: StoryRing, StoryViewer (both in-file, no new files created).
+- New datasets: STORY_USERS (8), COLLECTIONS (6), MEMORIES (3), MOMENTS (3) — all client-side mock, no API/schema changes.
+- New state: search, sort, category, sortMenuOpen, visibleCount, loadingMore, saved, storyView — added alongside existing tab/liked/viewer/brainBusy state.
+- New lucide-react imports: 22 icons added to existing import set.
+- Lint: ✅ passes (0 errors, 0 warnings).
+- No new dependencies, no Prisma schema changes, no new API routes, no new files outside of the screen — surgical, contained expansion.
