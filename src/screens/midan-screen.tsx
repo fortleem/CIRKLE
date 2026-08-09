@@ -25,6 +25,7 @@ import {
   Hash,
   Bookmark,
   Eye,
+  EyeOff,
   Image as ImageIcon,
   Smile,
   MapPin,
@@ -34,10 +35,12 @@ import {
   MoreHorizontal,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-store";
 import { useApp } from "@/lib/app-store";
+import { getPseudonym, pseudonymAvatarDataUrl, ANONYMOUS_PRIVACY_NOTICE } from "@/lib/anonymous-identity";
 
 /**
  * Brain AI connection for Midan (the public square).
@@ -235,6 +238,10 @@ export function MidanScreen() {
   const username = user?.username || null;
   const { country, city } = useApp();
   const [brainBusy, setBrainBusy] = useState(false);
+  // P1.6 — Anonymous Midan toggle. When on, posts go out under a
+  // per-Circle pseudonymous identity stored only in localStorage. The
+  // real user's identity never leaves the device.
+  const [anonymous, setAnonymous] = useState(false);
 
   /** Calls the Brain universal layer for local trending topics. */
   const onBrainTrending = async () => {
@@ -576,8 +583,15 @@ export function MidanScreen() {
       {(() => {
         const composerName = user?.displayName || username || "friend";
         const composerInitial = (composerName.trim()[0] || "Y").toUpperCase();
+        // P1.6 — Anonymous composer integration. The toggle is purely
+        // client-side; only the pseudonymous identity leaves the device.
+        const anonPseudonym = anonymous ? getPseudonym("midan") : null;
         const composerKind = (kind: string, extra?: Record<string, unknown>) =>
-          window.dispatchEvent(new CustomEvent("circle:composer", { detail: { kind, ...extra } }));
+          window.dispatchEvent(
+            new CustomEvent("circle:composer", {
+              detail: { kind, anonymous, circleId: "midan", ...extra },
+            }),
+          );
         return (
           <div className="mx-5 mt-4 glass rounded-3xl p-4 w-[calc(100%-2.5rem)]">
             <button
@@ -585,19 +599,78 @@ export function MidanScreen() {
               className="w-full flex items-start gap-3 text-start rounded-2xl p-1 -m-1 hover:bg-muted/30 transition"
               aria-label="Compose a new post"
             >
-              <div className="w-12 h-12 rounded-full bg-gradient-hero flex items-center justify-center text-primary-foreground font-display text-base shrink-0 ring-2 ring-secondary/25">
-                {composerInitial}
-              </div>
+              {anonPseudonym ? (
+                <div
+                  className="w-12 h-12 rounded-full shrink-0 ring-2 ring-secondary/40"
+                  style={{
+                    backgroundImage: `url(${pseudonymAvatarDataUrl(anonPseudonym, 96)})`,
+                    backgroundSize: "cover",
+                  }}
+                  aria-hidden="true"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-gradient-hero flex items-center justify-center text-primary-foreground font-display text-base shrink-0 ring-2 ring-secondary/25">
+                  {composerInitial}
+                </div>
+              )}
               <div className="flex-1 min-w-0 pt-1">
-                <div className="text-base text-muted-foreground">
-                  What&apos;s happening, {composerName.split(" ")[0]}?
-                </div>
-                <div className="mt-1 inline-flex items-center gap-1 text-[11px] text-secondary">
-                  <Sparkles className="w-3 h-3" />
-                  Share to the public square · No algorithm boost
-                </div>
+                {anonPseudonym ? (
+                  <>
+                    <div className="text-base text-muted-foreground">
+                      What&apos;s happening, {anonPseudonym.displayName}?
+                    </div>
+                    <div className="mt-1 inline-flex items-center gap-1 text-[11px] text-secondary">
+                      <EyeOff className="w-3 h-3" />
+                      Posting anonymously · @{anonPseudonym.handle}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-base text-muted-foreground">
+                      What&apos;s happening, {composerName.split(" ")[0]}?
+                    </div>
+                    <div className="mt-1 inline-flex items-center gap-1 text-[11px] text-secondary">
+                      <Sparkles className="w-3 h-3" />
+                      Share to the public square · No algorithm boost
+                    </div>
+                  </>
+                )}
               </div>
             </button>
+
+            {/* P1.6 — Anonymous toggle. Lives in the composer card so the
+                privacy covenant is visible at the point of authoring. */}
+            <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-secondary/5 border border-secondary/20 px-3 py-2">
+              <label
+                htmlFor="midan-anon-toggle"
+                className="flex items-center gap-2 text-[12px] text-foreground cursor-pointer select-none"
+              >
+                <EyeOff className="w-3.5 h-3.5 text-secondary" />
+                <span className="font-medium">Post anonymously</span>
+                <span className="text-muted-foreground hidden sm:inline">
+                  · per-Circle pseudonym
+                </span>
+              </label>
+              <Switch
+                id="midan-anon-toggle"
+                checked={anonymous}
+                onCheckedChange={(v) => {
+                  setAnonymous(v);
+                  if (v) {
+                    toast.success("Anonymous mode on", {
+                      description: ANONYMOUS_PRIVACY_NOTICE,
+                    });
+                  }
+                }}
+                aria-label="Toggle anonymous posting"
+              />
+            </div>
+            {anonymous && (
+              <p className="mt-1.5 text-[10px] text-muted-foreground px-1">
+                {ANONYMOUS_PRIVACY_NOTICE}
+              </p>
+            )}
+
             <div className="mt-3 pt-3 border-t border-border/40 flex items-center justify-between">
               <div className="flex items-center gap-0.5 text-secondary">
                 <button
@@ -651,9 +724,13 @@ export function MidanScreen() {
               </div>
               <button
                 onClick={() => composerKind("post")}
-                className="px-5 py-1.5 rounded-full bg-gradient-gold text-charcoal text-sm font-medium hover:scale-[1.02] active:scale-95 transition shadow-sm"
+                className={`px-5 py-1.5 rounded-full text-charcoal text-sm font-medium hover:scale-[1.02] active:scale-95 transition shadow-sm ${
+                  anonymous
+                    ? "bg-gradient-to-br from-secondary to-primary text-cream"
+                    : "bg-gradient-gold"
+                }`}
               >
-                Post
+                {anonymous ? "Post anonymously" : "Post"}
               </button>
             </div>
           </div>
@@ -747,7 +824,7 @@ export function MidanScreen() {
           <div className="font-display text-lg">No posts yet</div>
           <div className="text-xs text-muted-foreground mt-1">Be the first to post!</div>
           <button
-            onClick={() => window.dispatchEvent(new CustomEvent("circle:composer", { detail: { kind: "post" } }))}
+            onClick={() => window.dispatchEvent(new CustomEvent("circle:composer", { detail: { kind: "post", anonymous, circleId: "midan" } }))}
             className="mt-4 text-xs px-4 py-2 rounded-full bg-primary text-primary-foreground"
           >
             Compose a post

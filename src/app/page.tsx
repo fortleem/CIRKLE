@@ -81,6 +81,8 @@ const CirkleSentinel = dynamic(() => import("@/components/overlays/cirkle-sentin
 const CirkleOracle = dynamic(() => import("@/components/overlays/cirkle-oracle").then(m => ({ default: m.CirkleOracle })), { ssr: false });
 const CirkleSpark = dynamic(() => import("@/components/overlays/cirkle-spark").then(m => ({ default: m.CirkleSpark })), { ssr: false });
 const CirkleCreate = dynamic(() => import("@/components/overlays/cirkle-create").then(m => ({ default: m.CirkleCreate })), { ssr: false });
+const CircleGroupCreate = dynamic(() => import("@/components/overlays/circle-create").then(m => ({ default: m.CircleCreate })), { ssr: false });
+const CircleGroupDetail = dynamic(() => import("@/components/overlays/circle-detail").then(m => ({ default: m.CircleDetail })), { ssr: false });
 const CirkleLearn = dynamic(() => import("@/components/overlays/cirkle-learn").then(m => ({ default: m.CirkleLearn })), { ssr: false });
 const CirkleGrow = dynamic(() => import("@/components/overlays/cirkle-grow").then(m => ({ default: m.CirkleGrow })), { ssr: false });
 const CirkleCare = dynamic(() => import("@/components/overlays/cirkle-care").then(m => ({ default: m.CirkleCare })), { ssr: false });
@@ -357,7 +359,9 @@ export default function Page() {
   const [termsOpen, setTermsOpen] = useState(false);
   const [dsrOpen, setDsrOpen] = useState(false);
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
-  const [composer, setComposer] = useState<{ open: boolean; kind?: "post" | "poll" | "media"; draft?: string }>({ open: false });
+  const [circleCreateOpen, setCircleCreateOpen] = useState(false);
+  const [circleDetailId, setCircleDetailId] = useState<string | null>(null);
+  const [composer, setComposer] = useState<{ open: boolean; kind?: "post" | "poll" | "media"; draft?: string; anonymous?: boolean; circleId?: string }>({ open: false });
   const Screen = screens[tab];
 
   // Splash/cinematic entrance stays until user clicks "Continue" or "Register/Sign in"
@@ -408,7 +412,8 @@ export default function Page() {
   }, []);
 
   useEffect(() => {
-    const onComposer = (e: Event & { detail?: Record<string, unknown> }) => setComposer({ open: true, ...(e.detail || {}) });
+    const onComposer = (e: Event & { detail?: { kind?: "post" | "poll" | "media"; draft?: string; anonymous?: boolean; circleId?: string } }) =>
+      setComposer({ open: true, kind: e.detail?.kind, draft: e.detail?.draft, anonymous: e.detail?.anonymous, circleId: e.detail?.circleId });
     const onGovernance = () => setGovernanceOpen(true);
     const onSettings = () => setSettingsOpen(true);
     const onAi = () => setAiOpen(true);
@@ -635,6 +640,14 @@ export default function Page() {
     window.addEventListener("circle:dsr-request", onDSR);
     const onWhatsNew = () => setWhatsNewOpen(true);
     window.addEventListener("circle:whats-new", onWhatsNew);
+    // P1.7 — Circle Groups UX. The create flow + detail view are
+    // reachable from any surface via these CustomEvents.
+    const onCircleCreate = () => setCircleCreateOpen(true);
+    const onCircleDetail = (e: Event & { detail?: { circleId?: string } }) => {
+      if (e.detail?.circleId) setCircleDetailId(e.detail.circleId);
+    };
+    window.addEventListener("circle:create-circle", onCircleCreate);
+    window.addEventListener("circle:circle-detail", onCircleDetail as any);
 
     window.addEventListener("circle:navigate", onNavigate as any);
 
@@ -651,7 +664,7 @@ export default function Page() {
       const d = e.detail || {};
       const text = `📰 ${d.title || ""}\nvia ${d.source || "Cirkle News"}\n${d.url || ""}`;
       setTab("midan");
-      setComposer({ open: true, kind: "post", draft: text });
+      setComposer({ open: true, kind: "post", draft: text, anonymous: false, circleId: undefined });
       toast.success("Shared to Midan", { description: "Create a post with this article" });
     };
     window.addEventListener("share-to-wasl", onShareWasl as any);
@@ -754,6 +767,8 @@ export default function Page() {
       window.removeEventListener("circle:terms", onTerms);
       window.removeEventListener("circle:dsr-request", onDSR);
       window.removeEventListener("circle:whats-new", onWhatsNew);
+      window.removeEventListener("circle:create-circle", onCircleCreate);
+      window.removeEventListener("circle:circle-detail", onCircleDetail as any);
 
       window.removeEventListener("circle:navigate", onNavigate as any);
       window.removeEventListener("share-to-wasl", onShareWasl as any);
@@ -762,7 +777,7 @@ export default function Page() {
   }, []);
 
   const handleAIAction = (a: AIAction) => {
-    if (a.type === "open-composer") setComposer({ open: true, kind: a.kind, draft: a.draft });
+    if (a.type === "open-composer") setComposer({ open: true, kind: a.kind, draft: a.draft, anonymous: false, circleId: undefined });
     else if (a.type === "open-governance") setGovernanceOpen(true);
     else if (a.type === "navigate") setTab(a.tab as TabId);
     else if (a.type === "scan-pay") { setTab("pay"); toast("Scan & Pay ready"); }
@@ -962,10 +977,34 @@ export default function Page() {
       {/* P0.4: What's New — feature discoverability overlay */}
       <WhatsNew open={whatsNewOpen} onClose={() => setWhatsNewOpen(false)} />
 
+      {/* P1.7 — Circle Groups: creation flow + detail view. Reachable
+          from any surface via `circle:create-circle` and
+          `circle:circle-detail` (with `{ detail: { circleId } }`). */}
+      <CircleGroupCreate
+        open={circleCreateOpen}
+        onClose={() => setCircleCreateOpen(false)}
+        onCreated={(id) => {
+          setCircleCreateOpen(false);
+          setCircleDetailId(id);
+        }}
+      />
+      <CircleGroupDetail
+        open={!!circleDetailId}
+        circleId={circleDetailId}
+        onClose={() => setCircleDetailId(null)}
+      />
+
       {/* Cookie consent banner — always mounted so it can show on first visit. */}
       <CookieConsentBanner />
 
-      <Composer open={composer.open} initialKind={composer.kind} initialText={composer.draft} onClose={() => setComposer({ open: false })} />
+      <Composer
+        open={composer.open}
+        initialKind={composer.kind}
+        initialText={composer.draft}
+        anonymous={composer.anonymous}
+        circleId={composer.circleId}
+        onClose={() => setComposer({ open: false })}
+      />
       <AnimatePresence>{showOnboarding && <Onboarding onDone={finishOnboarding} />}</AnimatePresence>
       <FirstLaunchTour
         open={showTour}

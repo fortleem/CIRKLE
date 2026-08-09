@@ -4,12 +4,20 @@ import { AnimatePresence, motion } from "framer-motion";
 import { SmartImage } from "@/components/ui/smart-image";
 import {
   X, Image as ImageIcon, BarChart3, Mic, Send, Hash, Globe, Users, Sparkles,
-  Plus, Trash2, Lock, Heart, Check, Clock, Loader2, type LucideIcon,
+  Plus, Trash2, Lock, Heart, Check, Clock, Loader2, EyeOff, ShieldOff,
+  RefreshCw, type LucideIcon,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAuth, cirkleInitials } from "@/lib/auth-store";
+import {
+  getPseudonym,
+  rotatePseudonym,
+  pseudonymAvatarDataUrl,
+  ANONYMOUS_PRIVACY_NOTICE,
+  type Pseudonym,
+} from "@/lib/anonymous-identity";
 
 type Kind = "post" | "poll" | "media";
 type Target = "Public" | "Friends" | "Special Friends" | "Workspace";
@@ -45,10 +53,25 @@ const MAX_CHARS = 280;
 /**
  * Composer — bottom Sheet with three modes (Post / Poll / Media),
  * live preview, audience selector, and rich toolbar.
+ *
+ * Anonymous mode (P1.6):
+ *   When `anonymous` is true, the composer posts under a per-Circle
+ *   pseudonymous identity stored only in localStorage. The real user's
+ *   ID, handle, and display name are NEVER sent to the server — only
+ *   the pseudonym. The server has no way to map the pseudonym back.
  */
 export function Composer({
-  open, initialKind, initialText, onClose,
-}: { open: boolean; initialKind?: Kind; initialText?: string; onClose: () => void }) {
+  open, initialKind, initialText, anonymous, circleId, onClose,
+}: {
+  open: boolean;
+  initialKind?: Kind;
+  initialText?: string;
+  /** Post as a per-Circle pseudonym instead of the real user. */
+  anonymous?: boolean;
+  /** Circle ID the pseudonym is scoped to (defaults to "midan"). */
+  circleId?: string;
+  onClose: () => void;
+}) {
   const [kind, setKind] = useState<Kind>(initialKind ?? "post");
   const [text, setText] = useState(initialText ?? "");
   const [target, setTarget] = useState<Target>("Public");
@@ -58,6 +81,7 @@ export function Composer({
   const [pollOptions, setPollOptions] = useState<string[]>(["", ""]);
   const [pollDuration, setPollDuration] = useState<PollDuration>("24h");
   const [posting, setPosting] = useState(false);
+  const [pseudonym, setPseudonym] = useState<Pseudonym | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -73,6 +97,13 @@ export function Composer({
     setPollOptions(["", ""]);
     setTarget("Public");
     setPollDuration("24h");
+    // Mint / fetch the per-Circle pseudonym whenever the composer opens
+    // in anonymous mode. The mapping stays in localStorage only.
+    if (anonymous) {
+      setPseudonym(getPseudonym(circleId || "midan"));
+    } else {
+      setPseudonym(null);
+    }
   } else if (!open && prevOpen) {
     setPrevOpen(false);
   }
@@ -168,6 +199,34 @@ export function Composer({
 
     setPosting(true);
 
+    // ── Anonymous mode (P1.6) ──────────────────────────────────────────
+    // When posting anonymously, ONLY the pseudonymous identity is sent.
+    // No real user ID, username, or display name leaves the device. The
+    // server stores the pseudonym's id as the author — it cannot map
+    // that back to a real user because the mapping lives exclusively
+    // in this device's localStorage.
+    const anon = anonymous && pseudonym;
+    const authorPayload = anon
+      ? {
+          anonymousId: pseudonym.id,
+          authorId: pseudonym.id,
+          authorName: pseudonym.displayName,
+          authorHandle: pseudonym.handle,
+          authorInitials: pseudonym.initials,
+          authorColor: pseudonym.color,
+          authorVerified: false,
+        }
+      : {
+          // Send the real authenticated user's identity so posts are
+          // attributed correctly (not the hardcoded "User Yassin" mock).
+          authorId: user?.username ?? "u_current",
+          authorName: user?.displayName ?? "Anonymous",
+          authorHandle: user?.username ?? "anonymous",
+          authorInitials: user ? cirkleInitials(user) : "A",
+          authorColor: user?.avatarColor ?? "teal",
+          authorVerified: user?.verified ?? false,
+        };
+
     const fetchPromise = fetch("/api/posts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -176,16 +235,12 @@ export function Composer({
         kind,
         media,
         mediaKind,
-        visibility: visibilityMap[target],
+        // Anonymous posts are always visibility="anonymous" so the
+        // feed can mark them accordingly; the privacy covenant still
+        // holds because the API only sees the pseudonym.
+        visibility: anon ? "anonymous" : visibilityMap[target],
         tags: hashtags,
-        // Send the real authenticated user's identity so posts are
-        // attributed correctly (not the hardcoded "User Yassin" mock).
-        authorId: user?.username ?? "u_current",
-        authorName: user?.displayName ?? "Anonymous",
-        authorHandle: user?.username ?? "anonymous",
-        authorInitials: user ? cirkleInitials(user) : "A",
-        authorColor: user?.avatarColor ?? "teal",
-        authorVerified: user?.verified ?? false,
+        ...authorPayload,
       }),
     }).then(async (res) => {
       if (!res.ok) {
@@ -196,14 +251,15 @@ export function Composer({
     });
 
     toast.promise(fetchPromise, {
-      loading: "Posting...",
+      loading: anon ? "Posting anonymously..." : "Posting...",
       success: () => {
         queryClient.invalidateQueries({ queryKey: ["posts"] });
+        const prefix = anon ? "Posted anonymously to" : "Posted to";
         return kind === "poll"
-          ? "Poll published to Midan!"
+          ? `${prefix} Midan!`
           : kind === "media"
-            ? "Media shared to Midan!"
-            : "Posted to Midan!";
+            ? `Media shared to Midan!`
+            : `${prefix} Midan!`;
       },
       error: (e: Error) => e.message || "Failed to post",
     });
@@ -221,7 +277,17 @@ export function Composer({
 
   const setOpt = (i: number, v: string) => setPollOptions((o) => o.map((x, idx) => (idx === i ? v : x)));
 
-  const buttonLabel = kind === "poll" ? "Publish poll" : kind === "media" ? "Share media" : "Post to Midan";
+  const buttonLabel = anonymous
+    ? kind === "poll"
+      ? "Publish anonymous poll"
+      : kind === "media"
+        ? "Share media anonymously"
+        : "Post anonymously"
+    : kind === "poll"
+      ? "Publish poll"
+      : kind === "media"
+        ? "Share media"
+        : "Post to Midan";
 
   return (
     <AnimatePresence>
@@ -243,7 +309,14 @@ export function Composer({
               <span className="w-10 h-1 rounded-full bg-muted-foreground/30" />
             </div>
             <div className="px-5 pt-3 pb-2 flex items-center gap-3">
-              <h2 className="font-display text-2xl flex-1 capitalize">New {kind}</h2>
+              <h2 className="font-display text-2xl flex-1 capitalize">
+                {anonymous ? "Anonymous " : "New "}{kind}
+              </h2>
+              {anonymous && (
+                <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full bg-secondary/15 text-secondary">
+                  <EyeOff className="w-3 h-3" /> Anonymous
+                </span>
+              )}
               <button
                 onClick={onClose}
                 className="w-9 h-9 rounded-full hover:bg-muted/60 flex items-center justify-center"
@@ -252,6 +325,46 @@ export function Composer({
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {/* Anonymous identity banner — only rendered in anonymous mode. */}
+            {anonymous && pseudonym && (
+              <div className="mx-5 mt-1 mb-2 rounded-2xl border border-secondary/30 bg-secondary/5 p-3 flex items-center gap-3">
+                <div
+                  className="w-11 h-11 rounded-full shrink-0 ring-2 ring-secondary/30"
+                  style={{
+                    backgroundImage: `url(${pseudonymAvatarDataUrl(pseudonym, 88)})`,
+                    backgroundSize: "cover",
+                  }}
+                  aria-hidden="true"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium flex items-center gap-1.5">
+                    {pseudonym.displayName}
+                    <span className="text-[11px] text-muted-foreground truncate">
+                      @{pseudonym.handle}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                    <ShieldOff className="w-3 h-3 shrink-0" />
+                    <span className="truncate">{ANONYMOUS_PRIVACY_NOTICE}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    const next = rotatePseudonym(circleId || "midan");
+                    setPseudonym(next);
+                    toast.success("New anonymous identity minted", {
+                      description: `You are now @${next.handle}`,
+                    });
+                  }}
+                  className="w-8 h-8 rounded-full hover:bg-muted/60 flex items-center justify-center text-secondary shrink-0"
+                  aria-label="Rotate anonymous identity"
+                  title="Rotate identity"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
 
             {/* Kind switcher */}
             <div className="px-5 flex gap-2 flex-wrap">
@@ -452,12 +565,37 @@ export function Composer({
 
               {/* Realtime preview */}
               <div className="rounded-3xl border border-border bg-card p-4 space-y-3 self-start md:sticky md:top-0">
-                <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Live preview</div>
+                <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                  {anonymous ? "Anonymous preview" : "Live preview"}
+                </div>
                 <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-full bg-gradient-hero shrink-0" />
+                  {anonymous && pseudonym ? (
+                    <div
+                      className="w-9 h-9 rounded-full shrink-0 ring-1 ring-border"
+                      style={{
+                        backgroundImage: `url(${pseudonymAvatarDataUrl(pseudonym, 72)})`,
+                        backgroundSize: "cover",
+                      }}
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-gradient-hero shrink-0" />
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium flex items-center gap-1">
-                      User <span className="text-xs text-muted-foreground">@yousef · now</span>
+                      {anonymous && pseudonym ? (
+                        <>
+                          {pseudonym.displayName}{" "}
+                          <span className="text-xs text-muted-foreground truncate">
+                            @{pseudonym.handle} · now
+                          </span>
+                          <EyeOff className="w-3 h-3 text-secondary ml-0.5" />
+                        </>
+                      ) : (
+                        <>
+                          User <span className="text-xs text-muted-foreground">@yousef · now</span>
+                        </>
+                      )}
                     </div>
                     {kind === "post" && (
                       <p className="mt-1 text-[14px] leading-relaxed whitespace-pre-wrap break-words min-h-[1em]">
@@ -498,7 +636,15 @@ export function Composer({
                     )}
 
                     <div className="mt-2 text-[10px] text-secondary flex items-center gap-1">
-                      <Sparkles className="w-3 h-3" /> AI-verified · {target}
+                      {anonymous ? (
+                        <>
+                          <EyeOff className="w-3 h-3" /> Anonymous · no real identity attached
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3 h-3" /> AI-verified · {target}
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -510,14 +656,26 @@ export function Composer({
               style={{ paddingBottom: "max(env(safe-area-inset-bottom), 0.75rem)" }}
             >
               <span className="text-[11px] text-muted-foreground flex-1 flex items-center gap-1">
-                <Lock className="w-3 h-3" /> End-to-end encrypted · stored on your device
+                {anonymous ? (
+                  <>
+                    <EyeOff className="w-3 h-3" /> Real identity never linked
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-3 h-3" /> End-to-end encrypted · stored on your device
+                  </>
+                )}
               </span>
               <button
                 onClick={publish}
                 disabled={posting || (kind === "post" && overLimit)}
-                className="px-5 py-2.5 rounded-full bg-gradient-hero text-cream text-sm font-medium flex items-center gap-2 shadow-float disabled:opacity-50 transition"
+                className={`px-5 py-2.5 rounded-full text-sm font-medium flex items-center gap-2 shadow-float disabled:opacity-50 transition ${
+                  anonymous
+                    ? "bg-gradient-to-br from-secondary to-primary text-cream"
+                    : "bg-gradient-hero text-cream"
+                }`}
               >
-                {posting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                {posting ? <Loader2 className="w-4 h-4 animate-spin" /> : anonymous ? <EyeOff className="w-4 h-4" /> : <Send className="w-4 h-4" />}
                 {posting ? "Posting..." : buttonLabel}
               </button>
             </div>

@@ -63,6 +63,14 @@ export function CircleHub({ open, onClose }: { open: boolean; onClose: () => voi
     : PILLARS;
 
   const openPillar = (p: Pillar) => {
+    // P1.7 — Circle Groups UX. The "groups" pillar opens the create-
+    // circle flow instead of just navigating to the Midan tab.
+    if (p.id === "groups") {
+      window.dispatchEvent(new CustomEvent("circle:create-circle"));
+      toast.success(`Opening ${p.name}`, { description: "Create or join a Circle." });
+      onClose();
+      return;
+    }
     if (p.tab) {
       window.dispatchEvent(new CustomEvent("circle:navigate", { detail: { tab: p.tab } }));
       toast.success(`Opening ${p.name}`, { description: "Switched to the main tab." });

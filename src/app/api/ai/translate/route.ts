@@ -8,7 +8,13 @@ import { aiComplete } from "@/lib/ai";
  * Body: {text, from?, to?, targetLang?}
  *   - `to` is the canonical target language code.
  *   - `targetLang` is accepted as a convenience alias for `to`.
- * Returns {translation} after a 200ms delay.
+ * Returns {translation, from, to, isRTL, provider} after a 200ms delay.
+ *
+ * The route is the "server" provider used by `src/lib/translation-service.ts`.
+ * It delegates the actual translation to `aiComplete` (5-provider chain:
+ * Groq → OpenRouter → Gemini → OpenAI → HuggingFace) and falls back to
+ * the original text on any failure so the caller always gets a usable
+ * result. The 200ms delay smooths out provider latency spikes.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -26,15 +32,26 @@ export async function POST(req: NextRequest) {
     await new Promise((r) => setTimeout(r, 200));
 
     let translation: string;
+    let provider: "server" | "fallback" = "server";
     try {
-      translation = await aiComplete(text, from, to);
-      if (!translation.trim()) translation = text;
+      const out = await aiComplete(text, from, to);
+      translation = (out ?? "").trim();
+      if (!translation) {
+        translation = text;
+        provider = "fallback";
+      }
     } catch (aiErr) {
       console.warn("[/api/ai/translate] AI failed, echoing input", aiErr);
       translation = text;
+      provider = "fallback";
     }
 
-    return NextResponse.json({ translation });
+    return NextResponse.json({
+      translation,
+      from,
+      to,
+      provider,
+    });
   } catch (err) {
     logger.error("[/api/ai/translate] error", { error: (err as Error).message });
     return NextResponse.json(

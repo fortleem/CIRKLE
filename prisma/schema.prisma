@@ -123,6 +123,11 @@ model Post {
   arabicBody   String?
   module       String   @default("midan") // midan|lamahat|mashahd|circle
   visibility   String   @default("public") // public|followers|circle|anonymous
+  /// P1.6 — Anonymous Midan. When this post was published anonymously,
+  /// this field holds the per-Circle pseudonymous ID (e.g.
+  /// "anonymous-falcon-42-midan"). `authorId` is null in that case —
+  /// there is NO server-side mapping back to a real user.
+  anonymousId  String?
   location     String?
   language     String   @default("en")
   likes        Int      @default(0)
@@ -138,6 +143,7 @@ model Post {
 
   @@index([module, createdAt])
   @@index([authorHandle])
+  @@index([anonymousId])
 }
 
 /// Citizen Shield reports (zero-knowledge, tamper-evident).
@@ -1220,4 +1226,151 @@ model AikeModelEvaluation {
   recommendation String  // deploy | rollback | monitor | retrain
 
   @@index([modelName, evaluatedAt])
+}
+
+/// ============================================================
+/// Circle ID / OIDC Provider models
+/// (P1-1-OIDC — works ALONGSIDE existing localStorage auth;
+///  no big-bang migration. See src/lib/oidc-provider.ts)
+/// ============================================================
+
+/// Registered OIDC client (RP — Relying Party).
+/// Created via POST /api/oidc/register (RFC 7591 Dynamic Client Registration).
+model OidcClient {
+  id            String   @id @default(cuid())
+  clientId      String   @unique
+  clientSecret  String?
+  name          String
+  /// JSON-array of allowed redirect URIs (SQLite has no list type).
+  redirectUris  String   @default("[]")
+  /// JSON-array of allowed grant_types: ["authorization_code","refresh_token"]
+  grantTypes    String   @default("authorization_code,refresh_token")
+  /// JSON-array of allowed response_types: ["code"]
+  responseTypes String   @default("code")
+  /// JSON-array of allowed scopes.
+  scope         String   @default("openid profile email")
+  /// "confidential" | "public"
+  clientType    String   @default("confidential")
+  /// URI of client logo / icon (optional).
+  logoUri       String?
+  /// URI of client privacy policy (optional).
+  policyUri     String?
+  /// When the client was registered.
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions      OidcSession[]
+  consents      OidcConsent[]
+
+  @@index([clientType])
+}
+
+/// Authorization-code / token sessions issued by the OIDC provider.
+/// One row per authorization code; access/refresh tokens are stored on
+/// the same row to keep the chain of custody traceable.
+model OidcSession {
+  id              String   @id @default(cuid())
+  clientId        String
+  client          OidcClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  /// Cirkle username (subject) — the user who authorized.
+  userLabel       String
+  /// Random authorization code (short-lived, single-use).
+  code            String   @unique
+  codeChallenge   String?
+  codeChallengeMethod String? // "S256" | "plain"
+  /// Space-separated scopes that were granted.
+  scope           String   @default("openid")
+  /// Random nonce (sent by client, echoed in id_token).
+  nonce           String?
+  /// Opaque access token (random) used to look up this row at /userinfo.
+  accessToken     String?  @unique
+  /// Random refresh token (only issued when scope includes offline_access).
+  refreshToken    String?  @unique
+  /// ID token JWT (returned once at the token endpoint).
+  idToken         String?
+  /// PKCE / state binding — opaque to the server.
+  state           String?
+  /// "pending" | "issued" | "exchanged" | "revoked" | "expired"
+  status          String   @default("pending")
+  codeExpiresAt   DateTime
+  accessExpiresAt DateTime?
+  refreshExpiresAt DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([clientId, userLabel])
+  @@index([userLabel])
+  @@index([status])
+}
+
+/// Recorded user consents — a (user, client, scopes) tuple. Used to
+/// skip the consent screen on subsequent authorizations for the same
+/// client+scopes, and to support consent revocation.
+model OidcConsent {
+  id         String   @id @default(cuid())
+  clientId   String
+  client     OidcClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  userLabel  String
+  /// Space-separated scopes the user granted.
+  scope      String   @default("openid")
+  /// "granted" | "revoked"
+  status     String   @default("granted")
+  grantedAt  DateTime @default(now())
+  revokedAt  DateTime?
+  updatedAt  DateTime @updatedAt
+
+  @@unique([clientId, userLabel])
+  @@index([userLabel])
+}
+
+/// Circle Group — a private / public / anonymous community space.
+/// (P1.7 — Circle Groups UX)
+model CircleGroup {
+  id              String   @id @default(cuid())
+  name            String
+  description     String   @default("")
+  /// private | public | anonymous
+  mode            String   @default("private")
+  /// Social | Professional | Hobby | Community | Study | Sports
+  category        String   @default("Social")
+  avatarColor     String   @default("teal")
+  avatarInitials  String   @default("C")
+  encrypted       Boolean  @default(false)
+  /// Owner username (creator). Used as the "owner label" on the
+  /// membership roster — no FK to User so circles can exist without
+  /// the user having a full User row yet.
+  ownerLabel      String
+  /// Space-separated settings flags:
+  ///   joinApprovalRequired, membersCanPost, membersCanShareMedia,
+  ///   membersCanInvite, membersCanCreateEvents
+  settings        String   @default("joinApprovalRequired membersCanPost membersCanShareMedia")
+  /// JSON-stringified list of invitation handles pending acceptance.
+  pendingInvites  String   @default("[]")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  members         CircleMember[]
+
+  @@index([ownerLabel])
+  @@index([mode])
+  @@index([category])
+}
+
+/// Circle Group membership roster. (P1.7)
+/// One row per (circle, user) — role is owner | admin | moderator | member.
+model CircleMember {
+  id          String   @id @default(cuid())
+  circleId    String
+  circle      CircleGroup @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  /// Cirkle username (lowercase). Anonymous circles may store a
+  /// pseudonymous handle here instead.
+  userLabel   String
+  /// owner | admin | moderator | member
+  role        String   @default("member")
+  joinedAt    DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([circleId, userLabel])
+  @@index([circleId])
+  @@index([userLabel])
 }

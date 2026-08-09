@@ -207,6 +207,12 @@ export async function POST(req: NextRequest) {
       visibility?: string;
       tags?: string[];
       mediaKind?: string;
+      // P1.6 — Anonymous Midan. When `anonymousId` is present, the post
+      // is stored under the pseudonymous identity. The server never
+      // receives the real user's identity, and there is NO mapping
+      // table linking `anonymousId` back to a real user — the mapping
+      // lives exclusively in the authoring device's localStorage.
+      anonymousId?: string;
     } | null;
 
     const postBody = body?.body ?? body?.content;
@@ -219,17 +225,37 @@ export async function POST(req: NextRequest) {
       body!.module && validModules.includes(body!.module) ? body!.module : "midan";
 
     const validVis = ["public", "followers", "circle", "anonymous"];
+    // When anonymousId is present, force visibility to "anonymous" so
+    // downstream consumers (feed, search, moderation) can mark the
+    // post accordingly. The privacy covenant is unaffected — the API
+    // only ever sees the pseudonymous identity.
     const visibility =
-      body!.visibility && validVis.includes(body!.visibility) ? body!.visibility : "public";
+      body!.anonymousId
+        ? "anonymous"
+        : body!.visibility && validVis.includes(body!.visibility)
+          ? body!.visibility
+          : "public";
 
+    // P1.6 — Privacy covenant: when anonymousId is present, the server
+    // stores ONLY the pseudonymous identity. The real user's User row is
+    // NOT linked — `authorId` is null so the FK to User is never
+    // exercised. The pseudonymous identity lives in `anonymousId` +
+    // `authorHandle` + `authorName`, none of which can be mapped back
+    // to a real user (the mapping lives exclusively on the authoring
+    // device's localStorage).
+    const isAnonymous = !!body!.anonymousId;
     const created = await db.post.create({
       data: {
-        authorId: body!.authorId ?? "u_current",
-        authorName: body!.authorName ?? body!.author ?? "Anonymous",
-        authorHandle: body!.authorHandle ?? "anonymous",
+        // null authorId when anonymous (no User FK linkage) OR when no
+        // authorId was provided — avoids FK violations when the
+        // supplied authorId doesn't match a real User row.
+        authorId: isAnonymous ? null : (body!.authorId ?? null),
+        anonymousId: isAnonymous ? body!.anonymousId! : null,
+        authorName: isAnonymous ? (body!.authorName ?? "Anonymous") : (body!.authorName ?? body!.author ?? "Anonymous"),
+        authorHandle: isAnonymous ? (body!.authorHandle ?? "anonymous") : (body!.authorHandle ?? "anonymous"),
         authorInitials: body!.authorInitials ?? "A",
-        authorColor: body!.authorColor ?? "teal",
-        authorVerified: body!.authorVerified ?? false,
+        authorColor: isAnonymous ? (body!.authorColor ?? "steel") : (body!.authorColor ?? "teal"),
+        authorVerified: false, // Anonymous posts are never verified by design.
         body: postBody.trim(),
         module: moduleValue,
         visibility,
