@@ -64,6 +64,7 @@ import { PrivacyPolicy } from "@/components/overlays/privacy-policy";
 import { TermsOfService } from "@/components/overlays/terms-of-service";
 import { DSRRequest } from "@/components/overlays/dsr-request";
 import { CookieConsentBanner } from "@/components/cookie-consent-banner";
+import { FirstLaunchTour, TOUR_STORAGE_KEY } from "@/components/first-launch-tour";
 // CitizenShield loaded dynamically
 import type { TabId } from "@/lib/tabs";
 
@@ -159,6 +160,7 @@ export default function Page() {
   const isOnline = useOnlineStatus();
   const [showSplash, setShowSplash] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showTour, setShowTour] = useState(false);
 
   // Hydrate the stores from localStorage on mount (SSR-safe).
   useEffect(() => {
@@ -197,6 +199,32 @@ export default function Page() {
       return () => clearTimeout(t);
     }
   }, [showSplash, onboarded]);
+
+  // First-launch in-app tour: shown once after the user is authenticated
+  // and the splash + intro onboarding are dismissed. Completion / skip state
+  // is persisted under `cirkle-onboarding-completed` so it never re-appears.
+  useEffect(() => {
+    if (!authHydrated || !isAuthenticated || showSplash || showOnboarding) return;
+    let done: string | null = null;
+    try {
+      done = localStorage.getItem(TOUR_STORAGE_KEY);
+    } catch {
+      done = null;
+    }
+    if (!done) {
+      const t = setTimeout(() => setShowTour(true), 700);
+      return () => clearTimeout(t);
+    }
+  }, [authHydrated, isAuthenticated, showSplash, showOnboarding]);
+
+  const closeTour = useCallback((completed: boolean) => {
+    setShowTour(false);
+    try {
+      localStorage.setItem(TOUR_STORAGE_KEY, completed ? "completed" : "skipped");
+    } catch {
+      /* ignore localStorage errors (private mode, quota, etc.) */
+    }
+  }, []);
 
   // Initial tab is read from the URL hash via a lazy initializer (SSR-safe:
   // getTabFromHash returns "home" on the server, and `tab` is not consumed in
@@ -923,6 +951,12 @@ export default function Page() {
 
       <Composer open={composer.open} initialKind={composer.kind} initialText={composer.draft} onClose={() => setComposer({ open: false })} />
       <AnimatePresence>{showOnboarding && <Onboarding onDone={finishOnboarding} />}</AnimatePresence>
+      <FirstLaunchTour
+        open={showTour}
+        onNavigateTab={setTab}
+        onComplete={() => closeTour(true)}
+        onSkip={() => closeTour(false)}
+      />
     </div>
   );
 }

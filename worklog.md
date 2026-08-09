@@ -7744,3 +7744,47 @@ Stage Summary:
 - New lucide-react imports: 22 icons added to existing import set.
 - Lint: ✅ passes (0 errors, 0 warnings).
 - No new dependencies, no Prisma schema changes, no new API routes, no new files outside of the screen — surgical, contained expansion.
+
+---
+Task ID: P0-3-ONBOARDING
+Agent: full-stack-developer
+Task: Create interactive first-launch onboarding walkthrough
+
+Work Log:
+- Read worklog.md tail (P0-2-LAMAHAT + AUDIT-DOCS) for context — codebase is Next.js 16 PWA implementation of CIRKLE blueprint v12.0 with 8 screens, 96 overlays, 173 API routes, 67 Prisma models, 227 lib modules.
+- Read /home/z/my-project/src/components/onboarding.tsx (existing 5-slide intro splash, 43 LOC) — it renders BEFORE authentication as a marketing intro and is gated by `app-store.onboarded`.
+- Read /home/z/my-project/src/app/page.tsx (929 LOC) to understand integration point: main app renders after splash + auth + onboarding splash. Tab state managed via URL hash. `setTab(t)` callback updates both state and URL hash.
+- Read /home/z/my-project/src/lib/tabs.ts (8 tabs: home/wasl/mashahd/lamahat/midan/rihla/pay/profile) and verified available design tokens (gold/rose/teal/accent/charcoal/cream HSL vars, glass-strong class, bg-gradient-hero, shadow-float, shadow-glass, focus-visible:ring-ring).
+- Created /home/z/my-project/src/components/first-launch-tour.tsx (588 LOC):
+  - 12 steps with full content: Welcome, Home Dashboard, Wasl (Chat), Mashahd (Video), Lamahat (Photos), Midan (Square), Rihla (Travel), Cirkle Pay, Profile, Citizen Shield, Brain AI, "You're all set!" completion step.
+  - Each step has: id, optional tab target, icon kind, accent color (gold/rose/teal/accent), title, description, tip (highlighted box), srLabel (for screen readers).
+  - localStorage key: `cirkle-onboarding-completed` (exported as TOUR_STORAGE_KEY constant).
+  - Visual highlight: semi-transparent backdrop (bg-charcoal/75 backdrop-blur-sm) + giant box-shadow on the glass-strong card (`0 0 0 100vmax hsl(var(--charcoal) / 0.55)`) creating a cutout effect where the card stays bright while the rest of the screen is dimmed. Decorative animated glow behind the card matching step accent.
+  - Step counter (Step X of 12) with Sparkles icon, top progress bar (animated width based on percentage), 12 progress dots (clickable, current=accent colored+wider, completed=darker, upcoming=lightest).
+  - Next / Back / Skip buttons with lucide-react icons (ChevronRight, ChevronLeft, X, CheckCircle2). Skip button available at every step. Next button label changes to "Get started" on last step.
+  - Tab navigation: useEffect calls `onNavigateTab?.(step.tab)` when step changes so the actual screen is visible behind the spotlight during the tour.
+  - Framer Motion: AnimatePresence for outer overlay fade, inner AnimatePresence with popLayout mode + custom direction variants (slide left/right with scale) for step transitions. Decorative glow animates per-step.
+  - Accessibility: role="dialog", aria-modal="true", aria-labelledby (title) + aria-describedby (description), sr-only live region (aria-live=polite, aria-atomic=true) announcing step changes, aria-current="step" on active dot, aria-labels on all buttons. Focus trap cycles Tab within the card (first/last element wrap). Auto-focus on Next button when step changes (deferred via setTimeout 80ms). Body scroll lock when open.
+  - Keyboard nav: Escape → skip tour; ArrowRight/Enter → next step; ArrowLeft → previous step; Tab → focus trap. Skip button Enter activation preserved (checks data-tour-role="skip" before hijacking Enter).
+  - Responsive: card is bottom-anchored on mobile (items-end + p-3), centered on sm+ (items-center + p-6), max-w-lg. Body uses flex-col on mobile, flex-row on sm+. Icon size 20×20 (w-20 h-20), font sizes scale with sm: breakpoint.
+  - Used "derived-state-with-prevKey" pattern (prevOpen tracking) to reset step state when tour is (re)opened — avoids react-hooks/set-state-in-effect lint error (same pattern as LamahatViewer per P0-2-LAMAHAT worklog).
+  - Static Tailwind class strings via lookup objects (ACCENT_TEXT, ACCENT_GRADIENT, ACCENT_GLOW, ACCENT_DOT, ACCENT_TIP_BOX) — no dynamic class interpolation that JIT can't see.
+- Integrated into /home/z/my-project/src/app/page.tsx:
+  - Imported FirstLaunchTour + TOUR_STORAGE_KEY.
+  - Added `showTour` state (default false).
+  - Added useEffect to check localStorage AFTER authHydrated + isAuthenticated + !showSplash + !showOnboarding (waits 700ms for main UI to settle before showing tour).
+  - Added `closeTour(completed: boolean)` callback: hides tour + writes "completed" or "skipped" to localStorage.
+  - Rendered `<FirstLaunchTour open={showTour} onNavigateTab={setTab} onComplete={() => closeTour(true)} onSkip={() => closeTour(false)} />` after the CookieConsentBanner + Composer + intro Onboarding, so it overlays everything when open.
+- Did NOT modify Brain AI, proxy.ts, or any protected systems.
+- Verified lint: `bun run lint` — passes (0 errors, 0 warnings) after fixing initial react-hooks/set-state-in-effect error via the prevOpen derived-state pattern.
+
+Stage Summary:
+- Files created: /home/z/my-project/src/components/first-launch-tour.tsx (588 LOC, new file).
+- Files modified: /home/z/my-project/src/app/page.tsx (+1 import line, +1 state declaration, +1 useEffect block ~17 LOC, +1 closeTour callback ~9 LOC, +6 LOC JSX render = ~33 LOC net additions).
+- New exports: TOUR_STORAGE_KEY constant, FirstLaunchTour component, FirstLaunchTourProps interface.
+- 12 tour steps covering: all 8 tabs (Home/Wasl/Mashahd/Lamahat/Midan/Rihla/Pay/Profile) + 4 flagship features (Citizen Shield, Brain AI, plus completion + welcome overview).
+- localStorage persistence key: `cirkle-onboarding-completed` (values: "completed" or "skipped").
+- Accessibility: dialog role + aria-modal + aria-labelledby/describedby + sr-only live region + focus trap + keyboard nav (Esc/←/→/Enter/Tab) + aria-current step indicator.
+- Responsive: mobile bottom-anchored card, sm+ centered; flex-col→flex-row body layout; sm: breakpoint font scaling.
+- Lint: ✅ passes (0 errors, 0 warnings).
+- No new dependencies, no Prisma schema changes, no new API routes, no protected systems modified.
