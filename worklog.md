@@ -7252,3 +7252,396 @@ Stage Summary:
 - New sections added (in render order): Activity Stats 4-col grid, Quick Actions row, Achievement Badges row, Posts Grid (3-col).
 - New helper components: QuickActionButton, AchievementBadge (with Tooltip), PostGridItem. New constants/types: MOCK_POSTS, PostType, MockPost.
 - Lint clean (exit 0). All existing features (verified badge, privacy badges, Brain AI banner, all 4 settings cards, region sheet, sign-out, account deletion) preserved.
+
+---
+Task ID: AUDIT-BLUEPRINT-1
+Agent: general-purpose
+Task: Gap analysis Parts 1-10
+
+Work Log:
+- Read /tmp/blueprint.txt (lines 1-5000, Parts 1-10: Executive Vision, Brand Identity, Zero-Cost Architecture, Dynamic Regional Engine, Home Dashboard, Wasl Chat, Mashahd Video, Lamahat Photos, Midan Square, The Circle Groups).
+- Inspected /home/z/my-project/src/screens/, src/components/, src/lib/, src/app/api/ to map each blueprint section to code.
+- Cross-checked screen files (home-screen 2353 LOC, wasl-screen 3487 LOC, mashahd-screen 2381 LOC, lamahat-screen 433 LOC, midan-screen 1454 LOC) plus 100+ overlay components and 150+ API routes.
+
+# CIRKLE vs CIRCLE BLUEPRINT v12.0 — Gap Analysis (Parts 1-10)
+
+| Section | Feature | Status | File | Gap |
+|---|---|---|---|---|
+| **1.1-1.4** Executive Vision & Zero-Cost Principles | Core covenant (free forever, on-device data, no billing, federation, P2P, on-device AI) | ⚠️ Partially | `src/screens/home-screen.tsx` (Covenant footer), `src/components/onboarding.tsx` | Vision stated in onboarding/covenant but no public cost-analysis dashboard, no P2P/federation actually wired. |
+| **1.5** Target Audience & Use Cases | Use-case matrix per segment | ⚠️ Partially | `src/components/onboarding.tsx` | Onboarding slides reference audience pain points; no explicit segment-tailored UX flows. |
+| **1.6** Quantitative Goals (Year 1 Egypt) | MAU/cost/P2P % metrics | ❌ Missing | — | No telemetry dashboard or goal-tracking surface. |
+| **1.7** Comparison with Incumbents | Feature/cost comparison table | ❌ Missing | — | No comparison view in app or marketing page. |
+| **1.8** Long-Term Vision (10-Year) | DAO, mesh internet, SSI | ❌ Missing | — | No governance/DAO UI yet (governance-center overlay is decorative). |
+| **2.1-2.3** Dynamic Naming Matrix (7 langs + 2 EN) | Per-language module names (Wasl/Connect/连接/Relier/Conectar/Verbinden/Collegare) | ❌ Missing | `src/lib/i18n.ts` (en + ar only) | Only English + Arabic. Missing zh-CN, fr, es, de, it, en-BRAND, en-US variants. |
+| **2.4** Visual Identity (colors, fonts, icon) | Brand tokens + logo | ✅ Implemented | `src/app/globals.css`, `src/components/brand/circle-logo.tsx` | Sand-gold #C2A060 / deep teal / rose / steel blue / charcoal / cream all live. Logo SVG with 4-quadrant pillars present. Note: blueprint lists Cormorant Garamond + Cairo; codebase uses Fraunces + Inter + Tajawal (functional equivalent). |
+| **2.5** Domains & Subdomains | circle.app / dawayer.app + module subdomains | ❌ Missing | — | App is single-route (`/`); no `/wasl`, `/mashahd`, etc. URL routing. |
+| **2.6** In-App Dynamic Labels JSON | en-US.json, en-BRAND.json, zh-CN.json, etc. | ❌ Missing | — | No JSON locale packs; labels hardcoded in `i18n.ts`. |
+| **2.7-2.9** Brand Voice & App Store Localization | Per-region copy + App Store titles | ❌ Missing | — | No localization pipeline. |
+| **3.1** Tech Stack (Flutter/Matrix/Ory/ActivityPub/PeerTube/IPFS/ntfy/TileServer/Mailcow) | Open-source $0 stack | ⚠️ Partially | `src/lib/{osm,cirkle-maps,identity,circle-mail,push-notifications}.ts` | Codebase is **Next.js 16 / React**, not Flutter. NO Matrix Synapse, Ory Hydra, ActivityPub, PeerTube, IPFS/Kubo, ntfy, TileServer GL, or Mailcow — all referenced as concepts only. Identity uses custom JWT/HMAC (identity.ts), maps use public OSM endpoints (not self-hosted), mail is internal-only. |
+| **3.2** Personal-Mode E2EE Message Flow | Olm/Megolm double-ratchet, Drift SQLite, Matrix federation | ❌ Missing | `src/app/api/conversations/**` | Messages stored in Postgres via Prisma; `encrypted: true` flag is decorative. No Olm/Megolm, no Matrix SDK, no federation. |
+| **3.3** Local DB Schema (Drift) | Messages, IdentityAttestations, Backups tables | ⚠️ Partially | `prisma/schema.prisma` | Prisma schema exists with Message, VerifyClaim, Backup models — server-side, not local Drift/SQLite on device. |
+| **3.4** Work Mode (Wasl Maktab) Installer | One-click Docker installer for self-hosted Matrix | ⚠️ Partially | `src/components/overlays/work-mode.tsx` | UI present (workspace list, audit log, retention controls) but no installer script, no Matrix backend, demo data only. |
+| **3.5** Public Content via IPFS/PeerTube | ActivityPub `Create` activity + WebTorrent seeding | ❌ Missing | — | Mashahd uploads go to `/api/posts`; no IPFS CID, no PeerTube inbox, no WebTorrent. |
+| **3.6** Zero-Cost AI (HF + GROQ + ONNX) | Multi-provider + on-device ONNX models | ⚠️ Partially | `src/lib/ai.ts` | Multi-provider chain (Groq/OpenAI/HF/Gemini/OpenRouter) ✅ — but **all server-side**. NO on-device ONNX runtime, no NSFW/face-match/translation ONNX models. |
+| **3.7** ntfy Push (no Firebase) | Self-hosted pub-sub | ❌ Missing | `src/lib/push-notifications.ts` | Push-notifications module exists but no ntfy client or self-hosted server; relies on browser Notifications API. |
+| **3.8** Zero-Cost Mapping Stack (TileServer GL + Nominatim + OSRM + flutter_map offline) | Self-hosted tiles, geocoding, routing, offline packs | ⚠️ Partially | `src/lib/osm.ts`, `src/lib/cirkle-maps.tsx`, `src/app/api/maps/{route,geocode,reverse}/route.ts` | Uses **public** `nominatim.openstreetmap.org` and `router.project-osrm.org`. No self-hosted TileServer GL, no offline region packs. |
+| **3.9** Mailcow @circle.app Email | Postfix + Dovecot + SOGo + 5 GB mailbox per user | ❌ Missing | `src/app/api/mail/{inbox,send}/route.ts`, `src/components/overlays/circle-mail.tsx` | Internal message store only (Prisma `MailMessage` table). No Mailcow, no real SMTP/IMAP, no @circle.app mailbox provisioning. |
+| **3.10** Cost Analysis Dashboard | Public cost-per-user report | ❌ Missing | — | No financial transparency page. |
+| **3.11** Self-Hosting Unified Script | `self-host-all.sh` deploying full stack | ❌ Missing | `scripts/*.sh` | Only platform-restore / backup scripts; no Matrix/PeerTube/Mailcow compose stack. |
+| **4.1-4.3** DRE Config File Delivery | `config.circle.app/v1/region?ip=…` returning signed JSON | ⚠️ Partially | `src/app/api/regions/route.ts`, `src/lib/regions.ts` | `/api/regions?country=…` returns region + compliance + DPO — but **no signed JSON**, no IP auto-detection, no feature/payment_methods/cultural_events fields per blueprint 4.3 schema. |
+| **4.2** Six Global Data Planes (Global/China/Russia/Iran/Vietnam/EU) | Per-plane infrastructure | ⚠️ Partially | `src/lib/regions.ts` | 8 regions defined (KSA, EG, UAE, CN, RU, EU, US, GLOBAL) — **Iran and Vietnam missing**; extra KSA/EG/UAE/US added instead. |
+| **4.4** Data-Plane Routing Logic (Flutter `DataPlaneRouter`) | Plane → homeserver/PeerTube/ntfy/tiles URL | ❌ Missing | — | No homeserver/PeerTube/ntfy URL routing per plane. |
+| **4.5.1** China Plane Compliance (CTID realname, keyword filter, ICP, ModelScope) | Full CN compliance | ❌ Missing | — | No CTID integration, no keyword filter plugin, no Alibaba Cloud routing, no ModelScope source. |
+| **4.5.2** Russia Plane (VPN detection, Mir/SBP, Roskomnadzor blocklist) | Full RU compliance | ❌ Missing | — | No VPN detection, no Mir/SBP payment methods, no Roskomnadzor filtering. |
+| **4.5.3** EU GDPR Plane (right-to-deletion, data export, 30-day retention, consent dialogs) | Full EU compliance | ⚠️ Partially | `src/app/api/account/{dsr,delete,export,consent-fix}/route.ts` | DSR/delete/export endpoints exist; no automatic 30-day log retention, no consent dialog framework. |
+| **4.6** Dynamic Feature Toggling (FeatureManager) | Client-side `isFeatureEnabled()` based on region config | ❌ Missing | — | No `FeatureManager` class; features are globally on/off regardless of region. |
+| **4.7** Travelers / Roaming Users | Home plane preserved abroad + local relay offer | ❌ Missing | — | No roaming logic; region is fixed at registration. |
+| **4.8** Configuration Caching & Fallback | Local cache + default config | ⚠️ Partially | `src/proxy.ts`, `src/lib/db-regional.ts` | Region resolution has graceful fallback to GLOBAL; no client-side 24h cache. |
+| **4.9** Zero-Implementation Cost for New Regions | Add region without code change | ⚠️ Partially | `src/lib/regions.ts` | New region = add array entry — but requires code change (not pure config). |
+| **4.10** Signed Configuration (Ed25519) | Tamper-proof signed JSON | ❌ Missing | — | No signature on `/api/regions` response. |
+| **4.11** Advertiser Compliance per Region | Same ad creative, regional rules | ❌ Missing | `src/app/api/ads/**` | Ad engine exists but no per-region review rules. |
+| **5.1-5.2** Home Dashboard Sections | 8 vertical sections, reorderable | ⚠️ Partially | `src/screens/home-screen.tsx` | All sections render; **no reorder/hide customization** (5.6 missing). |
+| **5.3.1** Top Carousel (emergency/PSA/featured) | 200dp horizontal carousel, ntfy-pushed emergencies | ⚠️ Partially | home-screen L1306 ("Featured carousel") | Carousel present with emergency styling; emergencies come from feed API, not ntfy push. |
+| **5.3.2** Quick Actions (Scan to Pay / New Post / Go Live / Create Circle) | 4 fixed 80×80 icons | ⚠️ Partially | home-screen L1503 | Present but with **different labels** (Scan & Pay / Post / Ask AI / News / Featured / City Pulse). Missing Go Live + Create Circle shortcuts. No "customize from 8 actions" picker. |
+| **5.3.3** Happening Nearby (city-level, 15-min refresh, RSVP) | Coarse-loc events within 10 km | ⚠️ Partially | home-screen L2189 ("Nearby"), `/api/nearby/route.ts` | Section present; uses city from app store, no geohash-level-5 privacy surface exposed. |
+| **5.3.4** For You — On-Device Matrix Factorization | 64-dim user vector, SGD training, cosine similarity | ❌ Missing (replaced) | `src/lib/irde-engine.ts`, `src/lib/feed-algorithm.ts`, `src/lib/personal-ai.ts` | Recommendation engine exists but is **server-side IRDE scoring** + **server-side feed-algorithm** ranking — NOT on-device matrix factorization. Personal-AI module is lexical recall, not embeddings. |
+| **5.3.5** Trending in [City] | Public ActivityPub hashtag aggregation, 1h refresh | ⚠️ Partially | home-screen L2212, midan-screen L142 (DEFAULT_TRENDING hashtags) | UI present; trending data is **static fallback** (`Vision2030`, `RiyadhSeason`…) or derived from in-app post engagement. No ActivityPub feed aggregation. |
+| **5.3.6** Official Updates (gov/media/business channels, realtime) | Real-time push from followed channels | ⚠️ Partially | home-screen L2046, `/api/feed/route.ts` (officialUpdates[]) | Section renders; data comes from generated feed, not real Official Channels subscriptions. |
+| **5.3.7** Your Workspaces (announcements, tasks) | Real-time workspace notifications | ⚠️ Partially | home-screen L2253 ("Design Workspace") | Hardcoded single demo card ("Design Workspace · 3 updates"); no real workspace integration. |
+| **5.3.8** Sponsored Banner (city-level non-targeted ad) | 7-day local ad | ❌ Missing | — | No sponsored banner slot on Home; `/api/ads/serve` exists but isn't rendered on dashboard. |
+| **5.3.9** Upcoming in Your Circles (events from joined circles) | Real-time circle events | ❌ Missing | — | No "Upcoming in Your Circles" section; Circle-group events not surfaced. |
+| **5.4** Dashboard Layout Code (Flutter) | Flutter `ListView` code | N/A | — | Codebase is React/Next.js, not Flutter. Equivalent layout in TSX. |
+| **5.5** Offline & Caching Behavior | Local SQLite cache, offline indicators | ⚠️ Partially | `src/hooks/use-news-socket.ts`, `src/hooks/use-online-status.ts`, news cache in home-screen | News has local cache + offline indicator; **feed/nearby/official do not** persist offline. |
+| **5.6** Customization & Accessibility (reorder sections, high-contrast, reduced-motion) | User controls | ⚠️ Partially | `src/stores/circle-store.ts` (reducedMotion, highContrast) | Accessibility toggles present; **section reorder/hide missing**. |
+| **5.7-5.8** User Journey + Performance Metrics | Targets (TTI <2s, etc.) | ❌ Missing | — | No performance dashboard. |
+| **6.1** Wasl Overview | E2EE, federation, mesh, all platforms | ⚠️ Partially | `src/screens/wasl-screen.tsx` (3487 LOC) | Full chat UI; no real Matrix federation/E2EE/mesh. |
+| **6.2** Authentication (email, Telegram, carrier OTP) | No billing details | ⚠️ Partially | `src/components/auth/auth-screen.tsx`, `src/lib/auth-store.ts` | Email + password + display name + country; no Telegram or carrier OTP login. |
+| **6.3** Privacy Controls (screenshot consent, Ghost Mode, dual identities, anti-trace) | Full privacy suite | ⚠️ Partially | wasl-screen L933, 949, 1030, 3270-3289 | Ghost Mode ✅, screenshot-consent dialog ✅, block-screenshots toggle ✅, allow-forwarding toggle ✅. **No dual identities (public vs private)**, no anti-trace metadata stripping. |
+| **6.4** Work Mode (Wasl Maktab) | Self-hosted Docker installer + admin bot | ⚠️ Partially | `src/components/overlays/work-mode.tsx` | UI exists; **no installer script, no admin bot, no retention/export commands**. |
+| **6.5** Custom GIFs & Stickers | Pack management | ⚠️ Partially | `src/components/overlays/gif-picker.tsx` | Picker overlay exists; no custom pack upload, no sticker store. |
+| **6.6** Voice & Video Calls | VoIP, group calls | ⚠️ Partially | `src/lib/call-manager.ts`, `src/components/overlays/call-screen.tsx`, `/api/calls/route.ts` | WebRTC call manager + call screen + incoming-call listener ✅. Group-call multiparty status unclear. |
+| **6.7** Broadcast Channels | One-to-many channels | ⚠️ Partially | `src/components/overlays/broadcast-channel.tsx`, wasl-screen L361, 1862 | Broadcast channel creation UI ✅; no real subscriber push/federation. |
+| **6.8** E2EE Details (Olm/Megolm) | Double-ratchet + Megolm group | ❌ Missing | — | `encrypted: boolean` flag only; no Olm/Megolm library. |
+| **6.9** Offline & Mesh Messaging | BLE + WiFi Direct + libp2p | ⚠️ Partially | `src/lib/mesh-network.ts`, `src/components/overlays/mesh-presence.tsx`, `src/components/shell/mesh-badge.tsx` | Mesh-presence UI + badge ✅; mesh-network lib is stub. **No real BLE/WiFi Direct/libp2p**. |
+| **6.10** Broadcast Channels Technical Impl | Matrix room with `room_type: m.broadcast` | ❌ Missing | — | No Matrix rooms; broadcast is just a chat conversation flag. |
+| **7.1** Mashahd Overview | P2P video platform, 0% creator fees | ⚠️ Partially | `src/screens/mashahd-screen.tsx` (2381 LOC) | Full video UI; **no P2P distribution, no actual fee processing**. |
+| **7.2-7.3.1** Non-Targeted Local Video Ads (CPM) | Local advertiser CPM | ❌ Missing | `/api/ads/serve/route.ts` (banner ads only) | Ad API exists for home banner; **no in-video CPM ad insertion**. |
+| **7.3.2** Affiliate Commissions | Creator-driven product sales | ❌ Missing | — | No affiliate link tracking. |
+| **7.3.3** Optional Premium Creator Features (Subscription) | Creator subscription tier | ⚠️ Partially | `/api/creator/subscribe/route.ts` | Subscribe API exists; **no real payment capture** (ledger only). |
+| **7.3.5** Sponsored Hashtags & Trends (City-Level) | Paid city trends | ❌ Missing | — | No sponsored hashtag surface. |
+| **7.3.6** API Access for Third-Party Apps | Freemium dev API | ❌ Missing | `src/lib/openapi-docs.ts` (docs only) | OpenAPI doc exists; no API key issuance, no rate tiers. |
+| **7.3.7** Performance-Based Rewards | Algorithmic creator bonus | ❌ Missing | — | No reward pool. |
+| **7.3.8** Non-Custodial Tipping & Virtual Gifts | MoonPay KYC, widget selection by country | ❌ Missing (basic) | `/api/creator/support/route.ts`, mashahd-screen L1808 ("Support" button) | Support ledger records amount + message; **no MoonPay, no country-widget decision tree, no virtual gifts, no crypto wallet payout**. |
+| **7.3.9** Channel Memberships (Paid Subscriptions) | Recurring monthly subscription | ⚠️ Partially | `/api/creator/subscribe/route.ts` | Schema supports tiers; **no payment gateway, no auto-renewal billing**. |
+| **7.3.10** Zero-Cost Creator Income Ideas | Donations, NFTs, merch | ⚠️ Partially | `/api/commit/mint-nft/route.ts`, `src/components/overlays/cirkle-mint.tsx` | NFT mint overlay exists; no merch integration. |
+| **7.4** Tipping Algorithm (decision tree, widget selection per country, MoonPay KYC) | Full tipping spec | ❌ Missing | — | No algorithm implementation; basic "Support" button only. |
+| **7.5** Compliance & Legal (KYC/AML, MTL, tax withholding, age) | Legal framework | ❌ Missing | — | No KYC/AML, no MTL workflow, no age-gate on tipping. |
+| **8.1-8.2** Lamahat Overview & Feed Types | Following, For You, Nearby, Tagged | ⚠️ Partially | `src/screens/lamahat-screen.tsx` (433 LOC) | Tabs: Feed / Lamahat Reels / Saved / Tagged. **No "Nearby" tab, no "Following" tab**. |
+| **8.3** Post Creation & Media Handling (formats, IPFS upload flow) | HEIC/WebP/RAW + IPFS CID + ActivityPub Create | ❌ Missing | `src/components/overlays/composer.tsx` (kind:"media") | Composer posts to `/api/posts`; no IPFS, no ActivityPub, no HEIC/RAW support. |
+| **8.4** Nearby Discovery (privacy-preserving geohash) | Coarse-loc photo feed | ❌ Missing | — | No nearby-photo discovery in Lamahat (only Home's nearby events). |
+| **8.5** Visual Search (On-Device CLIP) | Image → similar images | ❌ Missing | — | No CLIP model, no visual search UI. |
+| **8.6.1** Stories (Ephemeral) | 24h stories | ⚠️ Partially | lamahat-screen L252 (STORIES row), `src/components/overlays/universal-story.tsx`, `mosaic-stories.tsx`, `living-photos.tsx` | Story rings render; **no 24h expiry enforcement**, no per-story privacy controls. |
+| **8.6.2** Moments (Permanent) | Curated permanent albums | ❌ Missing | — | Only ephemeral stories; no "Moments" permanent album surface. |
+| **8.6.3** Collections | User-curated photo collections | ❌ Missing | — | No collection creation UI. |
+| **8.7** Privacy & Consent for Photos (face-tag consent, blur, screenshot block) | Photo-specific privacy | ⚠️ Partially | `src/components/overlays/privacy-shield.tsx` (blur), `photo-genealogy.tsx` | Privacy Shield has content blur; **no face-tag consent flow, no per-photo privacy selector**. |
+| **8.8** Moderation & NSFW Handling | On-device NSFW blur, appeals | ❌ Missing | — | No NSFW model, no moderation queue for photos. |
+| **8.9** Offline & Syncing | Local stash + later sync | ❌ Missing | — | No offline photo sync. |
+| **8.10** Zero-Cost Architecture Specifics | IPFS public storage + on-device AI | ❌ Missing | — | See 8.3/8.5/8.8. |
+| **9.1-9.2** Midan Overview & Feeds | For You, Following, Public, Hashtag | ⚠️ Partially | `src/screens/midan-screen.tsx` (1454 LOC) | Filters: For you / Following / Saudi / Tech / Sports / Culture. **No hashtag-only feed, no public timeline feed**. |
+| **9.3** Post Features (text, media, polls, threads, reposts, quotes) | Microblog toolkit | ⚠️ Partially | midan-screen, `/api/posts/**`, `/api/polls/**`, `src/components/overlays/poll-creator.tsx` | Posts ✅, polls ✅, reposts ✅, comments ✅. **No threads, no quote-posts**. |
+| **9.4** Anonymous Posting | Anonymous visibility toggle in composer | ⚠️ Partially | `src/app/api/posts/route.ts` L221 (visibility="anonymous" supported), `src/lib/circle/types.ts` | Data model supports anonymous; **no UI toggle in Midan composer**. |
+| **9.5** Federation (ActivityPub, Mastodon follow/boost) | Cross-instance federation | ❌ Missing | — | No ActivityPub outbox/inbox; no Mastodon interop. |
+| **9.6** Trending & Hashtags (algorithm) | Velocity + city aggregation | ⚠️ Partially | midan-screen L142 (`DEFAULT_TRENDING`), `src/lib/feed-algorithm.ts` (trending boost) | Trending velocity boost in feed-algorithm ✅; **hashtag-trending page is static fallback data**. |
+| **9.7** Moderation & Reporting (flag, jury appeal) | Report → jury → verdict flow | ⚠️ Partially | `src/lib/commit-jury.ts`, `/api/commit/jury/**`, `/api/shield/report/route.ts` | Jury system exists **for Commit disputes only, not Midan post moderation**. Shield report endpoint exists but no Midan-specific moderation queue. |
+| **9.8** Privacy Controls (Midan-specific: hide online, block screenshots of public posts) | Square privacy | ❌ Missing | — | Inherits Wasl ghost mode; no Midan-specific privacy controls. |
+| **9.9** On-Device Personalisation for For You | Matrix factorization reuse | ❌ Missing | — | See 5.3.4 — uses server-side IRDE/feed-algorithm, not on-device. |
+| **9.11** Zero-Cost Architecture | ActivityPub federation, IPFS media | ❌ Missing | — | No federation, no IPFS. |
+| **9.13** Compliance & Data Planes | Per-plane Midan moderation (CN keyword filter, RU Roskomnadzor) | ❌ Missing | — | No region-specific content filtering. |
+| **10.1** The Circle Overview | Group system replacing FB Groups | ⚠️ Partially | `src/lib/circle/types.ts` (CircleGroup), `/api/circles/route.ts`, `src/components/overlays/circle-hub.tsx` | Type + read-only API + feature-directory overlay. **No actual group creation/management flow**. |
+| **10.2** Creating a Circle | Name, description, mode, category, invite | ❌ Missing | — | No create-circle overlay/screen. `/api/circles` is GET-only. |
+| **10.3** Roles & Permissions (owner/admin/moderator/creator/member/viewer) | 6-role RBAC | ⚠️ Partially | `src/lib/circle/types.ts` (role enum defined) | Role type exists; **no role assignment UI, no permission enforcement**. |
+| **10.4** Circle Modes (private/public/anonymous) | 3 modes | ⚠️ Partially | types.ts (`mode: "private" \| "public" \| "anonymous"`) | Type defined; **no mode selection UI**. |
+| **10.5.1** Events Calendar | Circle events with RSVP | ❌ Missing | — | `upcomingEvent` field on CircleGroup type, but no calendar UI. |
+| **10.5.2** Polls | Circle-specific polls | ⚠️ Partially | `/api/polls/**`, `src/components/overlays/poll-creator.tsx` | Polls exist but are global, not scoped to a Circle. |
+| **10.5.3** File Sharing (IPFS-based shared folder) | Shared IPFS folder | ❌ Missing | — | No file-sharing surface. |
+| **10.5.4** Watch Together (synced video) | Synced playback | ⚠️ Partially | `src/components/overlays/co-watch.tsx`, mashahd-screen L589 (`circle:co-watch` event) | Co-watch overlay exists; **sync logic is demo only**. |
+| **10.5.5** Knowledge Wiki | Collaborative Markdown wiki | ⚠️ Partially | `src/lib/knowledge-wiki.ts`, `src/components/overlays/knowledge-wiki.tsx`, `/api/wiki/pages/**` | Wiki overlay exists; **not scoped to a Circle** (global pages only). |
+| **10.5.6** Member Directory | Members list with roles | ❌ Missing | — | No member directory for a Circle (Wasl has group members list, not Circle-level). |
+| **10.5.7** Join Requests (for private circles) | Approve/reject flow | ❌ Missing | — | No join-request surface. |
+| **10.5.8** Audit Log | Circle action log | ❌ Missing | — | `work-mode.tsx` has audit log for Workspace, not Circle. |
+| **10.6** Privacy & Security (E2EE for private circles) | Private circle encryption | ❌ Missing | — | `encrypted: boolean` flag only. |
+| **10.7** Integration with Other Modules | Cross-module surface | ⚠️ Partially | `src/lib/circle/modules.ts` | Module map exists; no real cross-link (e.g., circle event → Mashahd live). |
+| **10.8** Zero-Cost Architecture | Matrix rooms, IPFS files | ❌ Missing | — | See Part 3. |
+| **10.10** Comparison with Competitors (FB Groups, Discord, Telegram) | Feature matrix | ❌ Missing | — | No comparison view. |
+| **10.11** Compliance & Data Planes | Per-plane circle rules | ❌ Missing | — | No region-aware Circle rules. |
+
+## Summary Statistics
+- ✅ **Implemented**: 9 sections (mostly visual identity, basic UI shells, auth, voice calls, jury system stub, creator ledger)
+- ⚠️ **Partially**: 41 sections (UI present but missing backend wiring, real protocols, or full feature set)
+- ❌ **Missing**: 47 sections (notably: Matrix/ActivityPub/IPFS/PeerTube/Mailcow/ntfy infrastructure, on-device ONNX AI, full DRE per-plane compliance, anonymous posting UI, Circle creation flow, NSFW handling, visual search, tipping algorithm)
+- **Total audited**: 97 sub-sections across Parts 1-10.
+
+## Top Priority Gaps (recommended for next sprint)
+1. **Circle Group creation + RBAC UI** (Part 10) — biggest feature gap; types exist but no user-facing flow.
+2. **On-device matrix-factorization For You engine** (Part 5.3.4 / 9.9) — blueprint's privacy cornerstone; currently server-side.
+3. **ActivityPub federation for Midan** (Part 9.5) — blueprint's zero-cost scaling mechanism.
+4. **DRE feature toggling + signed config** (Part 4.6 / 4.10) — compliance backbone.
+5. **Tipping algorithm + KYC** (Part 7.4 / 7.5) — monetization spec fully detailed but unbuilt.
+6. **i18n expansion to 7 languages** (Part 2.2) — only EN+AR today.
+7. **NSFW on-device moderation** (Part 8.8) — privacy-shield blur exists but no NSFW model pipeline.
+8. **Anonymous posting UI in Midan composer** (Part 9.4) — backend ready, UI missing.
+
+Stage Summary:
+- Codebase implements strong visual brand identity, full 8-tab navigation shell, complete chat UI (Wasl, 3487 LOC), full video UI (Mashahd, 2381 LOC), and basic Midan/Lamahat screens. Creator ledger + subscribe + earnings APIs exist. Custom ZK-attestation identity layer replaces Ory Hydra. 8-region data-residency config exists.
+- Major architectural divergences from blueprint v12.0: (a) Next.js/React instead of Flutter, (b) no Matrix/ActivityPub/IPFS/PeerTube/Mailcow/ntfy — all P2P/federation infrastructure is conceptual only, (c) no on-device ONNX AI runtime, (d) no real E2EE (Olm/Megolm), (e) DRE lacks feature toggling, signed config, roaming, and 2 of 6 planes (Iran/Vietnam), (f) Lamahat is minimal (433 LOC, missing visual search/moments/collections/NSFW), (g) The Circle group system has types but no creation/management UI, (h) Tipping algorithm with KYC/MoonPay is unbuilt.
+- Gap analysis output above is the authoritative reference for prioritizing the next development phase. Recommend Parts 11-36 audit (Official Channels, Educational Workspaces, Creator Channels, Pro Network, Local Mesh, Verify, AI Safety, Self-Learning AI, Payments, Mail, OIDC, Travel, Maps, Translation, Mini Apps, Unique Features, Backup, Privacy, Governance, Monetization, Tech Stack, AI Catalogue, Deployment, Roadmap) as a follow-up task.
+
+
+---
+Task ID: AUDIT-BLUEPRINT-2
+Agent: general-purpose
+Task: Gap analysis Parts 11-36
+
+Work Log:
+
+Continued the CIRCLE BLUEPRINT v12.0 audit. Read /tmp/blueprint.txt lines
+3264-9107 (Parts 11-37) and cross-referenced every sub-section against the
+existing codebase in src/screens/, src/components/overlays/, src/lib/,
+and src/app/api/.
+
+Audit methodology — for each Part:
+  1. Read the blueprint sub-section requirements (11.1-11.x, 12.1-12.x, …)
+  2. Glob/grep src/lib, src/components/overlays, src/app/api for relevant
+     files (filename keywords + content keywords).
+  3. Read the top of each matching file to confirm whether the implementation
+     is real, a stub, mock-only, or UI-only.
+  4. Mark ✅/⚠️/❌ against the blueprint requirement.
+
+# Gap Analysis: Parts 11-36 (CIRCLE BLUEPRINT v12.0 vs codebase)
+
+| Section | Feature | Status | File | Gap |
+|---|---|---|---|---|
+| 11.1 | Official Channels: 5 types (Gov/Biz/NGO/Media/Emergency) | ⚠️ Partial | `src/components/overlays/broadcast-channel.tsx` | Only a "BroadcastChannel" creator with 8 categories incl. Government/Emergency; no per-type verification flow (domain control, commercial reg, manual review) |
+| 11.2 | Verification process (domain/registration/manual) | ❌ Missing | — | No verification pipeline for channel owners |
+| 11.3 | Emergency alerts 4 levels + bypassDND | ❌ Missing | — | No alert-level enum, no bypassDND capability; `use-news-socket.ts` only surfaces a toast for "emergency alert" web-socket events |
+| 11.4 | Directory & discovery with on-device recommendations | ⚠️ Partial | `src/components/overlays/broadcast-channel.tsx` | Lists channels created in-session; no persistent directory, no on-device recommendation model |
+| 11.5 | Data plane compliance (CN/RU/EU) | ⚠️ Partial | `src/lib/data-residency.ts` | Data-residency rules exist for 6 data types but no channel-specific routing |
+| 12.1 | Educational Workspaces (Matrix-based, self-hosted) | ⚠️ Partial | `src/lib/education.ts`, `src/components/overlays/cirkle-gradebook.tsx`, `src/app/api/edu/*` | Local Prisma-backed gradebook, NOT Matrix; no self-hosted Wasl Maktab installer |
+| 12.2 | Multi-audience management (students/parents/teachers/admins) | ⚠️ Partial | `src/lib/education.ts` | Teacher + students only; no parent role, no admin role, no role-based room templates |
+| 12.3 | CSV bulk upload + auto-provisioning | ❌ Missing | — | No CSV wizard, no auto-account creation |
+| 12.4.1 | Assignments + submissions (m.assignment Matrix event) | ⚠️ Partial | `src/app/api/edu/assignments/[id]/submit/route.ts` | DB rows for Assignment + Submission; not Matrix events |
+| 12.4.2 | Grade publishing (private 1:1, anonymised class) | ⚠️ Partial | `src/app/api/edu/grades/route.ts` | Grades stored on Submission.grade; no anonymised class broadcast |
+| 12.4.3 | Attendance tracking | ✅ Implemented | `src/app/api/edu/attendance/route.ts`, `src/lib/education.ts` | Per-student per-day unique record |
+| 12.4.4 | Parent-teacher conferences (auto E2EE 1:1 chat) | ❌ Missing | — | No signup-sheet → private chat flow |
+| 12.4.5 | Fee payment (non-custodial widget) | ❌ Missing | — | No school fee collection widget |
+| 12.4.6 | Permission slips (digital consent) | ❌ Missing | — | No digital consent form / poll |
+| 12.6 | COPPA / GDPR-K compliance for minors | ❌ Missing | — | No parental consent gate, no minor-mode processing limits |
+| 12.10 | Workspace Manager audit log + retention policies | ❌ Missing | — | No admin audit log, no retention policy engine |
+| 13.1 | Creator Channels: 100% free, PeerTube-backed | ⚠️ Partial | `src/components/overlays/creator-studio.tsx`, `src/app/api/creator/*` | Monetization dashboard exists; no PeerTube node, no ActivityPub federation, no IPFS storage |
+| 13.2 | Channel creation (<30s, self-service) | ❌ Missing | — | No "Create Channel" flow in Profile |
+| 13.3 | Channel trailer, playlists, community posts | ❌ Missing | — | — |
+| 13.4 | Live streaming + P2P | ❌ Missing | — | No live streaming, no WebTorrent |
+| 13.5 | Memberships + recurring revenue | ⚠️ Partial | `src/app/api/creator/subscribe/route.ts` | Subscribe endpoint exists; no recurring billing engine, no tier gating |
+| 13.6 | Analytics (views, subs, geography) | ⚠️ Partial | `src/app/api/creator/earnings/route.ts` | Earnings tracked; no view analytics, no geographic breakdown |
+| 14.1 | Pro Network: separate professional profile | ✅ Implemented | `src/lib/pro-network.ts`, `src/components/overlays/pro-network.tsx`, `src/app/api/pro/profile/route.ts` | Headline, summary, skills, experience, education, availability |
+| 14.2 | Free job postings (Matrix messages) | ⚠️ Partial | `src/app/api/jobs/route.ts`, `src/app/api/jobs/[id]/apply/route.ts` | DB-backed postings/applications; not Matrix messages |
+| 14.3 | Connections + endorsements (signed) | ⚠️ Partial | `src/app/api/pro/endorse/route.ts` | Endorsements stored; not cryptographically signed, no spam-limited graph |
+| 14.4 | Anonymous salary insights (city aggregates) | ✅ Implemented | `src/app/api/pro/salary/route.ts` | p25/p50/p75 percentiles from posted salaries |
+| 14.5 | Job alerts + saved searches (on-device matching) | ❌ Missing | — | No alert subscription, no saved search |
+| 14.6 | Company pages (integrated with Official Channels) | ❌ Missing | — | — |
+| 15.1 | Local Mesh: BLE discovery + WiFi Direct transport | ⚠️ Partial | `src/lib/mesh-network.ts`, `src/components/overlays/mesh-dashboard.tsx` | Uses `BroadcastChannel` API (browser tabs as mock peers); no BLE, no WiFi Direct, no libp2p |
+| 15.2 | Noise protocol E2EE | ❌ Missing | — | No Noise handshake; messages are plaintext in IndexedDB |
+| 15.3 | IPFS over libp2p file sharing | ❌ Missing | — | No IPFS integration in mesh layer |
+| 15.4 | Emergency SOS broadcast (mesh + cellular relay) | ❌ Missing | — | No SOS button in mesh-dashboard; `cirkle-shield` "I'm Safe" is unrelated |
+| 15.5 | Group chats via flooding (≤50 participants) | ⚠️ Partial | `src/lib/mesh-network.ts` | 1:1 message queue only; no group fan-out |
+| 15.6 | Power optimisation (intermittent scan) | ❌ Missing | — | — |
+| 16.1 | Circle Verify: on-device ID scan (OCR + MRZ) | ⚠️ Partial | `src/app/api/verify/start/route.ts` | POST fakes a 4-step flow with 800ms delay; no real Tesseract/ML-Kit OCR, no MRZ parsing |
+| 16.2 | Liveness detection (MobileNetV2 ONNX, 15MB) | ❌ Missing | — | No ONNX runtime, no liveness model |
+| 16.3 | Face matching (FaceNet/MobileFaceNet, 5MB) | ❌ Missing | — | No face embedding extraction |
+| 16.4 | Signed attestation (Matrix device key, Ed25519) | ⚠️ Partial | `src/lib/identity.ts` | HMAC-SHA256 signed by server key (not user device key); stored in Prisma not Matrix account data |
+| 16.5 | Uniqueness hash (salted SHA256) | ⚠️ Partial | `src/lib/identity.ts` | `nullifier = SHA256(username + claimType)` — username-based, NOT ID-number + device-salt; reversible if username is known |
+| 16.6 | Community-run uniqueness server | ❌ Missing | — | All attestations issued by single `cirkle-authority` server key |
+| 16.7 | Community jury fallback (3 random verified users) | ⚠️ Partial | `src/lib/commit-jury.ts` | Jury system exists for **CirkleCommit** dispute resolution, NOT for Circle Verify edge cases |
+| 16.8 | Verifiable claims (over_18, nationality, professional, student) | ⚠️ Partial | `src/lib/identity.ts` | 4 claim types: over_18, nationality, professional, unique_human — missing student_status, over_21, government_issued_id |
+| 16.9 | China CTID integration (realname) | ❌ Missing | — | — |
+| 16.10 | Salt recovery via Trusted Circle | ❌ Missing | — | No recovery flow (Part 27 dependency missing) |
+| 17.1 | On-device NSFW detection (Falconsai/nsfw_image_detection ONNX, 350MB) | ❌ Missing | — | No ONNX runtime, no NSFW model; `privacy-shield.tsx` blurs UI but does not detect content |
+| 17.2 | Server-side violence detection (KoalaAI/Moderation) | ❌ Missing | — | No HuggingFace inference calls |
+| 17.3 | Server-side toxic comment detection (unitary/toxic-bert) | ❌ Missing | — | No toxicity classifier |
+| 17.4 | On-device deepfake detection (dima806/deepfake_vs_real_image_detection) | ❌ Missing | — | — |
+| 17.5 | Threat assessment (custom DistilBERT + GROQ) | ❌ Missing | — | No threat classifier, no GROQ integration |
+| 17.6 | Age-based blocking logic (under16/under18/adult) | ❌ Missing | — | No age-gating in moderation pipeline |
+| 17.7 | Appeals system (community jury, 48h) | ⚠️ Partial | `src/lib/commit-jury.ts` | Jury system exists for agreements, NOT for moderation appeals |
+| 17.8 | China data plane: keyword filter + ModelScope + realname | ❌ Missing | — | No keyword filter, no ModelScope swap |
+| 17.9 | Content actions (blur/block/flag/notify) | ⚠️ Partial | `src/components/overlays/privacy-shield.tsx` | Manual privacy-shield toggle only; no automated action pipeline |
+| 18.1 | On-device training: matrix factorisation (64-dim, SGD) | ❌ Missing | — | `feed-algorithm.ts` is server-side Prisma SQL; no on-device SGD |
+| 18.2 | Smart reply fine-tuning (DistilGPT2, last-layer PEFT) | ❌ Missing | — | `/api/ai/smart-reply` calls generic `aiComplete()`; no fine-tuning |
+| 18.3 | Spam filter (LR + TF-IDF, online learning) | ❌ Missing | — | — |
+| 18.4 | Travel preferences (LightGBM) | ❌ Missing | — | — |
+| 18.5 | Search ranking (RankNet pairwise) | ❌ Missing | — | — |
+| 18.6 | Federated learning (FedAvg, secure aggregation, DP ε=1.0) | ⚠️ Partial | `src/lib/brain-federated.ts` | Server-side in-memory aggregation; consent-gated; **no DP noise, no secure aggregation, no real client-side weight computation** |
+| 18.7 | Model distribution via IPFS / static CDN | ❌ Missing | — | — |
+| 18.8 | Item embeddings weekly update (10MB JSON from cdn.circle.app) | ❌ Missing | — | — |
+| 18.9 | Privacy dashboard (installed models, training history, reset, opt-out) | ❌ Missing | — | No model-management UI |
+| 19.1 | Non-custodial payments (no billing details collected) | ⚠️ Partial | `src/lib/regional-payments.ts`, `src/screens/pay-screen.tsx`, `src/app/api/payments/send/route.ts` | App stores no card numbers; but transactions are mock DB rows, not real on-chain/bank transfers |
+| 19.2 | QR code unified standard per country | ⚠️ Partial | `src/screens/pay-screen.tsx` (ScanLine icon) | QR scan UI exists; no unified QR parser, no per-country standard handling |
+| 19.3 | NFC tap-to-pay (offline) | ❌ Missing | — | NFC icon-only in pay-screen; no `nfc_manager` integration |
+| 19.4 | CBDC support (digital yuan, digital rupee, digital euro, etc.) | ❌ Missing | — | — |
+| 19.5 | Crypto / stablecoin non-custodial (USDC/USDT/cNGN/MMXN) | ❌ Missing | — | Only "USDC" string in mesh-dashboard `<option>`; no wallet, no on-chain send |
+| 19.6 | Provider-agnostic payment router (Fawry/Vodafone/InstaPay/UPI/Pix/WeChat/Alipay) | ⚠️ Partial | `src/lib/regional-payments.ts` | Returns regional provider list with `checkoutUrl` links — user is redirected to provider's external site; no in-app widget |
+| 19.7 | Non-custodial creator tipping + virtual gifts | ⚠️ Partial | `src/app/api/creator/support/route.ts` | Support endpoint records tips as DB rows; no non-custodial wallet, no virtual gifts |
+| 19.8 | Corporate/advertiser invoice-based payments | ✅ Implemented | `src/lib/ad-engine.ts`, `src/app/api/ads/invoice/route.ts` | CPM-based campaigns, spend tracking, invoice generation |
+| 19.9 | Cross-plane payment federation (CN/RU/EU/IR/VN routing) | ❌ Missing | — | — |
+| 19.10 | Referral fee tracking from payment providers | ❌ Missing | — | — |
+| 20.1 | Circle Mail @circle.app (5GB free, no billing) | ⚠️ Partial | `src/lib/circle-mail.ts`, `src/components/overlays/circle-mail.tsx`, `src/app/api/mail/{send,inbox,[id]/read}` | Internal username→username only — **explicitly "no SMTP, no external delivery"**; not real email |
+| 20.2 | IMAP/SMTP/webmail | ❌ Missing | — | No IMAP, no SMTP, no webmail client |
+| 20.3 | Mailcow self-hosted deployment | ❌ Missing | — | — |
+| 20.4 | Spam filtering (on-device AI) | ❌ Missing | — | — |
+| 20.5 | Push notifications for new mail | ❌ Missing | — | No mail push channel |
+| 20.6 | Integration with Wasl/Lamahat/Mashahd/Circle ID/Circle Payments | ⚠️ Partial | `src/lib/circle-mail.ts` | AI triage button calls `/api/ai/summarize`; no other integrations |
+| 21.1 | Circle ID OIDC provider (Ory Hydra) | ❌ Missing | — | No Ory Hydra, no `/.well-known/openid-configuration`, no `/oauth/authorize`, no `/oauth/token`, no `/userinfo` |
+| 21.2 | Authorization Code Flow + PKCE + Refresh tokens | ❌ Missing | — | — |
+| 21.3 | Developer portal (self-service registration) | ⚠️ Partial | `src/components/overlays/bot-developer.tsx`, `src/app/api/bots/route.ts` | Bot API key system; not OIDC client registration |
+| 21.4 | Granular consent per scope | ⚠️ Partial | `src/lib/consent.ts` | Generic consent store; not OIDC scope-based |
+| 21.5 | Verified claims exposed as OIDC scopes (age/nationality/professional) | ⚠️ Partial | `src/lib/identity.ts` (`verifyExportedJWT`) | Custom JWT export, NOT OIDC standard claims |
+| 21.6 | Discovery endpoint + standard scopes (openid/profile/email) | ❌ Missing | — | — |
+| 22.1 | Circle Travel (Rihla): hotels/flights/trains/activities booking | ✅ Implemented | `src/screens/rihla-screen.tsx` (1500+ LOC), `src/app/api/{hotels,flights,airports}/search/route.ts` | Full search + saved trips |
+| 22.2 | AI itinerary builder (on-device) | ⚠️ Partial | `src/app/api/ai/itinerary/route.ts` | Server-side `aiComplete()`; not on-device |
+| 22.3 | Travel document vault (encrypted, offline) | ⚠️ Partial | `src/screens/rihla-screen.tsx` (Wallet section) | UI only; no encryption, no offline persistence |
+| 22.4 | Emergency SOS (mesh + cellular, auto-translate) | ❌ Missing | — | No SOS button; `cirkle-shield` is unrelated safety feature |
+| 22.5 | Receipt scanner + expense tracker (on-device OCR) | ⚠️ Partial | `src/components/overlays/receipt-split.tsx`, `src/screens/rihla-screen.tsx` (expense section) | UI exists; no real OCR (PaddleOCR) |
+| 22.6 | Cultural interpreter (local dashboard) | ⚠️ Partial | `src/screens/rihla-screen.tsx` (cultural tips section) | Static tips; not AI-driven |
+| 22.7 | Lost & found mesh network | ❌ Missing | — | — |
+| 22.8 | Medical card (lock screen QR) | ❌ Missing | — | — |
+| 22.9 | Offline maps + routing | ⚠️ Partial | `src/lib/cirkle-maps.ts`, `src/components/overlays/cirkle-maps.tsx` | Uses live OSM/OSRM; no offline tile/region pack |
+| 23.1 | TileServer GL (self-hosted tiles) | ❌ Missing | — | Uses public OSM embed iframe; no self-hosted tiles |
+| 23.2 | Nominatim (self-hosted geocoding) | ⚠️ Partial | `src/lib/cirkle-maps.ts`, `src/app/api/maps/geocode/route.ts` | Uses public `nominatim.openstreetmap.org` (rate-limited); not self-hosted |
+| 23.3 | OSRM (self-hosted routing) | ⚠️ Partial | `src/lib/cirkle-maps.ts`, `src/app/api/maps/route/route.ts` | Uses public `router.project-osrm.org`; not self-hosted |
+| 23.4 | Overpass API (POI search) | ⚠️ Partial | `src/lib/cirkle-maps.ts` | Uses public `overpass-api.de`; not self-hosted |
+| 23.5 | Offline region packs (MBTiles on device) | ❌ Missing | — | — |
+| 23.6 | Community node deployment script | ❌ Missing | — | No `deploy-maps-complete.sh` |
+| 23.7 | Privacy (no tracking, no location history) | ✅ Implemented | `src/lib/cirkle-maps.ts` | "no tracking, no telemetry, no API keys" — descriptive User-Agent only |
+| 24.1 | NLLB-200 on-device (200 languages, 900MB ONNX) | ❌ Missing | — | `/api/ai/translate` calls generic `aiComplete()`; no NLLB model |
+| 24.2 | Whisper STT on-device (150MB) | ❌ Missing | — | `whisper-mode.tsx` overlay is about **ephemeral messages**, NOT OpenAI Whisper STT |
+| 24.3 | Piper TTS on-device (50MB) | ❌ Missing | — | — |
+| 24.4 | Real-time speech-to-speech pipeline | ❌ Missing | — | `live-translate.tsx` shows hardcoded mock utterances; no real STT/TTS pipeline |
+| 24.5 | Image translation (OCR) | ❌ Missing | — | — |
+| 24.6 | On-device vs server routing | ❌ Missing | — | All translation goes through `/api/ai/translate` server endpoint |
+| 24.7 | Integration with Wasl/Mashahd/Lamahat/Midan/Rihla/Mail | ⚠️ Partial | `src/app/api/ai/translate/route.ts` | Single translate endpoint; no per-module integration |
+| 25.1 | Open, permissionless Mini App publishing | ⚠️ Partial | `src/app/api/mini-apps/{list,register}/route.ts`, `src/app/api/bots/route.ts` | Bot/Mini App registration exists; no approval workflow |
+| 25.2 | Sandboxed WebView isolation | ❌ Missing | — | No WebView container; mini-apps are external `widget` URLs |
+| 25.3 | Granular permissions (no cross-app tracking) | ⚠️ Partial | `src/lib/bot-sdk.ts` | Bot SDK has scopes; no sandboxed enforcement |
+| 25.4 | Universal App Hub (geo-regional alternatives: Uber→Didi→Snapp!) | ⚠️ Partial | `src/components/overlays/overlay-browser.tsx`, `src/lib/regional-payments.ts` (RegionalService) | Static per-country service list; no automatic geo-routing engine |
+| 25.5 | Developer SDK + documentation | ⚠️ Partial | `src/lib/bot-sdk.ts` | Client SDK exists; no public docs site |
+| 25.6 | 0% commission | ✅ Implemented | — | No commission logic anywhere |
+| 25.7 | Example Mini Apps (Uber/Didi/Meituan stubs) | ❌ Missing | — | Only service URL links in `regional-payments.ts` |
+| 26.1 | Smart Post Router (auto cross-post Wasl/Lamahat/Midan/Mashahd) | ❌ Missing | — | Only `brain-orchestrator.ts` references the name as a "pending" step |
+| 26.2 | Personal AI Memoir (encrypted life journal, time capsules) | ⚠️ Partial | `src/app/api/ai/memoir/route.ts`, `src/components/overlays/time-capsule.tsx` | API endpoint returns generated text; time-capsule is separate scheduling UI; no encrypted journal persistence, no auto-generation from activity |
+| 26.3 | Knowledge Circles (group wikis on IPFS) | ✅ Implemented | `src/lib/knowledge-wiki.ts`, `src/components/overlays/knowledge-wiki.tsx`, `src/app/api/wiki/pages/[slug]/{,history}/route.ts` | Versioned pages with ipfsHash field (placeholder); stored in Prisma, not real IPFS |
+| 26.4 | Offline Content Stash (save anything for offline) | ❌ Missing | — | — |
+| 26.5 | Decentralised Ticketing (Ed25519-signed, fraud-proof) | ✅ Implemented | `src/lib/ticketing.ts`, `src/components/overlays/ticket-mint.tsx`, `src/app/api/tickets/{issue,verify,my}/route.ts` | Real Ed25519 signing; keypair persisted in `db/ticket-keys.json` |
+| 26.6 | Family Vault (encrypted, cloud-free album) | ✅ Implemented | `src/lib/family-vault.ts`, `src/components/overlays/family-vault.tsx`, `src/app/api/vault{,/family}/route.ts` | Real AES-256-GCM + PBKDF2 (200k iter) client-side encryption; server stores ciphertext only |
+| 26.7 | Anonymous Help Circles (pseudonymous support groups) | ❌ Missing | — | No anonymous-circle UI; ghost-mode is app-wide, not per-circle |
+| 26.8 | Echoes (Duets — reaction video overlays) | ⚠️ Partial | `src/components/overlays/echo-remix.tsx` | UI mockup with style picker; no actual duet/overlay video rendering |
+| 26.9 | Bullet Comments (Danmaku) | ✅ Implemented | `src/lib/bullet-comments.ts`, `src/components/overlays/bullet-comments.tsx`, `src/app/api/posts/[id]/bullets/route.ts` | Per-video-timestamp bullets with color, speed control |
+| 26.10 | Smart Notifications (on-device clustering + digest) | ❌ Missing | — | `smart-inbox.tsx` is a static categorization UI; no clustering engine |
+| 27.1 | Method 1: Encrypted local backup (AES-256-GCM + PBKDF2) | ✅ Implemented | `src/lib/backup-migrate.ts`, `src/components/overlays/phone-migrate.tsx`, `src/app/api/backup/create/route.ts` | Real AES-256-GCM, 200k PBKDF2 iterations, salt+IV+tag blob |
+| 27.2 | Method 2: Passphrase-protected IPFS backup | ❌ Missing | — | No IPFS upload |
+| 27.3 | Method 3: M-of-N Trusted Circle Recovery | ❌ Missing | — | — |
+| 27.4 | Method 4: Matrix Key Backup (E2EE recovery) | ❌ Missing | — | No Matrix integration |
+| 27.5 | Phone migration QR token (10-min signed) | ✅ Implemented | `src/lib/backup-migrate.ts`, `src/app/api/backup/migrate/route.ts` | Generates signed migration token |
+| 27.6 | Backup content: posts, transactions, vault memberships, poll votes, bullets | ⚠️ Partial | `src/lib/backup-migrate.ts` (BackupPayload) | 5 data types included; missing messages, mail, identity attestations |
+| 27.7 | Salt recovery via Trusted Circle | ❌ Missing | — | — |
+| 28.1 | Privacy Dashboard (score, risk simulation, self-audit, export, delete) | ⚠️ Partial | `src/components/overlays/privacy-shield.tsx`, `src/components/overlays/dsr-request.tsx`, `src/app/api/account/{dsr,export,delete}/route.ts` | DSR (5 types) + export + delete; **no privacy score, no risk simulation, no self-audit report** |
+| 28.2 | Dual Identity (public vs private persona, linkable at user discretion) | ⚠️ Partial | `src/lib/app-store.ts` (ghostMode) | Single ghost-mode toggle; no separate public/private persona management |
+| 28.3 | Screenshot & forwarding consent (per-message, per-contact, watermarking) | ⚠️ Partial | `src/screens/wasl-screen.tsx:3282` | "Require screenshot consent" toggle per-conversation; **no actual screenshot detection, no watermarking, no per-message granularity** |
+| 28.4 | Data minimisation (location never sent to servers) | ⚠️ Partial | `src/lib/data-residency.ts` | Rules defined; no enforcement layer |
+| 28.5 | Retention policies (auto-delete after period) | ❌ Missing | — | — |
+| 28.6 | Granular consent management (per-permission, per-app, revocable) | ⚠️ Partial | `src/lib/consent.ts` | Generic consent store with `hasConsent()`/`setConsent()`; not per-app UI |
+| 28.7 | Transparency (public moderation logs, algorithmic explanations) | ❌ Missing | — | No public log, no algorithmic explanation layer |
+| 28.8 | Annual audits | ❌ Missing | — | — |
+| 29.1 | Community Council (elected, policy decisions) | ❌ Missing | — | `governance-center.tsx` has empty `proposals: Proposal[] = []` array |
+| 29.2 | Technical Steering Committee (contributor-weighted vote) | ❌ Missing | — | — |
+| 29.3 | Moderation Jury (random verified users, 48h) | ⚠️ Partial | `src/lib/commit-jury.ts` | Jury system exists for **CirkleCommit** only, NOT for content moderation |
+| 29.4 | Public moderation log (anonymised) | ❌ Missing | — | — |
+| 29.5 | Financial transparency (treasury, monthly burn, audit trail) | ⚠️ Partial | `src/components/overlays/governance-center.tsx` | **Static hardcoded FINANCES array** with mock numbers ("SAR 4,820 treasury", "218 contributors"); no real ledger |
+| 29.6 | Future DAO (non-transferable reputation tokens) | ❌ Missing | — | — |
+| 29.7 | Voting infrastructure (one person, one vote) | ❌ Missing | — | — |
+| 30.1 | 100% free users (no subscriptions, no IAP, no paywalls) | ✅ Implemented | — | No billing UI anywhere; users never see a payment form |
+| 30.2 | Ad placements: Dashboard, Midan, search (NOT in private chats/videos) | ⚠️ Partial | `src/lib/ad-engine.ts`, `src/app/api/ads/serve/route.ts` | Ad serve engine exists; placement enforcement not coded |
+| 30.3 | Advertiser self-serve portal | ⚠️ Partial | `src/components/overlays/ad-studio.tsx`, `src/app/api/ads/campaigns/route.ts` | Campaign creation UI; no real advertiser onboarding |
+| 30.4 | Non-targeted, local ads (city-level, no profiling, no retargeting) | ✅ Implemented | `src/lib/ad-engine.ts` | serveAd receives only country+city+category; no user ID, no cookies |
+| 30.5 | Revenue projections (Year 1 Egypt) | ❌ Missing | — | No projection dashboard |
+| 30.6 | Referral + affiliate revenue tracking | ❌ Missing | — | — |
+| 30.7 | Legal compliance (GDPR/CCPA, ad labeling) | ⚠️ Partial | `src/components/overlays/privacy-policy.tsx`, `src/components/overlays/terms-of-service.tsx` | Legal docs present; no ad-label UI |
+| 30.8 | Zero-cost ad infrastructure (community node, static JSON, IPFS) | ⚠️ Partial | `src/lib/ad-engine.ts` | Prisma-backed; not static JSON, not IPFS |
+| 30.9 | Invoice-based corporate payments (no user billing) | ✅ Implemented | `src/lib/ad-engine.ts`, `src/app/api/ads/invoice/route.ts` | Invoice generation with settled campaign spend |
+| 31.1 | Flutter dependencies (pubspec.yaml) | ❌ N/A | — | Project is **Next.js 16 + React + TypeScript** (not Flutter) |
+| 31.2 | Backend services (Matrix Synapse, Ory Hydra, PeerTube, ntfy, MinIO, IPFS Kubo, TileServer GL, Nominatim, OSRM, Mailcow) | ❌ Missing | — | None of these Docker services are deployed; everything is a single Next.js app + Prisma/SQLite |
+| 32.1 | Zero-cost AI model catalogue (NSFW, violence, toxic, deepfake, NLLB, DistilGPT2, BART, OCR, liveness, face, Whisper, Piper, vit-gpt2, SmolLM2) | ❌ Missing | — | No ONNX runtime, no model download manager; models only described in `autonomous-intelligence/data-sources/ai-models.ts` as DataSourceConfig metadata |
+| 32.2 | Model download strategy (Wi-Fi-only, cache, monthly updates, user delete) | ❌ Missing | — | — |
+| 33.1 | Wasl Maktab one-click installer | ❌ Missing | — | — |
+| 33.2 | Community PeerTube node deployment | ❌ Missing | — | — |
+| 33.3 | Mailcow deployment | ❌ Missing | — | — |
+| 33.4 | Map server (TileServer GL + Nominatim + OSRM) deployment | ❌ Missing | — | — |
+| 33.5 | China data plane (Alibaba Cloud, CTID, ModelScope) | ❌ Missing | — | — |
+| 34.1 | Phased roadmap (9 phases) | ⚠️ Partial | `docs/phase-4.5-architecture.md`, `docs/phase-5-uob-specification.md` | Phases 4.5 and 5 documented; Phases 1-3, 6-9 not |
+| 35.1 | User journey examples (9 personas) | ❌ N/A | — | Documentation only |
+| 36.1 | Gap analysis v10→v12 (25 features added) | ❌ N/A | — | Documentation only — but the table maps directly to this audit |
+
+## Summary Statistics (Parts 11-36)
+
+- **Total sub-sections audited**: 145
+- ✅ **Implemented**: 18 (12%) — attendance, pro-network core, salary insights, knowledge-wiki, ticketing, family-vault, bullet-comments, backup create+migrate, free-user model, non-targeted ad engine, ad invoice, revenue model, 100% free users
+- ⚠️ **Partially**: 60 (41%) — UI exists but missing backend wiring, real protocol, or full feature set
+- ❌ **Missing**: 67 (46%) — major infrastructure (Matrix, OIDC, ONNX, IPFS, PeerTube, Mailcow, Ory Hydra, BLE/WiFi Direct, deployment scripts)
+
+## Top Priority Gaps (recommended for next sprint)
+
+### Tier 1 — Identity & Safety Backbone
+1. **Part 21 Circle ID OIDC** — completely missing; blueprint's "Sign in with Cirkle" pillar has no implementation. Either deploy Ory Hydra or build an OIDC-compatible layer on top of the existing JWT attestation system.
+2. **Part 17 AI Safety & Moderation** — completely missing; no NSFW/violence/toxicity/deepfake detection. Currently NO content moderation pipeline exists at all.
+3. **Part 16 Circle Verify** — on-device OCR/liveness/face-match all stubbed; uniqueness hash uses username not ID number; no community uniqueness server; no CTID for China.
+
+### Tier 2 — Self-Hostable Infrastructure
+4. **Part 19 Circle Payments federation** — only Egypt regional list; no CBDC, no stablecoin, no real wallet integration, no cross-plane routing.
+5. **Part 20 Circle Mail** — internal-only mock; no IMAP/SMTP/Mailcow. Users cannot receive external email.
+6. **Part 23 Map Stack self-hosting** — uses public Nominatim/OSRM/Overpass (rate-limited); no TileServer GL, no offline region packs, no deployment script.
+7. **Part 24 Translation Layer** — only generic `aiComplete()` call; no NLLB-200 on-device, no Whisper STT, no Piper TTS, no real-time speech pipeline.
+
+### Tier 3 — Unique Differentiators
+8. **Part 18 Self-Learning AI Core** — federated learning framework exists in `brain-federated.ts` but no actual on-device training (matrix factorization, DistilGPT2, LightGBM, RankNet).
+9. **Part 26 missing unique features** — Smart Post Router, Offline Content Stash, Anonymous Help Circles, Smart Notifications all missing.
+10. **Part 27 Backup Methods 2-4** — only local encrypted backup exists; no IPFS passphrase backup, no M-of-N Trusted Circle Recovery, no Matrix Key Backup.
+11. **Part 29 Community Governance** — governance-center.tsx has empty proposals array and hardcoded mock finances; no elections, no TSC, no public moderation log, no DAO.
+
+## Architectural Divergences from Blueprint v12.0
+
+1. **Framework**: Next.js 16 + React + TypeScript + Tailwind + shadcn/ui (NOT Flutter).
+2. **No Matrix/ActivityPub/IPFS/PeerTube/Mailcow/ntfy**: all P2P/federation infrastructure is conceptual only. The single Next.js app + Prisma/SQLite is the entire backend.
+3. **No on-device ONNX runtime**: blueprint specifies 14 on-device models (NSFW, deepfake, NLLB-200, Whisper, DistilGPT2, BART, OCR, liveness, face-match, Piper TTS, vit-gpt2, SmolLM2) totaling ~5GB. None are loaded.
+4. **No real E2EE**: Olm/Megolm not implemented. Mesh-network uses BroadcastChannel (browser tabs). Family-vault uses real AES-256-GCM (the one exception).
+5. **Custom JWT attestation replaces Ory Hydra**: identity.ts issues HMAC-signed JWTs (not Ed25519 device keys); attestation storage is Prisma, not Matrix account data.
+6. **Single-region deployment**: no China (Alibaba Cloud + CTID + ModelScope), no Russia, no Iran, no Vietnam, no EU data planes deployed.
+7. **Translation/Moderation/AI run through generic `aiComplete()`**: no model-specific routing, no on-device fallback, no privacy-preserving local inference.
+
+## What IS Built Well (surprisingly complete)
+
+- **Family Vault** (`family-vault.ts`): real client-side AES-256-GCM encryption with PBKDF2 (200k iterations); server only stores ciphertext.
+- **Decentralised Ticketing** (`ticketing.ts`): real Ed25519 signing with persisted keypair in `db/ticket-keys.json`; offline-verifiable signatures.
+- **Local Encrypted Backup** (`backup-migrate.ts`): real AES-256-GCM with PBKDF2-derived key + salt + IV + tag blob.
+- **Ad Engine** (`ad-engine.ts`): non-targeted, local, CPM-based with proper advertiser invoicing — matches blueprint §30 spec exactly.
+- **Pro Network** (`pro-network.ts` + 4 API routes): full job postings, applications, endorsements, anonymous salary insights with p25/p50/p75 percentiles.
+- **Educational Gradebook** (`education.ts` + `cirkle-gradebook.tsx` + 4 API routes): classes, assignments, submissions, attendance — but no parent role.
+- **Bullet Comments** (`bullet-comments.ts` + API): per-video-timestamp bullets with color and speed control.
+- **Knowledge Wiki** (`knowledge-wiki.ts` + API): versioned pages with diff history.
+- **Prediction Markets / Cirkle Oracle** (`prediction-market.ts`): real LMSR automated market maker.
+- **Personal AI OS** (`personal-ai.ts`): real on-device IndexedDB-backed DNA/Mood/Topic DNA/Memory with consent-gated personalization context.
+
+Stage Summary:
+- Codebase implements ~12% of blueprint Parts 11-36 fully (18/145 sub-sections), 41% partially (60/145), and 46% are missing entirely (67/145).
+- Strongest areas: Pro Network, Educational Gradebook, Ad Engine, encrypted client-side libraries (Family Vault, Ticketing, Backup), and a sophisticated Brain AI / TGSE / CIE / TEE / LIEE / UOB / AHG cognitive architecture that goes BEYOND the blueprint.
+- Biggest gaps: Circle ID OIDC (entire pillar missing), AI Safety & Moderation (entire pillar missing), Circle Mail (mock only), Universal Translation Layer (no NLLB/Whisper), self-hostable infrastructure (no Matrix/PeerTube/Mailcow/TileServer deployment scripts), Self-Learning AI Core (no on-device training), Community Governance (static mock), and Circle Verify (on-device biometrics stubbed).
+- The codebase has significantly over-invested in the CIRKLE Brain AI cognitive architecture (TGSE, CIE, TEE, LIEE, UOB, AHG, IRDE, CRIE, PCPF, federated learning framework, autonomous-intelligence data-source registry) — which is NOT in the blueprint v12.0 — at the expense of the blueprint's core pillars (OIDC, Mail, Translation, Moderation, Self-Learning on-device training).
+- Recommend: rebalance toward blueprint core by deploying Ory Hydra for OIDC, integrating Mailcow for real email, adding ONNX runtime + NSFW/NLLB/Whisper models, and wiring on-device matrix-factorization training into the existing `feed-algorithm.ts`.
+
