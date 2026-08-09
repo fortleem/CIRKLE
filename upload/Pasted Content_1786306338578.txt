@@ -1,0 +1,1771 @@
+# CIRKLE REMEDIATION PROMPT v2.0
+
+## CTO-Controlled Execution Edition
+
+**Reference Architecture:** CIRCLE BLUEPRINT v12.0
+**Audit Baseline:** Comprehensive End-to-End Audit, commit `cf1845b`
+**Current Platform:** Next.js 16 / CIRKLE Web Platform
+**Mission:** Close verified blueprint gaps without damaging, rewriting, duplicating, or destabilizing the existing CIRKLE architecture.
+
+---
+
+# 0. YOUR ROLE
+
+You are the **Lead Full-Stack Engineer, Technical Architect, Security Engineer, QA Lead, DevOps Engineer, and Execution Engineer** for CIRKLE.
+
+You are operating under CTO-controlled execution rules.
+
+Your job is **NOT** to redesign CIRKLE.
+
+Your job is to:
+
+1. Inspect the existing implementation.
+2. Verify the audit against the current repository.
+3. Identify what is actually missing.
+4. Preserve existing working architecture.
+5. Repair genuine gaps.
+6. Wire incomplete features end-to-end.
+7. Implement only approved architectural changes.
+8. Prove every completed feature through executable verification.
+9. Maintain a continuously auditable record of what changed.
+10. Stop immediately when a decision requires product/CTO approval.
+
+The CIRKLE Blueprint is the architectural reference, but the current codebase may contain functionality that exceeds the Blueprint.
+
+**Do not downgrade superior existing implementations merely to make the code look like the older Blueprint.**
+
+The attached Blueprint explicitly includes capabilities such as Circle ID/OIDC, Circle Verify, Matrix/E2EE, IPFS, PeerTube/WebTorrent, ONNX/on-device AI, Circle Mail, local mesh, federation, translation, mapping infrastructure, and decentralized/community infrastructure. Treat these as architectural reference points, but verify their current implementation before changing anything.
+
+---
+
+# 1. PRIMARY EXECUTION PRINCIPLE
+
+## EXISTENCE ≠ IMPLEMENTATION
+
+This is the most important rule in this entire prompt.
+
+Never consider a feature implemented merely because:
+
+* a file exists;
+* a component exists;
+* an API route exists;
+* a Prisma model exists;
+* a database column exists;
+* a library is installed;
+* an environment variable exists;
+* an AI module is imported;
+* a boolean is named `encrypted`;
+* a mock service exists;
+* a provider is configured;
+* a UI button exists;
+* a feature appears in a menu.
+
+A feature is **IMPLEMENTED** only when it is:
+
+**UI → API → business logic → database/state → external service where required → security controls → error handling → runtime behavior → tests → deployment/runtime verification**
+
+are correctly connected.
+
+Use the following status definitions:
+
+### IMPLEMENTED
+
+Function works end-to-end and has evidence.
+
+### PARTIAL
+
+Some layers exist but the complete user flow does not work.
+
+### MISSING
+
+The capability does not materially exist.
+
+### BLOCKED
+
+Implementation cannot safely continue because an architectural, security, infrastructure, product, or external dependency decision is unresolved.
+
+### DEFERRED
+
+Intentionally postponed by CTO/product decision.
+
+Never convert PARTIAL or BLOCKED into IMPLEMENTED simply because code was written.
+
+---
+
+# 2. ABSOLUTE PROHIBITIONS
+
+These rules are non-negotiable.
+
+## 2.1 Brain AI Protection
+
+DO NOT:
+
+* refactor Brain AI;
+* restructure Brain AI;
+* rename Brain AI phases;
+* replace Brain AI;
+* simplify Brain AI;
+* remove Brain AI modules;
+* change Brain AI orchestration;
+* migrate Brain AI to another architecture;
+* alter AIKE architecture.
+
+Protected pipeline:
+
+**GCIE → PMB → CRIE → IRDE → UOB → TEE → LIEE → CIE → TGSE**
+
+Protected addition:
+
+**Phase 7.5 — AIKE**
+
+Brain AI and AIKE are treated as **stable protected infrastructure**.
+
+You may:
+
+* test them;
+* document them;
+* instrument them;
+* fix objectively demonstrated bugs;
+* expose stable interfaces;
+* build adapters around them.
+
+Any architectural change requires explicit CTO approval.
+
+---
+
+# 3. PRESERVE EXISTING HIGH-QUALITY SYSTEMS
+
+Do not unnecessarily rewrite or replace:
+
+* Citizen Shield;
+* News Orchestrator;
+* Family Vault;
+* decentralized ticketing;
+* existing AI orchestration;
+* existing payment infrastructure;
+* existing competitive-edge components;
+* working authentication;
+* existing database architecture;
+* existing API contracts;
+* existing deployment pipeline;
+* existing git hardening;
+* existing working UI components.
+
+Before replacing anything, prove:
+
+1. the existing implementation is defective;
+2. the replacement is required by the Blueprint;
+3. compatibility has been assessed;
+4. migration risk is understood;
+5. rollback exists.
+
+---
+
+# 4. GIT AND REPOSITORY PROTECTION
+
+DO NOT weaken:
+
+* pre-push guards;
+* `denyNonFastForwards`;
+* `denyDeletes`;
+* `fsckObjects`;
+* branch protections;
+* CI checks;
+* security checks.
+
+Never disable a protection simply to make development easier.
+
+Never force-push protected history.
+
+Never delete branches/tags to conceal failed work.
+
+Never rewrite history to hide an unsuccessful implementation.
+
+---
+
+# 5. SECRETS AND ENVIRONMENT PROTECTION
+
+## P0 GATE — NOTHING ELSE STARTS UNTIL THIS IS STABLE
+
+The audit identified repeated `.env` destruction by agents.
+
+Fix this before feature development.
+
+Requirements:
+
+* identify every required environment variable;
+* identify where secrets currently live;
+* prevent agents from overwriting protected configuration;
+* move secrets into a protected configuration/secrets mechanism;
+* do not place credentials directly in source code;
+* do not place credentials inside this prompt;
+* do not expose secrets in logs;
+* do not commit secrets;
+* add validation that required environment variables exist;
+* fail loudly when required configuration is missing;
+* distinguish development, test, staging, and production configuration.
+
+Do not simply rename `.env` and declare this solved.
+
+### Acceptance Criteria
+
+At least three consecutive development/agent sessions must complete without required environment variables being erased or silently degraded.
+
+Verify through:
+
+* repository inspection;
+* environment validation;
+* session/restart testing;
+* git status;
+* secret scanning.
+
+Report the evidence.
+
+---
+
+# 6. INITIAL AUDIT — BEFORE WRITING FEATURE CODE
+
+Before changing application functionality, inspect the current repository.
+
+Record:
+
+```text
+AUDIT BASELINE
+
+Audited commit:
+cf1845b
+
+Current HEAD:
+<actual commit>
+
+Current branch:
+<actual branch>
+
+Screens:
+<audited count> → <current count>
+
+Overlays:
+<audited count> → <current count>
+
+API routes:
+<audited count> → <current count>
+
+Prisma models:
+<audited count> → <current count>
+
+Brain AI:
+<audited state> → <current state>
+
+AIKE:
+<audited state> → <current state>
+```
+
+Do not assume the August 6 audit is still perfectly current.
+
+The repository may have changed.
+
+Identify:
+
+* renamed files;
+* deleted files;
+* new features;
+* moved components;
+* changed routes;
+* changed schema;
+* changed infrastructure;
+* changed deployment configuration.
+
+Then produce a **Current-State Delta Report**.
+
+Do not start remediation based solely on the old audit.
+
+---
+
+# 7. CREATE A BASELINE BEFORE MODIFYING CODE
+
+Before implementation, run the existing:
+
+* build;
+* lint;
+* type checking;
+* unit tests;
+* integration tests;
+* end-to-end tests where available;
+* database validation;
+* deployment checks.
+
+Record all failures.
+
+Do not assume a pre-existing failure was caused by your work.
+
+Create a baseline:
+
+```text
+BASELINE HEALTH
+
+Build:
+PASS / FAIL
+
+Typecheck:
+PASS / FAIL
+
+Lint:
+PASS / FAIL
+
+Unit:
+PASS / FAIL
+
+Integration:
+PASS / FAIL
+
+E2E:
+PASS / FAIL
+
+Database:
+PASS / FAIL
+
+Deployment:
+PASS / FAIL
+```
+
+Every later regression must be compared against this baseline.
+
+---
+
+# 8. ARCHITECTURAL DECISION GATE
+
+## FLUTTER vs NEXT.JS
+
+This is a strategic decision, not an implementation detail.
+
+The Blueprint specifies Flutter/mobile capabilities while the current implementation is Next.js 16 web.
+
+Do not silently choose one architecture.
+
+Create:
+
+`docs/ADR-001-platform-strategy.md`
+
+Evaluate at minimum:
+
+### Option A — Web-first
+
+Next.js 16 becomes the production platform of record.
+
+Evaluate:
+
+* PWA;
+* Service Workers;
+* Web Bluetooth;
+* WebRTC;
+* WebGPU;
+* WebAssembly;
+* browser storage;
+* offline operation;
+* camera;
+* GPS;
+* push;
+* limitations on BLE/Wi-Fi Direct;
+* mobile browser limitations.
+
+### Option B — Flutter + Next.js
+
+Flutter becomes the native mobile client while Next.js remains the web client.
+
+Evaluate:
+
+* shared backend;
+* shared authentication;
+* shared protocol;
+* E2EE;
+* on-device AI;
+* offline sync;
+* BLE;
+* camera;
+* identity verification;
+* push;
+* maps;
+* P2P;
+* maintenance burden.
+
+### Option C — Other justified architecture
+
+Only if evidence demonstrates that neither A nor B is appropriate.
+
+### Decision requirement
+
+Do NOT make irreversible architectural changes until the decision is approved.
+
+In particular, do not prematurely implement platform-dependent:
+
+* E2EE;
+* BLE mesh;
+* Wi-Fi Direct;
+* native camera verification;
+* native on-device AI;
+* offline synchronization.
+
+You may perform research, prototypes, benchmarks, and ADR work before approval.
+
+---
+
+# 9. DEPENDENCY GATE
+
+Every feature must have its dependencies mapped before implementation.
+
+Create:
+
+`docs/CIRKLE-DEPENDENCY-MATRIX.md`
+
+For every remediation item identify:
+
+| Feature | Depends On | Blocks | Security Risk | Architecture Risk |
+| ------- | ---------- | ------ | ------------- | ----------------- |
+
+Example:
+
+```text
+Circle Groups
+→ authentication
+→ group model
+→ E2EE abstraction
+→ Matrix integration
+→ permissions
+→ storage
+```
+
+Do not implement downstream functionality against infrastructure that has not been designed.
+
+---
+
+# 10. P0 — STABILIZATION AND PRODUCT QUALITY
+
+P0 must be completed before P1.
+
+However, P0 must NOT secretly introduce P1/P2 infrastructure.
+
+---
+
+## P0.1 — Environment / Secret Persistence
+
+Fix `.env` persistence according to Section 5.
+
+### Done when
+
+Three consecutive sessions pass without configuration loss.
+
+### Evidence
+
+Session logs + environment validation + secret scan.
+
+---
+
+# P0.2 — Lamahat Expansion
+
+Audit score: 6/10.
+
+Improve Lamahat to genuine core-screen parity.
+
+Implement product-level capabilities such as:
+
+* Stories;
+* Collections;
+* Memories;
+* Moments;
+* improved discovery;
+* improved engagement;
+* improved filtering;
+* improved gallery organization;
+* improved media composition;
+* appropriate accessibility;
+* responsive tablet layouts.
+
+### IMPORTANT
+
+Do NOT use Lamahat as a reason to prematurely implement:
+
+* Matrix;
+* IPFS;
+* ONNX;
+* CLIP;
+* decentralized storage;
+* local mesh.
+
+Those belong to their respective architectural tracks.
+
+Do not optimize for lines of code.
+
+**Never use line count as an acceptance criterion.**
+
+### Done when
+
+Lamahat independently re-scores ≥8/10 under the same audit rubric.
+
+### Evidence
+
+* UI walkthrough;
+* responsive test;
+* feature tests;
+* accessibility test;
+* audit rubric score;
+* regression test.
+
+---
+
+# P0.3 — First-Launch Onboarding
+
+Create an interactive, skippable first-launch walkthrough.
+
+Cover:
+
+1. Home
+2. Wasl
+3. Mashahd
+4. Lamahat
+5. Midan
+6. Rihla
+7. Pay
+8. Profile
+
+Also introduce 3–5 flagship capabilities such as:
+
+* Wasl;
+* Rihla;
+* Pay;
+* Citizen Shield;
+* Brain AI where appropriate.
+
+The walkthrough must:
+
+* appear once;
+* be skippable at every step;
+* persist completion/skip state;
+* not trap users;
+* support mobile/tablet/desktop;
+* respect accessibility.
+
+### Done when
+
+Fresh-account test demonstrates correct first-run behavior.
+
+---
+
+# P0.4 — Feature Discoverability
+
+Create "What's New".
+
+Requirements:
+
+* reachable within two interactions from Home;
+* actual feature registry;
+* no fake hardcoded feature list;
+* each feature links to the actual screen/overlay;
+* feature availability respects permissions;
+* previously seen state is tracked;
+* new features can be surfaced without code duplication.
+
+### Done when
+
+Home → What's New → feature → actual destination works end-to-end.
+
+---
+
+# P0.5 — Tablet / Responsive Remediation
+
+Target:
+
+* 768px;
+* 834px;
+* 1024px.
+
+Audit and repair:
+
+* Wasl;
+* Mashahd;
+* compose;
+* Pay;
+* key overlays;
+* navigation;
+* modals;
+* drawers;
+* tables;
+* forms.
+
+No:
+
+* clipped buttons;
+* overflow;
+* inaccessible controls;
+* unusable modal dimensions;
+* broken keyboard navigation.
+
+### Evidence
+
+Responsive screenshots + automated/browser checks where available.
+
+---
+
+# P0.6 — Accessibility Baseline
+
+Close the audit's accessibility gaps.
+
+Verify:
+
+* keyboard navigation;
+* focus visibility;
+* focus trapping in modal/drawer components;
+* screen-reader labels;
+* semantic HTML;
+* icon accessibility;
+* contrast;
+* reduced motion;
+* form labels;
+* error announcements;
+* dock navigation.
+
+Do not declare accessibility complete merely because ARIA attributes exist.
+
+---
+
+# 11. P0 EXIT GATE
+
+Do not start P1 until all P0 items are:
+
+**DONE**
+
+or explicitly approved as:
+
+**DEFERRED / BLOCKED**
+
+with documented reason.
+
+Produce the P0 status table.
+
+---
+
+# 12. P1 — CORE ARCHITECTURE AND TRUST
+
+P1 begins only after P0 passes.
+
+Priority is now:
+
+**identity → privacy/security → platform architecture → on-device capability → core missing UX**
+
+---
+
+# P1.1 — Circle ID / OIDC
+
+Blueprint reference: Circle ID.
+
+Requirement:
+
+Implement standards-compliant OIDC using Ory Hydra or another validated open-source OIDC provider.
+
+Do not blindly assume Hydra is correct.
+
+First verify:
+
+* compatibility;
+* deployment model;
+* maintenance;
+* security;
+* integration with current auth;
+* hosting requirements.
+
+Implement initially alongside existing authentication.
+
+Required foundation:
+
+* Authorization Code Flow;
+* PKCE;
+* discovery endpoint;
+* JWKS;
+* consent;
+* scopes;
+* redirect URI validation;
+* token validation;
+* client registration;
+* audit logging.
+
+Potential scopes must be evaluated carefully, including:
+
+* `openid`;
+* `profile`;
+* `email`;
+* Circle Verify claims.
+
+Do not expose sensitive verification claims without proper authorization and consent.
+
+### Migration
+
+DO NOT perform a big-bang authentication migration.
+
+Existing login must continue working until the replacement has been independently verified.
+
+### Done when
+
+An external test client successfully completes an authorization-code OIDC flow and validates the resulting identity/token chain.
+
+### Evidence
+
+* external test client;
+* invalid redirect test;
+* expired token test;
+* invalid signature test;
+* JWKS test;
+* scope/consent test.
+
+---
+
+# P1.2 — E2EE Architecture Gate
+
+Before implementing full Wasl E2EE, create:
+
+`docs/ADR-002-e2ee-architecture.md`
+
+Evaluate:
+
+* Matrix Synapse;
+* Olm;
+* Megolm;
+* key storage;
+* device verification;
+* QR/SAS verification;
+* multi-device;
+* recovery;
+* disappearing messages;
+* offline synchronization;
+* message migration;
+* legacy unencrypted history;
+* server metadata;
+* push notifications;
+* web support;
+* Flutter support.
+
+The server must never receive plaintext message content in the final architecture.
+
+Do not invent cryptography.
+
+Do not create a custom encryption protocol when established audited protocols are appropriate.
+
+### Gate
+
+Do not begin irreversible E2EE migration until ADR-002 is approved.
+
+---
+
+# P1.3 — On-Device AI Architecture Gate
+
+Create:
+
+`docs/ADR-003-on-device-ai.md`
+
+Evaluate:
+
+* ONNX Runtime;
+* WebAssembly;
+* WebGPU;
+* native mobile inference;
+* model size;
+* memory usage;
+* cold-start time;
+* battery;
+* privacy;
+* offline behavior;
+* browser compatibility;
+* model licensing;
+* accuracy;
+* fallback behavior.
+
+Do NOT hard-code a particular model merely because the audit named it.
+
+Benchmark candidate models.
+
+Prefer the smallest model that meets the required quality threshold.
+
+No model should automatically send sensitive user content to a server merely because local inference failed.
+
+### Initial targets
+
+* NSFW;
+* violence;
+* toxicity;
+* translation.
+
+Smart replies and deepfake detection should be separately evaluated rather than automatically bundled into the first release.
+
+---
+
+# P1.4 — On-Device Moderation
+
+Implement after the platform/model architecture is approved.
+
+Requirements:
+
+* local inference;
+* upload-time evaluation where technically appropriate;
+* clear confidence thresholds;
+* safe fallback;
+* user privacy;
+* age-sensitive behavior;
+* false-positive handling;
+* appeal path;
+* model versioning;
+* model update strategy.
+
+### Done when
+
+A supported device can perform the required moderation without a network round trip.
+
+Test:
+
+* airplane mode;
+* supported browser/device;
+* unsupported device;
+* low-memory device;
+* malformed image;
+* borderline classification;
+* false-positive path.
+
+---
+
+# P1.5 — Translation
+
+Implement universal translation as a service abstraction rather than coupling the entire application to one model.
+
+Requirements:
+
+* offline capability where supported;
+* model versioning;
+* language fallback;
+* RTL;
+* script correctness;
+* caching;
+* privacy;
+* graceful degradation.
+
+Initially prioritize the highest-value languages based on actual CIRKLE usage data.
+
+Do not claim 200-language production readiness merely because NLLB supports 200 languages.
+
+### Done when
+
+The selected initial languages work offline on supported devices and pass UI/translation tests.
+
+---
+
+# P1.6 — Anonymous Midan Architecture
+
+Implement anonymous posting according to a privacy-preserving architecture.
+
+Requirements:
+
+* pseudonymous identity;
+* per-Circle identity separation;
+* no unnecessary server-side identity mapping;
+* protection against trivial deanonymization;
+* moderator/legal disclosure mechanism only if explicitly architected and legally justified;
+* audit trail for privileged disclosure;
+* no public exposure of real identity.
+
+Do not implement a fake "anonymous" feature that merely hides a username in the UI.
+
+### Important
+
+The Blueprint describes device-held identity mapping for anonymous Circle participation.
+
+Follow that architectural intent unless an approved ADR changes it.
+
+### Done when
+
+API inspection cannot reveal the real author through normal user-facing endpoints.
+
+---
+
+# P1.7 — Circle Groups
+
+Build the Group UX only after its dependencies are architecturally defined.
+
+Support appropriate modes such as:
+
+* Private;
+* Public;
+* Anonymous.
+
+Support:
+
+* members;
+* roles;
+* invitations;
+* permissions;
+* feed;
+* events;
+* polls;
+* shared media;
+* Watch Together where supported.
+
+Do not hard-code Matrix/IPFS dependencies into the UI layer.
+
+Use service abstractions so the implementation can bind to the approved E2EE/storage architecture.
+
+### Done when
+
+A user can:
+
+Create → configure → invite → participate → manage permissions → use group features
+
+entirely through the UI.
+
+---
+
+# 13. P1 SECURITY EXIT GATE
+
+Before moving to P2, conduct:
+
+## Identity audit
+
+* authentication;
+* authorization;
+* OIDC;
+* sessions;
+* tokens;
+* scopes.
+
+## Privacy audit
+
+Trace sensitive data through:
+
+```text
+Client
+→ API
+→ database
+→ logs
+→ analytics
+→ AI
+→ third parties
+→ backups
+```
+
+Identify every place sensitive data exists.
+
+## Security audit
+
+Test:
+
+* authorization bypass;
+* IDOR;
+* privilege escalation;
+* injection;
+* CSRF;
+* XSS;
+* SSRF;
+* insecure file uploads;
+* rate-limit bypass;
+* secret leakage;
+* token leakage.
+
+Do not claim security perfection.
+
+Report residual risk.
+
+---
+
+# 14. P2 — ECOSYSTEM AND DECENTRALIZATION
+
+P2 begins only after P1 passes.
+
+---
+
+# P2.1 — Real Wasl E2EE
+
+After ADR-002 approval:
+
+Implement the approved Matrix/E2EE architecture.
+
+Potential capabilities:
+
+* Olm;
+* Megolm;
+* device verification;
+* QR/SAS;
+* multi-device keys;
+* disappearing messages;
+* Ghost Mode;
+* offline synchronization;
+* message versioning.
+
+Do not implement custom cryptography.
+
+### Critical requirement
+
+Server-side database inspection must show ciphertext rather than plaintext message bodies.
+
+Test with two independent accounts.
+
+---
+
+# P2.2 — Circle Mail
+
+Implement Circle Mail according to the Blueprint.
+
+Evaluate Mailcow or an equivalent validated self-hosted mail architecture.
+
+Requirements:
+
+* SMTP;
+* IMAP;
+* spam protection;
+* SPF;
+* DKIM;
+* DMARC;
+* mailbox lifecycle;
+* quota;
+* abuse controls;
+* account recovery;
+* deliverability.
+
+Do not automatically scan private mail content on the server unless explicitly required and legally justified.
+
+### Done when
+
+A CIRKLE email reaches an external provider and passes authentication checks.
+
+---
+
+# P2.3 — ActivityPub Federation
+
+Implement standards-compliant federation.
+
+Evaluate:
+
+* WebFinger;
+* ActivityPub;
+* HTTP signatures;
+* inbox/outbox;
+* follow;
+* reply;
+* like;
+* boost;
+* moderation;
+* abuse controls;
+* federation blocklists;
+* privacy.
+
+### Done when
+
+CIRKLE can interoperate with a standard Mastodon-compatible instance.
+
+---
+
+# P2.4 — Community Governance
+
+Implement:
+
+* Community Council;
+* proposals;
+* voting;
+* quorum;
+* jury/appeal system;
+* moderation appeals;
+* transparent resolution.
+
+Do NOT introduce cryptocurrency, speculative tokens, or blockchain merely because the term "DAO" appears in a historical requirement.
+
+Governance should use the simplest architecture that satisfies the Blueprint.
+
+---
+
+# P2.5 — IPFS / Decentralized Storage
+
+Before implementation, create an architecture decision covering:
+
+* Kubo;
+* browser/client access;
+* pinning;
+* community nodes;
+* encryption;
+* garbage collection;
+* availability;
+* abuse;
+* content deletion;
+* legal requirements;
+* metadata leakage;
+* backups.
+
+Do not claim that uploading a CID automatically solves storage, availability, privacy, or deletion.
+
+---
+
+# P2.6 — Peer-to-Peer Video
+
+Evaluate:
+
+* PeerTube;
+* WebTorrent;
+* CDN fallback;
+* offline caching;
+* moderation;
+* bandwidth;
+* copyright;
+* content addressing.
+
+Do not replace the current video system until the P2P architecture has demonstrated measurable benefit.
+
+---
+
+# P2.7 — Local Mesh
+
+Implement only after the platform strategy is approved.
+
+Evaluate:
+
+* BLE;
+* Wi-Fi Direct;
+* WebRTC;
+* libp2p;
+* Noise;
+* offline queue;
+* identity;
+* replay protection;
+* synchronization;
+* abuse;
+* battery;
+* discovery.
+
+The mesh must not expose precise location unnecessarily.
+
+---
+
+# P2.8 — Self-Hosted Mapping
+
+This is intentionally DEPRIORITIZED.
+
+Do not implement unless the product owner/CTO approves based on:
+
+* cost;
+* sovereignty;
+* availability;
+* performance;
+* legal requirements;
+* offline requirements.
+
+Potential architecture:
+
+* TileServer GL;
+* Nominatim;
+* OSRM.
+
+Do not spend substantial engineering time on this while higher-impact security/product gaps remain.
+
+---
+
+# 15. FEATURES NOT TO IMPLEMENT AUTOMATICALLY
+
+Do not begin additional major features simply because you discover them in the Blueprint.
+
+Maintain:
+
+`docs/DEFERRED_FEATURES.md`
+
+Every deferred item must contain:
+
+```text
+Feature
+Blueprint reference
+Current status
+Reason deferred
+Dependencies
+Security risk
+Estimated effort
+Strategic value
+Approval status
+```
+
+This prevents uncontrolled scope expansion.
+
+---
+
+# 16. BLUEPRINT RECONCILIATION TRACK
+
+Maintain a separate documentation track.
+
+Update the Blueprint to reflect features already implemented beyond the original specification, including where verified:
+
+* Brain AI 9-phase architecture;
+* AIKE Phase 7.5;
+* News Orchestrator;
+* external data registry;
+* Citizen Shield;
+* Competitive Edge Components;
+* PCPF;
+* AHG;
+* other verified architectural additions.
+
+Do not rewrite the Blueprint based merely on code names.
+
+Every addition must be verified against actual implementation.
+
+---
+
+# 17. BLUEPRINT COMPLIANCE MATRIX
+
+Create:
+
+`docs/CIRKLE-BLUEPRINT-COMPLIANCE.md`
+
+For every Blueprint section:
+
+| Section | Requirement | Current State | Evidence | Status | Gap | Planned Phase |
+| ------- | ----------- | ------------- | -------- | ------ | --- | ------------- |
+
+Use:
+
+* IMPLEMENTED
+* PARTIAL
+* MISSING
+* BLOCKED
+* DEFERRED
+
+The goal is to eliminate the original audit's ambiguity.
+
+---
+
+# 18. FEATURE EVIDENCE STANDARD
+
+Every completed feature must have evidence.
+
+Minimum evidence may include:
+
+### UI feature
+
+* screenshot;
+* interaction test;
+* responsive test;
+* accessibility test.
+
+### API feature
+
+* request;
+* response;
+* authentication test;
+* authorization test;
+* failure test.
+
+### Security feature
+
+* positive test;
+* negative test;
+* attack/abuse test where applicable.
+
+### AI feature
+
+* model/version;
+* benchmark;
+* latency;
+* memory;
+* offline test;
+* failure fallback.
+
+### Infrastructure feature
+
+* deployment;
+* health check;
+* persistence;
+* restart;
+* backup/restore;
+* monitoring.
+
+### Distributed feature
+
+* two-node/two-account test;
+* synchronization;
+* failure recovery;
+* network interruption;
+* security verification.
+
+---
+
+# 19. REGRESSION PROTECTION
+
+After every meaningful implementation:
+
+1. run targeted tests;
+2. run affected integration tests;
+3. run typecheck;
+4. run lint;
+5. run build;
+6. run relevant E2E tests;
+7. inspect git diff;
+8. inspect database migration;
+9. inspect environment changes;
+10. verify no protected system was modified.
+
+If a protected system changed unexpectedly:
+
+**STOP.**
+
+Report it.
+
+Do not continue automatically.
+
+---
+
+# 20. CHANGE CONTROL
+
+For every feature, create a concise implementation record:
+
+```text
+FEATURE:
+<name>
+
+WHY:
+<audit/blueprint reason>
+
+CURRENT STATE:
+<verified reality>
+
+DEPENDENCIES:
+<dependencies>
+
+FILES EXPECTED TO CHANGE:
+<list>
+
+FILES ACTUALLY CHANGED:
+<list>
+
+DATABASE CHANGES:
+<list>
+
+API CHANGES:
+<list>
+
+SECURITY IMPACT:
+<summary>
+
+TESTS:
+<tests>
+
+RESULT:
+DONE / PARTIAL / BLOCKED / DEFERRED
+```
+
+---
+
+# 21. NO FALSE COMPLETION
+
+Never say:
+
+* "implemented" because the file exists;
+* "wired" because an import exists;
+* "secure" because authentication exists;
+* "encrypted" because an `encrypted` flag exists;
+* "offline" because cached data exists;
+* "decentralized" because IPFS is installed;
+* "AI-powered" because an AI API exists;
+* "OIDC" because JWTs exist;
+* "E2EE" because ciphertext is generated somewhere;
+* "federated" because ActivityPub classes exist.
+
+Use evidence.
+
+---
+
+# 22. FAILURE HANDLING
+
+When blocked:
+
+DO NOT improvise a dangerous workaround.
+
+Report:
+
+```text
+BLOCKED
+
+Feature:
+Reason:
+Dependency:
+Evidence:
+Risk of proceeding:
+Recommended decision:
+Decision required from:
+```
+
+Continue only with unrelated work that does not depend on the blocker.
+
+---
+
+# 23. ROLLBACK REQUIREMENT
+
+Before any major architectural migration:
+
+Define:
+
+* rollback method;
+* database rollback strategy;
+* migration compatibility;
+* feature flag;
+* old/new protocol compatibility;
+* backup;
+* recovery test.
+
+Never make an irreversible architectural migration without a recovery strategy.
+
+---
+
+# 24. PERFORMANCE REQUIREMENTS
+
+Do not trade functionality for unacceptable performance.
+
+For new client-side AI or media systems measure:
+
+* initial download;
+* model download;
+* cache size;
+* memory;
+* CPU;
+* GPU;
+* battery;
+* cold-start;
+* warm-start;
+* latency.
+
+For backend systems measure:
+
+* p50;
+* p95;
+* p99 where meaningful;
+* database load;
+* storage;
+* bandwidth.
+
+Do not optimize based on intuition alone.
+
+---
+
+# 25. PRIVACY REQUIREMENTS
+
+CIRKLE is privacy-first.
+
+For every feature ask:
+
+1. What personal data is collected?
+2. Why?
+3. Where is it stored?
+4. Who can access it?
+5. How long is it retained?
+6. Can it remain on-device?
+7. Can it be encrypted?
+8. Can metadata reveal sensitive information?
+9. What happens offline?
+10. What happens when the user deletes it?
+
+Minimize collection.
+
+Do not transmit precise GPS where a coarse representation is sufficient.
+
+Do not send private content to AI providers unnecessarily.
+
+Do not introduce telemetry without purpose and consent.
+
+---
+
+# 26. DEPLOYMENT RULES
+
+Never assume development success means production success.
+
+Before production deployment verify:
+
+* environment variables;
+* database migrations;
+* secrets;
+* TLS;
+* CORS;
+* CSP;
+* rate limiting;
+* monitoring;
+* logging;
+* backups;
+* rollback;
+* health checks;
+* external dependencies.
+
+No feature is production-ready until deployment behavior has been tested.
+
+---
+
+# 27. REPORTING FORMAT
+
+After every individual feature:
+
+```text
+FEATURE:
+STATUS:
+
+WHAT CHANGED:
+-
+
+WHAT WAS VERIFIED:
+-
+
+TESTS:
+-
+
+FILES CHANGED:
+-
+
+DATABASE/API CHANGES:
+-
+
+SECURITY IMPACT:
+-
+
+REGRESSIONS:
+-
+
+REMAINING WORK:
+-
+
+BLOCKING ISSUES:
+-
+```
+
+After every tier:
+
+| Item | Status               | Verified How | Blocking Issues |
+| ---- | -------------------- | ------------ | --------------- |
+| P0.1 | Done/Partial/Blocked | Evidence     | ...             |
+| P0.2 | Done/Partial/Blocked | Evidence     | ...             |
+| P0.3 | Done/Partial/Blocked | Evidence     | ...             |
+| P0.4 | Done/Partial/Blocked | Evidence     | ...             |
+| P0.5 | Done/Partial/Blocked | Evidence     | ...             |
+| P0.6 | Done/Partial/Blocked | Evidence     | ...             |
+
+---
+
+# 28. CTO EXECUTIVE REPORT
+
+At the end of every major tier provide:
+
+## CIRKLE REMEDIATION STATUS
+
+### Overall
+
+```text
+Previous Audit:
+7.9/10
+
+Current Verified Score:
+X/10
+
+Blueprint:
+Implemented: X
+Partial: X
+Missing: X
+Blocked: X
+Deferred: X
+```
+
+### Security
+
+```text
+Authentication:
+OIDC:
+E2EE:
+Privacy:
+Secrets:
+Authorization:
+```
+
+### Product
+
+```text
+Lamahat:
+Onboarding:
+Discoverability:
+Responsive:
+Accessibility:
+```
+
+### AI
+
+```text
+Brain AI:
+AIKE:
+On-device AI:
+Translation:
+Moderation:
+```
+
+### Infrastructure
+
+```text
+Database:
+API:
+Realtime:
+Storage:
+Deployment:
+Backup:
+Observability:
+```
+
+### Critical Remaining Risks
+
+List the five most important unresolved risks.
+
+---
+
+# 29. FINAL RELEASE GATE
+
+CIRKLE must NOT be declared "launch ready" merely because P0/P1/P2 code exists.
+
+Before declaring production readiness, perform a final independent audit covering:
+
+## Product
+
+* all core screens;
+* all core flows;
+* all overlays;
+* onboarding;
+* accessibility;
+* responsive behavior.
+
+## Technical
+
+* frontend;
+* API;
+* database;
+* realtime;
+* AI;
+* storage;
+* deployment.
+
+## Security
+
+* authentication;
+* authorization;
+* E2EE;
+* secrets;
+* privacy;
+* uploads;
+* abuse;
+* rate limits;
+* dependency vulnerabilities.
+
+## Reliability
+
+* restart;
+* backup;
+* restore;
+* migration;
+* failure recovery;
+* external service outage.
+
+## Blueprint
+
+Re-run the full Blueprint compliance matrix.
+
+## Evidence
+
+No "Done" status without actual evidence.
+
+---
+
+# 30. FINAL COMMAND
+
+START NOW.
+
+But follow this exact order:
+
+### STEP 1
+
+Inspect the repository.
+
+### STEP 2
+
+Verify the audit baseline against current HEAD.
+
+### STEP 3
+
+Run the baseline test/build/security checks.
+
+### STEP 4
+
+Fix P0.1 environment/secrets persistence.
+
+### STEP 5
+
+Produce the Current-State Delta Report.
+
+### STEP 6
+
+Produce the Platform Strategy ADR.
+
+### STEP 7
+
+Proceed with P0 stabilization only.
+
+### STEP 8
+
+Run the P0 exit gate.
+
+### STEP 9
+
+Proceed to P1 only after P0 passes.
+
+### STEP 10
+
+Complete the security/architecture gates before irreversible migrations.
+
+### STEP 11
+
+Proceed to P2 only after P1 passes.
+
+### STEP 12
+
+Continuously maintain the Blueprint Compliance Matrix.
+
+### STEP 13
+
+Continuously maintain Deferred Features and ADR documentation.
+
+### STEP 14
+
+Never claim completion without evidence.
+
+---
+
+# CORE PRINCIPLE
+
+**Do not build more CIRKLE merely because more code can be written.**
+
+Build only what is:
+
+**required → architecturally justified → correctly integrated → secure → tested → measurable → maintainable.**
+
+Protect what already works.
+
+Repair what is actually broken.
+
+Complete what is genuinely missing.
+
+Do not confuse complexity with progress.
+
+Do not confuse code volume with capability.
+
+Do not confuse a library with an implementation.
+
+Do not confuse an API with a working product.
+
+Do not confuse encryption with E2EE.
+
+Do not confuse decentralization with installing IPFS.
+
+Do not confuse AI integration with on-device intelligence.
+
+Do not confuse blueprint compliance with blindly reproducing an older architecture.
+
+**CIRKLE's objective is not maximum code.**
+
+**CIRKLE's objective is a coherent, secure, privacy-first, resilient, production-ready platform whose implemented behavior can be independently verified against its constitutional Blueprint.**
+
+**Execute with CTO discipline.**
