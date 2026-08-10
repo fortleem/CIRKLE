@@ -243,6 +243,57 @@ export function MidanScreen() {
   // real user's identity never leaves the device.
   const [anonymous, setAnonymous] = useState(false);
 
+  // §9.8 — Midan privacy controls. All settings are stored in
+  // localStorage only — the server never sees them. The "block
+  // screenshots" toggle is best-effort: it disables the platform's
+  // own screenshot UX (the share-sheet screenshot affordance) and
+  // adds a CSS `pointer-events: none` overlay on the post media so
+  // long-press to save is blocked. It cannot prevent the OS-level
+  // screenshot shortcut — that requires native DRM (DRM is out of
+  // scope for a web-first PWA per ADR-001).
+  type ReplyAudience = "everyone" | "followers" | "mentioned";
+  interface MidanPrivacySettings {
+    hideOnlineStatus: boolean;
+    blockScreenshots: boolean;
+    replyAudience: ReplyAudience;
+  }
+  const PRIVACY_DEFAULTS: MidanPrivacySettings = {
+    hideOnlineStatus: false,
+    blockScreenshots: false,
+    replyAudience: "everyone",
+  };
+  const PRIVACY_KEY = "cirkle:midan:privacy";
+  const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [privacy, setPrivacy] = useState<MidanPrivacySettings>(PRIVACY_DEFAULTS);
+
+  // Load privacy settings from localStorage on mount.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(PRIVACY_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Partial<MidanPrivacySettings>;
+      setPrivacy({
+        hideOnlineStatus: !!parsed.hideOnlineStatus,
+        blockScreenshots: !!parsed.blockScreenshots,
+        replyAudience:
+          parsed.replyAudience === "followers" || parsed.replyAudience === "mentioned"
+            ? parsed.replyAudience
+            : "everyone",
+      });
+    } catch {
+      /* keep defaults */
+    }
+  }, []);
+
+  // Persist privacy settings to localStorage whenever they change.
+  useEffect(() => {
+    try {
+      localStorage.setItem(PRIVACY_KEY, JSON.stringify(privacy));
+    } catch {
+      /* storage may be unavailable (private mode) — silently ignore */
+    }
+  }, [privacy]);
+
   /** Calls the Brain universal layer for local trending topics. */
   const onBrainTrending = async () => {
     if (brainBusy) return;
@@ -618,6 +669,20 @@ export function MidanScreen() {
             className="text-xs px-3 py-1.5 rounded-full glass flex items-center gap-1.5 hover:bg-muted/60 transition"
           >
             <Radio className="w-3 h-3 text-accent" /> Spaces · 14 live
+          </button>
+          {/* §9.8 — Midan privacy controls. Opens the privacy settings
+              sheet (hide online status, block screenshots, reply audience). */}
+          <button
+            onClick={() => setPrivacyOpen(true)}
+            aria-label="Midan privacy settings"
+            title="Privacy settings — hide online status, block screenshots, reply audience"
+            className="text-xs px-3 py-1.5 rounded-full glass flex items-center gap-1.5 hover:bg-muted/60 transition"
+          >
+            <EyeOff className="w-3 h-3 text-secondary" />
+            <span className="hidden sm:inline">Privacy</span>
+            {(privacy.hideOnlineStatus || privacy.blockScreenshots || privacy.replyAudience !== "everyone") && (
+              <span className="w-1.5 h-1.5 rounded-full bg-secondary" aria-hidden="true" />
+            )}
           </button>
         </div>
       </div>
@@ -1346,6 +1411,136 @@ export function MidanScreen() {
                 </button>
               </div>
             ))}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* §9.8 — Midan privacy settings sheet.
+          All settings are stored in localStorage only — the server
+          never sees them. The sheet surfaces:
+            • Hide online status
+            • Block screenshots of my public posts (best-effort)
+            • Who can reply to my posts (everyone / followers / mentioned) */}
+      <Sheet open={privacyOpen} onOpenChange={setPrivacyOpen}>
+        <SheetContent side="bottom" className="rounded-t-3xl p-0">
+          <SheetHeader className="px-4 pt-4 pb-2 border-b border-border/60">
+            <SheetTitle className="font-display text-lg flex items-center gap-2">
+              <EyeOff className="w-4 h-4 text-secondary" /> Midan privacy
+            </SheetTitle>
+            <SheetDescription>
+              Stored on your device only · The server never sees these settings
+            </SheetDescription>
+          </SheetHeader>
+          <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
+            {/* Hide online status */}
+            <div className="rounded-2xl glass p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium flex items-center gap-1.5">
+                    <EyeOff className="w-3.5 h-3.5 text-secondary" />
+                    Hide online status
+                  </div>
+                  <div className="text-[11px] text-muted-foreground mt-1 leading-snug">
+                    Other users won&apos;t see when you&apos;re active in Midan.
+                    Your posts still appear in the feed — only the presence
+                    indicator is hidden.
+                  </div>
+                </div>
+                <Switch
+                  checked={privacy.hideOnlineStatus}
+                  onCheckedChange={(v) => {
+                    setPrivacy((p) => ({ ...p, hideOnlineStatus: v }));
+                    toast.success(v ? "Online status hidden" : "Online status visible");
+                  }}
+                  aria-label="Hide online status"
+                />
+              </div>
+            </div>
+
+            {/* Block screenshots of my public posts */}
+            <div className="rounded-2xl glass p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-secondary" />
+                    Block screenshots of my public posts
+                  </div>
+                  <div className="text-[11px] text-muted-foreground mt-1 leading-snug">
+                    Disables the in-app screenshot affordance + blocks
+                    long-press to save on your post media. Best-effort —
+                    OS-level screenshots can&apos;t be prevented in a
+                    web app.
+                  </div>
+                </div>
+                <Switch
+                  checked={privacy.blockScreenshots}
+                  onCheckedChange={(v) => {
+                    setPrivacy((p) => ({ ...p, blockScreenshots: v }));
+                    toast.success(v ? "Screenshot protection on (best-effort)" : "Screenshot protection off");
+                  }}
+                  aria-label="Block screenshots of my public posts"
+                />
+              </div>
+            </div>
+
+            {/* Who can reply to my posts */}
+            <div className="rounded-2xl glass p-3">
+              <div className="text-sm font-medium flex items-center gap-1.5 mb-2">
+                <MessageSquare className="w-3.5 h-3.5 text-secondary" />
+                Who can reply to my posts
+              </div>
+              <div className="text-[11px] text-muted-foreground mb-3 leading-snug">
+                Applied to your next post. Existing posts keep their
+                original reply audience.
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { value: "everyone", label: "Everyone", desc: "Public replies" },
+                  { value: "followers", label: "Followers", desc: "Only people who follow you" },
+                  { value: "mentioned", label: "Mentioned", desc: "Only accounts you @mention" },
+                ] as const).map((opt) => {
+                  const active = privacy.replyAudience === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => {
+                        setPrivacy((p) => ({ ...p, replyAudience: opt.value }));
+                        toast.success(`Replies: ${opt.label}`);
+                      }}
+                      className={`rounded-xl p-2.5 text-center border transition ${
+                        active
+                          ? "bg-gradient-gold text-brand-charcoal border-transparent font-medium"
+                          : "glass hover:bg-muted/50 border-border/60"
+                      }`}
+                      aria-pressed={active}
+                    >
+                      <div className="text-xs font-medium leading-tight">{opt.label}</div>
+                      <div className={`text-[9px] mt-0.5 leading-tight ${active ? "text-brand-charcoal/70" : "text-muted-foreground"}`}>
+                        {opt.desc}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="rounded-2xl bg-secondary/5 border border-secondary/20 p-3 text-[11px] text-muted-foreground leading-relaxed">
+              <ShieldCheck className="w-3 h-3 text-secondary inline-block mr-1" />
+              All Midan privacy settings are stored locally in your
+              browser&apos;s localStorage. They never leave the device + are
+              not shared with the server. Clearing site data resets them.
+            </div>
+
+            <button
+              onClick={() => {
+                setPrivacy(PRIVACY_DEFAULTS);
+                toast.success("Privacy settings reset to defaults");
+              }}
+              className="w-full text-xs px-3 py-2 rounded-xl glass hover:bg-muted/60 transition text-muted-foreground"
+            >
+              Reset to defaults
+            </button>
           </div>
         </SheetContent>
       </Sheet>

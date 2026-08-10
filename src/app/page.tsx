@@ -120,6 +120,9 @@ const GifPicker = dynamic(() => import("@/components/overlays/gif-picker").then(
 const WorkMode = dynamic(() => import("@/components/overlays/work-mode").then(m => ({ default: m.WorkMode })), { ssr: false });
 const DeviceVerify = dynamic(() => import("@/components/overlays/device-verify").then(m => ({ default: m.DeviceVerify })), { ssr: false });
 const MemoryDashboard = dynamic(() => import("@/components/overlays/memory-dashboard").then(m => ({ default: m.MemoryDashboard })), { ssr: false });
+const TransparencyDashboard = dynamic(() => import("@/components/overlays/transparency-dashboard").then(m => ({ default: m.TransparencyDashboard })), { ssr: false });
+const PerformanceDashboard = dynamic(() => import("@/components/overlays/performance-dashboard").then(m => ({ default: m.PerformanceDashboard })), { ssr: false });
+const ComparisonView = dynamic(() => import("@/components/overlays/comparison-view").then(m => ({ default: m.ComparisonView })), { ssr: false });
 import { useApp } from "@/lib/app-store";
 import { useAuth } from "@/lib/auth-store";
 import { toast } from "sonner";
@@ -352,6 +355,9 @@ export default function Page() {
   const [workModeOpen, setWorkModeOpen] = useState(false);
   const [deviceVerifyOpen, setDeviceVerifyOpen] = useState(false);
   const [memoryDashboardOpen, setMemoryDashboardOpen] = useState(false);
+  const [transparencyDashboardOpen, setTransparencyDashboardOpen] = useState(false);
+  const [performanceDashboardOpen, setPerformanceDashboardOpen] = useState(false);
+  const [comparisonViewOpen, setComparisonViewOpen] = useState(false);
   const [proNetworkOpen, setProNetworkOpen] = useState(false);
   const [cirkleMapsOpen, setCirkleMapsOpen] = useState(false);
   const [circleMailOpen, setCircleMailOpen] = useState(false);
@@ -405,6 +411,9 @@ export default function Page() {
         setPrivacyPolicyOpen(false);
         setTermsOpen(false);
         setDsrOpen(false);
+        setTransparencyDashboardOpen(false);
+        setPerformanceDashboardOpen(false);
+        setComparisonViewOpen(false);
       }
     };
     window.addEventListener("keydown", handler);
@@ -631,6 +640,14 @@ export default function Page() {
     const onMemory = () => setMemoryDashboardOpen(true);
     window.addEventListener("circle:memory", onMemory);
 
+    // ── Transparency / Performance / Comparison dashboards ───────
+    const onTransparencyDashboard = () => setTransparencyDashboardOpen(true);
+    const onPerformanceDashboard = () => setPerformanceDashboardOpen(true);
+    const onComparisonView = () => setComparisonViewOpen(true);
+    window.addEventListener("circle:transparency-dashboard", onTransparencyDashboard);
+    window.addEventListener("circle:performance-dashboard", onPerformanceDashboard);
+    window.addEventListener("circle:comparison-view", onComparisonView);
+
     // ── Legal / privacy overlays ────────────────────────────────
     const onPrivacyPolicy = () => setPrivacyPolicyOpen(true);
     const onTerms = () => setTermsOpen(true);
@@ -763,6 +780,9 @@ export default function Page() {
       window.removeEventListener("circle:work-mode", onWorkMode);
       window.removeEventListener("circle:device-verify", onDeviceVerify);
       window.removeEventListener("circle:memory", onMemory);
+      window.removeEventListener("circle:transparency-dashboard", onTransparencyDashboard);
+      window.removeEventListener("circle:performance-dashboard", onPerformanceDashboard);
+      window.removeEventListener("circle:comparison-view", onComparisonView);
       window.removeEventListener("circle:privacy-policy", onPrivacyPolicy);
       window.removeEventListener("circle:terms", onTerms);
       window.removeEventListener("circle:dsr-request", onDSR);
@@ -968,6 +988,11 @@ export default function Page() {
       <WorkMode open={workModeOpen} onClose={() => setWorkModeOpen(false)} />
       <DeviceVerify open={deviceVerifyOpen} onClose={() => setDeviceVerifyOpen(false)} />
       <MemoryDashboard open={memoryDashboardOpen} onClose={() => setMemoryDashboardOpen(false)} />
+
+      {/* Blueprint §3.10 / §5.7 / §1.7 dashboards */}
+      <TransparencyDashboard open={transparencyDashboardOpen} onClose={() => setTransparencyDashboardOpen(false)} />
+      <PerformanceDashboard open={performanceDashboardOpen} onClose={() => setPerformanceDashboardOpen(false)} />
+      <ComparisonView open={comparisonViewOpen} onClose={() => setComparisonViewOpen(false)} />
 
       {/* Legal / privacy overlays */}
       <PrivacyPolicy open={privacyPolicyOpen} onClose={() => setPrivacyPolicyOpen(false)} />

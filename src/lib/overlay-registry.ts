@@ -879,6 +879,35 @@ export const OVERLAY_REGISTRY: OverlayEntry[] = [
     event: "circle:circle-mail",
     keywords: ["mail", "email", "inbox", "compose", "ai triage", "summarize", "@cirkle.app"],
   },
+
+  // ── Blueprint §3.10 / §5.7 / §1.7 dashboards ──────────────────────────
+  {
+    id: "transparency-dashboard",
+    name: "Transparency Dashboard",
+    description: "Public costs, revenue, ad stats. Where the money comes from + where it goes.",
+    emoji: "📊",
+    category: "privacy",
+    event: "circle:transparency-dashboard",
+    keywords: ["transparency", "costs", "revenue", "ads", "finance", "report", "public"],
+  },
+  {
+    id: "performance-dashboard",
+    name: "Performance Metrics",
+    description: "TTI, API p50/p95, DB queries, cache hit, bundle size, memory. Live SLO dashboard.",
+    emoji: "⚡",
+    category: "productivity",
+    event: "circle:performance-dashboard",
+    keywords: ["performance", "metrics", "tti", "p95", "latency", "slo", "cache", "bundle", "memory"],
+  },
+  {
+    id: "comparison-view",
+    name: "CIRKLE vs Incumbents",
+    description: "Side-by-side comparison with Facebook, WhatsApp, YouTube, Instagram, Twitter, LinkedIn.",
+    emoji: "⚖️",
+    category: "privacy",
+    event: "circle:comparison-view",
+    keywords: ["comparison", "vs", "facebook", "whatsapp", "youtube", "instagram", "twitter", "linkedin", "competitive"],
+  },
 ];
 
 // ── Category metadata ──────────────────────────────────────────────────

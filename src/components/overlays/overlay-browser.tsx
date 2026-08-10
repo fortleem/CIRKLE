@@ -253,7 +253,7 @@ export function OverlayBrowser({ open, onClose }: Props) {
                                   <div className="font-display text-sm leading-tight truncate flex items-center gap-1.5">
                                     {entry.name}
                                     {/* R6: NEW badge for recently added overlays */}
-                                    {["broadcast-channel", "gif-picker", "work-mode", "device-verify", "brain-orchestrator", "pro-network", "cirkle-maps", "circle-mail", "ad-studio", "cirkle-gradebook", "knowledge-wiki", "poll-creator", "bullet-comments", "family-vault", "ticket-mint", "phone-migrate", "data-residency", "creator-studio", "call-screen", "bot-developer", "personal-ai-os", "mesh-dashboard", "oracle-markets", "cirkle-identity", "shield-dashboard"].includes(entry.id) && (
+                                    {["broadcast-channel", "gif-picker", "work-mode", "device-verify", "brain-orchestrator", "pro-network", "cirkle-maps", "circle-mail", "ad-studio", "cirkle-gradebook", "knowledge-wiki", "poll-creator", "bullet-comments", "family-vault", "ticket-mint", "phone-migrate", "data-residency", "creator-studio", "call-screen", "bot-developer", "personal-ai-os", "mesh-dashboard", "oracle-markets", "cirkle-identity", "shield-dashboard", "transparency-dashboard", "performance-dashboard", "comparison-view"].includes(entry.id) && (
                                       <span className="text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-secondary text-charcoal">NEW</span>
                                     )}
                                   </div>

@@ -12,6 +12,10 @@ import {
   Crown, Gift, CircleUser, LocateFixed, MapPinOff,
 } from "lucide-react";
 import { LamahatViewer } from "@/components/overlays/lamahat-viewer";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { useApp } from "@/lib/app-store";
 import { useAuth } from "@/lib/auth-store";
@@ -600,6 +604,114 @@ export function LamahatScreen() {
   const [nearbyStatus, setNearbyStatus] = useState<"idle" | "loading" | "ready" | "denied" | "error">("idle");
   const [nearbyPhotos, setNearbyPhotos] = useState<Photo[]>([]);
 
+  // ── §8.6.2 / §8.6.3 — Permanent Moments (albums) + Collections
+  //    curation. Both are backed by the PhotoCollection Prisma model
+  //    (kind="moment" | "collection"). The UI fetches the owner's
+  //    albums on mount + whenever the create-sheet closes (so a newly
+  //    created album appears immediately).
+  interface AlbumEntry {
+    id: string;
+    title: string;
+    description: string | null;
+    postIds: string[];
+    cover: string;
+    visibility: string;
+    collaborators: string[];
+    category: string | null;
+    pinned: boolean;
+    kind: "collection" | "moment";
+    updatedAt: string;
+  }
+  const ownerLabel = (user?.username || "you").toLowerCase().replace(/^@/, "");
+  const { data: albumsData, refetch: refetchAlbums } = useQuery<AlbumEntry[]>({
+    queryKey: ["lamahat-albums", ownerLabel],
+    queryFn: async () => {
+      const r = await fetch(`/api/collections?user=${encodeURIComponent(ownerLabel)}`, { cache: "no-store" });
+      if (!r.ok) throw new Error("failed to load albums");
+      const data = await r.json();
+      return (data.collections || []) as AlbumEntry[];
+    },
+    staleTime: 30_000,
+  });
+  const apiCollections = useMemo(
+    () => (albumsData || []).filter((a) => a.kind === "collection"),
+    [albumsData],
+  );
+  const apiMoments = useMemo(
+    () => (albumsData || []).filter((a) => a.kind === "moment"),
+    [albumsData],
+  );
+
+  // Create-album sheet state. `kind` decides whether we're creating a
+  // permanent Moment or a curated Collection.
+  const [createAlbum, setCreateAlbum] = useState<{ open: boolean; kind: "collection" | "moment" }>({ open: false, kind: "collection" });
+  const [albumTitle, setAlbumTitle] = useState("");
+  const [albumDesc, setAlbumDesc] = useState("");
+  const [albumCategory, setAlbumCategory] = useState<string>("");
+  const [albumVisibility, setAlbumVisibility] = useState<"private" | "shared" | "public">("private");
+  const [albumPinned, setAlbumPinned] = useState(false);
+  const [creatingAlbum, setCreatingAlbum] = useState(false);
+
+  const resetAlbumForm = () => {
+    setAlbumTitle("");
+    setAlbumDesc("");
+    setAlbumCategory("");
+    setAlbumVisibility("private");
+    setAlbumPinned(false);
+  };
+
+  const submitAlbum = async () => {
+    if (!albumTitle.trim()) {
+      toast.error("Title is required");
+      return;
+    }
+    setCreatingAlbum(true);
+    try {
+      // Pick a deterministic cover gradient based on the title hash so
+      // the album card has a unique cover without an extra round-trip.
+      const h = hashStr(albumTitle);
+      const COVER_GRADIENTS = [
+        "from-amber-500 via-orange-600 to-rose-700",
+        "from-cyan-500 via-teal-600 to-blue-700",
+        "from-violet-500 via-purple-600 to-indigo-800",
+        "from-emerald-500 via-green-600 to-teal-700",
+        "from-rose-500 via-pink-600 to-fuchsia-800",
+        "from-slate-500 via-zinc-600 to-stone-800",
+        "from-yellow-600 via-amber-700 to-stone-800",
+        "from-sky-500 via-blue-600 to-indigo-700",
+      ];
+      const cover = COVER_GRADIENTS[h % COVER_GRADIENTS.length];
+      const r = await fetch("/api/collections", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user: ownerLabel,
+          kind: createAlbum.kind,
+          title: albumTitle.trim(),
+          description: albumDesc.trim() || undefined,
+          cover,
+          visibility: albumVisibility,
+          category: albumCategory || undefined,
+          pinned: albumPinned,
+        }),
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      toast.success(
+        createAlbum.kind === "moment" ? "Moment created" : "Collection created",
+        { description: `"${albumTitle.trim()}" is ready. Add photos from any Lamahat post.` },
+      );
+      resetAlbumForm();
+      setCreateAlbum({ open: false, kind: createAlbum.kind });
+      void refetchAlbums();
+    } catch (err) {
+      toast.error("Couldn't create album", {
+        description: err instanceof Error ? err.message : undefined,
+      });
+    } finally {
+      setCreatingAlbum(false);
+    }
+  };
+
   const fetchNearby = useCallback(async () => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
       setNearbyStatus("error");
@@ -936,90 +1048,157 @@ export function LamahatScreen() {
         </div>
       </div>
 
-      {/* ── Collections ── */}
+      {/* ── Collections (§8.6.3 — curated albums, backed by /api/collections) ── */}
       <div className="mt-6">
         <div className="px-6 flex items-center justify-between mb-2">
           <div className="flex items-center gap-1.5">
             <Images className="w-3.5 h-3.5 text-secondary" />
             <span className="text-xs font-medium">Your Collections</span>
-            <span className="text-[10px] text-muted-foreground">· {COLLECTIONS.length}</span>
+            <span className="text-[10px] text-muted-foreground">· {apiCollections.length}</span>
           </div>
           <button
-            onClick={() => toast.success("New collection", { description: "Pick photos to start a curated album." })}
+            onClick={() => setCreateAlbum({ open: true, kind: "collection" })}
             className="text-[10px] text-secondary flex items-center gap-0.5 hover:gap-1 transition-all"
+            aria-label="Create new collection"
           >
             <FolderPlus className="w-3 h-3" /> Create new
           </button>
         </div>
         <div className="flex gap-3 px-6 overflow-x-auto scrollbar-hide">
-          {COLLECTIONS.map((c) => (
+          {apiCollections.length === 0 && (
             <button
-              key={c.id}
-              onClick={() => toast.success(`Opening ${c.title}`, { description: `${c.count} photos · ${c.collaborators} collaborator${c.collaborators === 1 ? "" : "s"}` })}
-              className="shrink-0 w-[200px] rounded-2xl overflow-hidden border border-border/60 relative group text-left hover:ring-2 hover:ring-secondary/30 transition"
+              onClick={() => setCreateAlbum({ open: true, kind: "collection" })}
+              className="shrink-0 w-[200px] rounded-2xl overflow-hidden border border-dashed border-border/60 relative group text-left hover:ring-2 hover:ring-secondary/30 transition"
             >
-              <div className={`h-28 bg-gradient-to-br ${c.cover} relative`}>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                <div
-                  className="absolute inset-0 opacity-50 mix-blend-soft-light"
-                  style={{
-                    backgroundImage:
-                      "radial-gradient(circle at 30% 25%, hsl(var(--cream) / 0.4), transparent 55%), radial-gradient(circle at 75% 75%, hsl(var(--gold) / 0.3), transparent 50%)",
-                  }}
-                />
-                {c.pinned && (
-                  <div className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-gradient-gold flex items-center justify-center">
-                    <Star className="w-3 h-3 text-brand-charcoal fill-current" />
-                  </div>
-                )}
-                <div className="absolute bottom-2 left-3 z-10 text-cream">
-                  <div className="font-display text-base leading-tight">{c.title}</div>
-                  <div className="text-[10px] opacity-80 mt-0.5">{c.count} photos · updated {c.updated}</div>
-                </div>
-              </div>
-              <div className="px-3 py-2 bg-card flex items-center justify-between">
-                <div className="flex -space-x-2">
-                  {Array.from({ length: Math.min(c.collaborators + 1, 3) }).map((_, idx) => (
-                    <div
-                      key={idx}
-                      className="w-5 h-5 rounded-full ring-2 ring-background"
-                      style={{ background: AVATAR_GRADIENTS[idx % AVATAR_GRADIENTS.length] }}
-                    />
-                  ))}
-                  {c.collaborators > 2 && (
-                    <div className="w-5 h-5 rounded-full ring-2 ring-background glass-strong flex items-center justify-center">
-                      <span className="text-[8px] text-cream">+{c.collaborators - 2}</span>
-                    </div>
-                  )}
-                </div>
-                {c.collaborators === 0 ? (
-                  <span className="text-[9px] text-muted-foreground">Private</span>
-                ) : (
-                  <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
-                    <CircleUser className="w-2.5 h-2.5" /> Shared
-                  </span>
-                )}
+              <div className="h-28 flex flex-col items-center justify-center text-muted-foreground gap-1.5">
+                <FolderPlus className="w-6 h-6" />
+                <span className="text-[11px] font-medium">Create your first collection</span>
+                <span className="text-[9px]">Curate photos around a theme</span>
               </div>
             </button>
-          ))}
+          )}
+          {apiCollections.map((c) => {
+            const photoCount = c.postIds.length;
+            const collabCount = c.collaborators.length;
+            return (
+              <button
+                key={c.id}
+                onClick={() => toast.success(`Opening ${c.title}`, { description: `${photoCount} photo${photoCount === 1 ? "" : "s"} · ${collabCount} collaborator${collabCount === 1 ? "" : "s"}` })}
+                className="shrink-0 w-[200px] rounded-2xl overflow-hidden border border-border/60 relative group text-left hover:ring-2 hover:ring-secondary/30 transition"
+              >
+                <div className={`h-28 bg-gradient-to-br ${c.cover || "from-amber-500 via-orange-600 to-rose-700"} relative`}>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                  <div
+                    className="absolute inset-0 opacity-50 mix-blend-soft-light"
+                    style={{
+                      backgroundImage:
+                        "radial-gradient(circle at 30% 25%, hsl(var(--cream) / 0.4), transparent 55%), radial-gradient(circle at 75% 75%, hsl(var(--gold) / 0.3), transparent 50%)",
+                    }}
+                  />
+                  {c.pinned && (
+                    <div className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-gradient-gold flex items-center justify-center">
+                      <Star className="w-3 h-3 text-brand-charcoal fill-current" />
+                    </div>
+                  )}
+                  <div className="absolute bottom-2 left-3 z-10 text-cream">
+                    <div className="font-display text-base leading-tight">{c.title}</div>
+                    <div className="text-[10px] opacity-80 mt-0.5">{photoCount} photo{photoCount === 1 ? "" : "s"} · updated {new Date(c.updatedAt).toLocaleDateString()}</div>
+                  </div>
+                </div>
+                <div className="px-3 py-2 bg-card flex items-center justify-between">
+                  <div className="flex -space-x-2">
+                    {Array.from({ length: Math.min(collabCount + 1, 3) }).map((_, idx) => (
+                      <div
+                        key={idx}
+                        className="w-5 h-5 rounded-full ring-2 ring-background"
+                        style={{ background: AVATAR_GRADIENTS[idx % AVATAR_GRADIENTS.length] }}
+                      />
+                    ))}
+                    {collabCount > 2 && (
+                      <div className="w-5 h-5 rounded-full ring-2 ring-background glass-strong flex items-center justify-center">
+                        <span className="text-[8px] text-cream">+{collabCount - 2}</span>
+                      </div>
+                    )}
+                  </div>
+                  {c.visibility === "private" ? (
+                    <span className="text-[9px] text-muted-foreground">Private</span>
+                  ) : c.visibility === "shared" ? (
+                    <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
+                      <CircleUser className="w-2.5 h-2.5" /> Shared
+                    </span>
+                  ) : (
+                    <span className="text-[9px] text-secondary">Public</span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* ── Moments (permanent posts) ── */}
+      {/* ── Moments (permanent posts — §8.6.2, backed by /api/collections?kind=moment) ── */}
       <div className="mt-6">
         <div className="px-6 flex items-center justify-between mb-2">
           <div className="flex items-center gap-1.5">
             <Crown className="w-3.5 h-3.5 text-secondary" />
             <span className="text-xs font-medium">Moments</span>
-            <span className="text-[10px] text-muted-foreground">· permanent posts</span>
+            <span className="text-[10px] text-muted-foreground">· permanent posts · {apiMoments.length} yours</span>
           </div>
           <button
-            onClick={() => window.dispatchEvent(new CustomEvent("circle:composer", { detail: { kind: "media", moment: true } }))}
+            onClick={() => setCreateAlbum({ open: true, kind: "moment" })}
             className="text-[10px] text-secondary flex items-center gap-0.5 hover:gap-1 transition-all"
+            aria-label="Create a new permanent moment album"
           >
             <Plus className="w-3 h-3" /> New moment
           </button>
         </div>
+
+        {/* §8.6.2 — The user's own permanent Moment albums (from the API).
+            These are full-width album cards (distinct from the static
+            MOMENTS discover examples below). Each shows the album title,
+            description, photo count, and pinned badge. */}
+        {apiMoments.length > 0 && (
+          <div className="px-4 mb-4 space-y-2">
+            {apiMoments.map((m) => (
+              <button
+                key={m.id}
+                onClick={() => toast.success(`Opening moment · ${m.title}`, { description: m.description || `${m.postIds.length} photo${m.postIds.length === 1 ? "" : "s"}` })}
+                className="w-full rounded-2xl overflow-hidden border border-border/60 relative group text-left hover:ring-2 hover:ring-secondary/30 transition"
+              >
+                <div className={`h-32 bg-gradient-to-br ${m.cover || "from-amber-500 via-orange-600 to-rose-700"} relative`}>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                  {m.pinned && (
+                    <div className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-gradient-gold flex items-center justify-center">
+                      <Crown className="w-3 h-3 text-brand-charcoal fill-current" />
+                    </div>
+                  )}
+                  <div className="absolute bottom-2 left-3 right-3 z-10 text-cream">
+                    <div className="font-display text-base leading-tight">{m.title}</div>
+                    {m.description && (
+                      <div className="text-[10px] opacity-80 mt-0.5 line-clamp-1">{m.description}</div>
+                    )}
+                    <div className="text-[10px] opacity-70 mt-0.5">
+                      {m.postIds.length} photo{m.postIds.length === 1 ? "" : "s"}
+                      {m.category ? ` · ${m.category}` : ""}
+                      {" · "}updated {new Date(m.updatedAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Discover: example moments from other creators (static, for
+            inspiration when the user has no own moments yet). */}
+        {apiMoments.length === 0 && (
+          <div className="px-6 mb-2">
+            <div className="rounded-xl bg-secondary/5 border border-secondary/20 px-3 py-2 text-[10px] text-muted-foreground flex items-center gap-1.5">
+              <Sparkles className="w-3 h-3 text-secondary" />
+              Tap “New moment” to create a permanent themed album — distinct from ephemeral stories.
+            </div>
+          </div>
+        )}
 
         <div className="px-4 space-y-4">
           {MOMENTS.map((m, idx) => {
@@ -1409,6 +1588,161 @@ export function LamahatScreen() {
         stories={STORY_USERS.filter((s) => !s.isOwn)}
         onClose={() => setStoryView((s) => ({ ...s, open: false }))}
       />
+
+      {/* §8.6.2 / §8.6.3 — Create-album sheet. Shared between permanent
+          Moments (kind="moment") and curated Collections (kind="collection").
+          Posts can be added to the album later from any Lamahat post's
+          "..." menu — this sheet only creates the album shell. */}
+      <Sheet
+        open={createAlbum.open}
+        onOpenChange={(v) => {
+          if (!v) resetAlbumForm();
+          setCreateAlbum((s) => ({ ...s, open: v }));
+        }}
+      >
+        <SheetContent side="bottom" className="rounded-t-3xl p-0">
+          <SheetHeader className="px-4 pt-4 pb-2 border-b border-border/60">
+            <SheetTitle className="font-display text-lg flex items-center gap-2">
+              {createAlbum.kind === "moment" ? (
+                <Crown className="w-4 h-4 text-secondary" />
+              ) : (
+                <FolderPlus className="w-4 h-4 text-secondary" />
+              )}
+              New {createAlbum.kind === "moment" ? "Moment" : "Collection"}
+            </SheetTitle>
+            <SheetDescription>
+              {createAlbum.kind === "moment"
+                ? "A permanent themed album — distinct from ephemeral stories. Showcases a curated set of photos around an event or theme."
+                : "A curated album of your Lamahat photos. Add photos from any post's “…” menu after creating."}
+            </SheetDescription>
+          </SheetHeader>
+          <div className="p-4 space-y-3 max-h-[70vh] overflow-y-auto">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                Title <span className="text-rose-500">*</span>
+              </label>
+              <Input
+                value={albumTitle}
+                onChange={(e) => setAlbumTitle(e.target.value.slice(0, 140))}
+                placeholder={createAlbum.kind === "moment" ? "Golden hour in AlUla" : "Desert Light"}
+                maxLength={140}
+                autoFocus
+              />
+              <div className="text-[10px] text-muted-foreground mt-1 text-right">
+                {albumTitle.length}/140
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                Description <span className="text-muted-foreground/70">(optional)</span>
+              </label>
+              <Textarea
+                value={albumDesc}
+                onChange={(e) => setAlbumDesc(e.target.value.slice(0, 600))}
+                placeholder="A short caption for the album — what ties these photos together?"
+                rows={3}
+                maxLength={600}
+              />
+              <div className="text-[10px] text-muted-foreground mt-1 text-right">
+                {albumDesc.length}/600
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                Category <span className="text-muted-foreground/70">(optional)</span>
+              </label>
+              <div className="flex gap-2 flex-wrap">
+                {["Travel", "Food", "Nature", "Friends", "Art", "Architecture", "Studio"].map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setAlbumCategory(albumCategory === c ? "" : c)}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition ${
+                      albumCategory === c
+                        ? "bg-gradient-gold text-brand-charcoal border-transparent font-medium"
+                        : "glass hover:bg-muted/50 border-border/60"
+                    }`}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                Visibility
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { value: "private", label: "Private", desc: "Only you" },
+                  { value: "shared", label: "Shared", desc: "Named collaborators" },
+                  { value: "public", label: "Public", desc: "Anyone on CIRKLE" },
+                ] as const).map((opt) => {
+                  const active = albumVisibility === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => setAlbumVisibility(opt.value)}
+                      className={`rounded-xl p-2.5 text-center border transition ${
+                        active
+                          ? "bg-gradient-gold text-brand-charcoal border-transparent font-medium"
+                          : "glass hover:bg-muted/50 border-border/60"
+                      }`}
+                      aria-pressed={active}
+                    >
+                      <div className="text-xs font-medium leading-tight">{opt.label}</div>
+                      <div className={`text-[9px] mt-0.5 leading-tight ${active ? "text-brand-charcoal/70" : "text-muted-foreground"}`}>
+                        {opt.desc}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="flex items-center justify-between gap-3 rounded-2xl glass p-3">
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium flex items-center gap-1.5">
+                  <Star className="w-3.5 h-3.5 text-secondary" />
+                  Pin to top
+                </div>
+                <div className="text-[11px] text-muted-foreground mt-0.5">
+                  Pinned albums appear first in your Collections / Moments rail.
+                </div>
+              </div>
+              <Switch
+                checked={albumPinned}
+                onCheckedChange={setAlbumPinned}
+                aria-label="Pin album to top"
+              />
+            </div>
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                onClick={() => {
+                  resetAlbumForm();
+                  setCreateAlbum((s) => ({ ...s, open: false }));
+                }}
+                className="flex-1 text-xs px-3 py-2.5 rounded-xl glass hover:bg-muted/60 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitAlbum}
+                disabled={!albumTitle.trim() || creatingAlbum}
+                className="flex-1 text-xs px-3 py-2.5 rounded-xl bg-gradient-gold text-brand-charcoal font-medium hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                {creatingAlbum ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Creating…
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-3.5 h-3.5" /> Create {createAlbum.kind === "moment" ? "moment" : "collection"}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

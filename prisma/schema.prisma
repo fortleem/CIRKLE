@@ -1969,3 +1969,81 @@ model OfflineStashItem {
   @@index([userLabel, contentType])
   @@index([expiresAt])
 }
+
+/// Performance-based creator rewards (Blueprint §7.3.7).
+/// Rewards are computed per period (e.g. "2024-01" for January) based on
+/// engagement metrics (views, likes, comments, shares) across the creator's
+/// posts. The pool is distributed proportionally to a weighted engagement
+/// score. Payout is recorded once per period per creator; the row tracks
+/// the computation inputs + the final payout amount.
+model CreatorReward {
+  id           String   @id @default(cuid())
+  /// Cirkle username (lowercase) of the rewarded creator.
+  username     String
+  /// Period key — "YYYY-MM" (monthly) or "YYYY-Www" (weekly ISO).
+  period       String
+  /// Engagement inputs used to compute the reward (JSON string).
+  /// Fields: views, likes, comments, shares, score, rank.
+  metrics      String
+  /// Weighted engagement score (raw, for ranking + proportional split).
+  score        Float    @default(0)
+  /// Rank in the leaderboard for this period (1 = top creator).
+  rank         Int      @default(0)
+  /// Share of the period's reward pool (0..1).
+  share        Float    @default(0)
+  /// Final payout amount in `currency`.
+  amount       Float    @default(0)
+  currency     String   @default("USD")
+  /// Total pool size for this period (denominator of share).
+  poolSize     Float    @default(0)
+  /// "computed" (leaderboard written, payout pending) |
+  /// "distributed" (payout recorded) | "failed" (computation error).
+  status       String   @default("computed")
+  /// When the reward was distributed (null until payout).
+  distributedAt DateTime?
+  /// Optional payment reference (Commit hash, bank transfer id, etc.).
+  paymentRef   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([username, period])
+  @@index([period, rank])
+  @@index([username, period])
+  @@index([status])
+}
+
+/// Photo collection / Moment album (Blueprint §8.6.2 / §8.6.3).
+/// A collection is a curated album of Lamahat photos (posts) assembled by
+/// a user. Collections can be private (default) or shared with named
+/// collaborators. "Moments" are a special kind of permanent album
+/// (kind=moment) — distinct from ephemeral stories — that showcases a
+/// curated set of photos around a theme or event.
+model PhotoCollection {
+  id          String   @id @default(cuid())
+  /// Owner handle (lowercase, no leading @).
+  ownerLabel  String
+  /// "collection" (curated album) | "moment" (permanent themed album).
+  kind        String   @default("collection")
+  title       String
+  /// Optional longer description / caption for the album.
+  description String?
+  /// JSON-encoded array of Post ids that belong to this collection.
+  /// Stored as a string because SQLite lists are not supported.
+  postIds     String   @default("[]")
+  /// Cover gradient class string (e.g. "from-amber-500 via-orange-600 to-rose-700")
+  /// so the UI can render a deterministic cover without an extra round-trip.
+  cover       String   @default("")
+  /// "private" (only owner) | "shared" (named collaborators) | "public".
+  visibility  String   @default("private")
+  /// JSON-encoded array of collaborator handles (lowercase).
+  collaborators String @default("[]")
+  /// Optional theme/category tag (Travel, Food, Nature, ...).
+  category    String?
+  pinned      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([ownerLabel, kind])
+  @@index([ownerLabel, visibility])
+  @@index([kind, visibility])
+}
