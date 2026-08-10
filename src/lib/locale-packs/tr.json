@@ -1,0 +1,121 @@
+{
+  "appName": "Cirkle",
+  "tagline": "Yeni bir sosyal işletim sistemi",
+  "dir": "ltr",
+  "greeting": {
+    "morning": "Günaydın",
+    "afternoon": "İyi günler",
+    "evening": "İyi akşamlar",
+    "welcome": "Tekrar hoş geldin"
+  },
+  "common": {
+    "ok": "Tamam",
+    "cancel": "İptal",
+    "save": "Kaydet",
+    "delete": "Sil",
+    "edit": "Düzenle",
+    "share": "Paylaş",
+    "close": "Kapat",
+    "retry": "Tekrar dene",
+    "loading": "Yükleniyor…",
+    "search": "Ara",
+    "send": "Gönder",
+    "join": "Katıl",
+    "leave": "Ayrıl",
+    "dismiss": "Gizle",
+    "learnMore": "Daha fazla bilgi",
+    "viewAll": "Tümünü gör",
+    "showMore": "Daha fazla göster",
+    "showLess": "Daha az göster"
+  },
+  "tabs": {
+    "home": "Ana Sayfa",
+    "wasl": "Wasl",
+    "mashahd": "Mashahd",
+    "lamahat": "Lamahat",
+    "midan": "Midan",
+    "rihla": "Rihla",
+    "pay": "Öde",
+    "mail": "Posta",
+    "profile": "Sen"
+  },
+  "buttons": {
+    "enter": "Cirkle'a gir",
+    "skip": "Atla",
+    "continue": "Devam et",
+    "post": "Gönder",
+    "reply": "Yanıtla",
+    "rsvp": "Katıl",
+    "going": "Gidiyorum",
+    "interested": "İlgiliyim",
+    "notGoing": "Gitmiyorum",
+    "createPost": "Gönderi oluştur",
+    "askAi": "AI'a sor",
+    "explore": "Keşfet"
+  },
+  "sections": {
+    "featured": "Öne çıkan",
+    "nearby": "Yakındaki etkinlikler",
+    "forYou": "Senin için",
+    "trending": "Şehrinde popüler",
+    "workspace": "İş güncellemeleri",
+    "spaces": "Canlı alanlar",
+    "sponsored": "Sponsorlu",
+    "upcomingCircles": "Çevrelerinde yaklaşanlar",
+    "exclusives": "Cirkle Özel",
+    "news": "Haberler",
+    "miniApps": "Cirkle içinde mini uygulamalar",
+    "mail": "Cirkle Posta"
+  },
+  "onboarding": {
+    "slide1": { "title": "Cirkle'a hoş geldin", "body": "Tek uygulama. Her konuşma, video, fotoğraf, ödeme ve yolculuk — zarif biçimde birleşti." },
+    "slide2": { "title": "Sekiz dünya. Tek Cirkle.", "body": "Wasl, Mashahd, Lamahat, Midan, Rihla, Pay, Mail ve AI yardımcın. Hepsi ücretsiz, sonsuza dek." },
+    "slide3": { "title": "Gizlilik ürünün kendisidir", "body": "Verileriniz cihazınızda kalır. Hayalet modu, uçtan uca şifreleme ve varsayılan olarak cihaz üzerinde AI." },
+    "slide4": { "title": "İnternetsiz çalışır", "body": "Bluetooth ve Wi-Fi Direct üzerinden ağ örgüsü sizi tünellerde, çöllerde ve kalabalıklarda bağlı tutar." },
+    "slide5": { "title": "Senin için tasarlandı", "body": "Bir dil, bir tarz seç ve içeri gir. Her şeyi daha sonra değiştirebilirsin." },
+    "cta": "Cirkle'a gir",
+    "skip": "Atla",
+    "next": "Devam et"
+  },
+  "nav": {
+    "home": "Ana Sayfa", "wasl": "Wasl", "mashahd": "Mashahd", "lamahat": "Lamahat",
+    "midan": "Midan", "rihla": "Rihla", "pay": "Öde", "profile": "Sen"
+  },
+  "home": {
+    "hello": "İyi akşamlar",
+    "featured": "Öne çıkan",
+    "nearby": "Yakındaki etkinlikler",
+    "forYou": "Senin için",
+    "trending": "Şehrinde popüler",
+    "workspace": "İş güncellemeleri",
+    "ask": "Cirkle'a her şeyi sor...",
+    "miniApps": "Cirkle içinde mini uygulamalar",
+    "mail": "Cirkle Posta",
+    "mailSub": "3 yeni · 1 yanıt bekliyor",
+    "id": "Cirkle ID · Doğrulandı",
+    "idSub": "Tüm Cirkle servisleri için tek kimlik",
+    "mesh": "Mesh çevrimiçi · 4 eş yakın",
+    "spaces": "Canlı alanlar"
+  },
+  "ai": {
+    "title": "Cirkle AI",
+    "sub": "Cihazda · Tasarım gereği gizli",
+    "placeholder": "Sor, planla, çevir, özetle...",
+    "send": "Gönder",
+    "examples": ["Günümü özetle", "İstanbul seyahatimi planla", "Layla'ya tonumla yanıt ver", "Kibar bir hayır yaz"]
+  },
+  "palette": {
+    "placeholder": "Her şeyi ara, her komutu çalıştır"
+  },
+  "sponsored": {
+    "label": "Sponsorlu",
+    "why": "Bunu neden görüyorum?",
+    "hide": "Reklamı gizle"
+  },
+  "upcoming": {
+    "title": "Çevrelerinde yaklaşanlar",
+    "empty": "Çevrelerinde henüz yaklaşan etkinlik yok",
+    "rsvpGoing": "Gidiyorsun",
+    "rsvpInterested": "İlgilisin"
+  }
+}

@@ -1,7 +1,7 @@
 // @ts-nocheck
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Sparkles, Layers, Heart, Plus, Grid3x3, Bookmark, Film, Camera, Loader2,
@@ -9,12 +9,13 @@ import {
   Search, SlidersHorizontal, ChevronDown, ChevronLeft, ChevronRight,
   FolderPlus, Images, Clock, Calendar, Flame, TrendingUp, Star, X,
   History, Bookmark as BookmarkIcon, MapPin, Volume2, Smile, ArrowUpDown,
-  Crown, Gift, CircleUser,
+  Crown, Gift, CircleUser, LocateFixed, MapPinOff,
 } from "lucide-react";
 import { LamahatViewer } from "@/components/overlays/lamahat-viewer";
 import { toast } from "sonner";
 import { useApp } from "@/lib/app-store";
 import { useAuth } from "@/lib/auth-store";
+import { encodeGeohash } from "@/lib/geohash";
 
 /**
  * Brain AI connection for Lamahat.
@@ -61,7 +62,7 @@ async function brainRecommendPhotos(opts: {
   };
 }
 
-type Tab = "feed" | "reels" | "saved" | "tagged";
+type Tab = "feed" | "reels" | "saved" | "tagged" | "nearby";
 type SortKey = "recent" | "popular" | "liked";
 type CategoryKey = "all" | "Travel" | "Food" | "Nature" | "Friends" | "Art" | "Architecture";
 
@@ -585,6 +586,68 @@ export function LamahatScreen() {
     staleTime: 30_000,
   });
 
+  // ── P2 GAPS-BATCH-2 — Nearby photo discovery (Blueprint §8.4).
+  //
+  // Privacy-preserving geohash-based discovery. The CLIENT computes
+  // the geohash from the user's GPS coordinates BEFORE sending
+  // anything to the server — the server never sees exact lat/lng.
+  // The geohash precision is 6 chars (~1.2km × 0.6km per cell) so
+  // each cell contains 100s of users in dense areas (k-anonymity).
+  //
+  // We only fetch when the user opens the "Nearby" tab AND has
+  // granted geolocation permission. If permission is denied, we show
+  // a friendly prompt to enable location.
+  const [nearbyStatus, setNearbyStatus] = useState<"idle" | "loading" | "ready" | "denied" | "error">("idle");
+  const [nearbyPhotos, setNearbyPhotos] = useState<Photo[]>([]);
+
+  const fetchNearby = useCallback(async () => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setNearbyStatus("error");
+      return;
+    }
+    setNearbyStatus("loading");
+    try {
+      const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: false,
+          maximumAge: 300_000,
+          timeout: 10_000,
+        });
+      });
+      const { latitude, longitude } = pos.coords;
+      // Compute the geohash CLIENT-SIDE — never send raw lat/lng.
+      const geohash = encodeGeohash(latitude, longitude, 6);
+      const r = await fetch(`/api/photos/nearby?geohash=${encodeURIComponent(geohash)}&radius=2&limit=50`, {
+        cache: "no-store",
+      });
+      if (!r.ok) throw new Error(`failed (${r.status})`);
+      const data = await r.json();
+      const arr: any[] = Array.isArray(data?.photos) ? data.photos : [];
+      setNearbyPhotos(
+        arr.map((p): Photo => ({
+          id: p.id,
+          body: p.body || "",
+          authorName: p.authorName || "Anonymous",
+          ratio: ratioFor(p.id),
+        })),
+      );
+      setNearbyStatus("ready");
+    } catch (err: unknown) {
+      if ((err as GeolocationPositionError)?.code === 1) {
+        setNearbyStatus("denied");
+      } else {
+        setNearbyStatus("error");
+      }
+    }
+  }, []);
+
+  // When the user selects the Nearby tab, auto-fetch (once per mount).
+  useEffect(() => {
+    if (tab === "nearby" && nearbyStatus === "idle") {
+      void fetchNearby();
+    }
+  }, [tab, nearbyStatus, fetchNearby]);
+
   /** Apply discovery filters: search + category + sort, then slice for infinite scroll. */
   const filteredPhotos = useMemo(() => {
     let list = photos.slice();
@@ -610,14 +673,22 @@ export function LamahatScreen() {
   }, [photos, category, search, sort]);
 
   const grid = useMemo(() => {
+    if (tab === "nearby") {
+      // The Nearby tab renders the nearbyPhotos list directly (no
+      // category/search/sort filtering — the privacy-preserving geo
+      // query is the only filter that applies).
+      return nearbyPhotos.slice(0, visibleCount);
+    }
     let g = filteredPhotos;
     if (tab === "saved") g = g.filter((_, i) => i < 6);
     else if (tab === "tagged") g = g.slice(4, 12);
     else if (tab === "reels") g = g.filter((_, i) => i % 2 === 0);
     return g.slice(0, visibleCount);
-  }, [tab, filteredPhotos, visibleCount]);
+  }, [tab, filteredPhotos, visibleCount, nearbyPhotos]);
 
-  const hasMore = filteredPhotos.length > visibleCount;
+  const hasMore = tab === "nearby"
+    ? nearbyPhotos.length > visibleCount
+    : filteredPhotos.length > visibleCount;
 
   /** Infinite scroll — when sentinel enters viewport, load 8 more. */
   useEffect(() => {
@@ -1062,11 +1133,12 @@ export function LamahatScreen() {
         </div>
       </div>
 
-      {/* ── Tabs (preserved) ── */}
+      {/* ── Tabs (preserved + Nearby added) ── */}
       <div className="mt-6 px-6 flex items-center gap-1 border-b border-border">
         {[
           { k: "feed" as Tab,   l: "Feed",          i: Grid3x3 },
-          { k: "reels" as Tab,  l: "Lamahat Reels", i: Film },
+          { k: "nearby" as Tab, l: "Nearby",        i: MapPin },
+          { k: "reels" as Tab,  l: "Reels",         i: Film },
           { k: "saved" as Tab,  l: "Saved",         i: Bookmark },
           { k: "tagged" as Tab, l: "Tagged",        i: Layers },
         ].map((t) => (
@@ -1083,7 +1155,7 @@ export function LamahatScreen() {
       </div>
 
       {/* ── Discovery summary line ── */}
-      {!isLoading && (
+      {!isLoading && tab !== "nearby" && (
         <div className="px-6 mt-3 text-[10px] text-muted-foreground flex items-center gap-2">
           <SlidersHorizontal className="w-3 h-3" />
           {filteredPhotos.length} photo{filteredPhotos.length === 1 ? "" : "s"}
@@ -1093,8 +1165,80 @@ export function LamahatScreen() {
         </div>
       )}
 
+      {/* ── Nearby tab: privacy-preserving geohash discovery ── */}
+      {tab === "nearby" && (
+        <div className="px-6 mt-3">
+          <div className="rounded-2xl glass p-3 flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-secondary/15 text-secondary flex items-center justify-center shrink-0">
+              <MapPin className="w-4 h-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[12px] font-medium leading-tight">
+                Photos near you · ~2 km radius
+              </div>
+              <div className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1 leading-tight">
+                <ShieldCheck className="w-2.5 h-2.5 shrink-0" />
+                Privacy-preserving · your exact location never leaves the device (geohash only).
+              </div>
+            </div>
+            {nearbyStatus === "ready" && (
+              <span className="text-[10px] text-secondary font-bold tabular-nums">
+                {nearbyPhotos.length}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── Pinterest-style masonry grid (preserved + enhanced) ── */}
-      {isLoading ? (
+      {tab === "nearby" && nearbyStatus === "loading" ? (
+        <div className="flex items-center justify-center py-16 text-xs text-muted-foreground gap-2">
+          <Loader2 className="w-4 h-4 animate-spin" /> Finding photos near you…
+        </div>
+      ) : tab === "nearby" && nearbyStatus === "denied" ? (
+        <div className="px-6 py-16 flex flex-col items-center justify-center text-center">
+          <MapPinOff className="w-12 h-12 text-muted-foreground/50 mb-3" />
+          <div className="font-display text-lg">Location permission needed</div>
+          <div className="text-xs text-muted-foreground mt-1 max-w-xs">
+            We need your location to find photos near you. Your exact coordinates are never sent to
+            the server — only an anonymized geohash.
+          </div>
+          <button
+            onClick={() => void fetchNearby()}
+            className="mt-4 text-xs px-4 py-2 rounded-full bg-secondary text-secondary-foreground flex items-center gap-1.5"
+          >
+            <LocateFixed className="w-3.5 h-3.5" /> Enable location
+          </button>
+        </div>
+      ) : tab === "nearby" && nearbyStatus === "error" ? (
+        <div className="px-6 py-16 flex flex-col items-center justify-center text-center">
+          <MapPinOff className="w-12 h-12 text-muted-foreground/50 mb-3" />
+          <div className="font-display text-lg">Couldn&apos;t get your location</div>
+          <div className="text-xs text-muted-foreground mt-1">
+            Geolocation may be unavailable in this browser. Try again later.
+          </div>
+          <button
+            onClick={() => void fetchNearby()}
+            className="mt-3 text-xs px-3 py-1.5 rounded-full glass hover:bg-muted/60 transition"
+          >
+            Retry
+          </button>
+        </div>
+      ) : tab === "nearby" && nearbyStatus === "ready" && nearbyPhotos.length === 0 ? (
+        <div className="px-6 py-16 flex flex-col items-center justify-center text-center">
+          <MapPin className="w-12 h-12 text-muted-foreground/50 mb-3" />
+          <div className="font-display text-lg">No photos nearby yet</div>
+          <div className="text-xs text-muted-foreground mt-1">
+            Be the first to share a moment in this area!
+          </div>
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent("circle:composer", { detail: { kind: "media" } }))}
+            className="mt-4 text-xs px-4 py-2 rounded-full bg-gradient-gold text-brand-charcoal font-medium flex items-center gap-1"
+          >
+            <Plus className="w-3 h-3" /> Share a photo
+          </button>
+        </div>
+      ) : isLoading ? (
         <div className="flex items-center justify-center py-16 text-xs text-muted-foreground gap-2">
           <Loader2 className="w-4 h-4 animate-spin" /> Loading photos…
         </div>

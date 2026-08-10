@@ -1,0 +1,121 @@
+{
+  "appName": "Cirkle",
+  "tagline": "Un nouvel système d'exploitation social",
+  "dir": "ltr",
+  "greeting": {
+    "morning": "Bonjour",
+    "afternoon": "Bon après-midi",
+    "evening": "Bonsoir",
+    "welcome": "Bon retour"
+  },
+  "common": {
+    "ok": "OK",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "share": "Partager",
+    "close": "Fermer",
+    "retry": "Réessayer",
+    "loading": "Chargement…",
+    "search": "Rechercher",
+    "send": "Envoyer",
+    "join": "Rejoindre",
+    "leave": "Quitter",
+    "dismiss": "Masquer",
+    "learnMore": "En savoir plus",
+    "viewAll": "Tout voir",
+    "showMore": "Afficher plus",
+    "showLess": "Afficher moins"
+  },
+  "tabs": {
+    "home": "Accueil",
+    "wasl": "Wasl",
+    "mashahd": "Mashahd",
+    "lamahat": "Lamahat",
+    "midan": "Midan",
+    "rihla": "Rihla",
+    "pay": "Payer",
+    "mail": "Mail",
+    "profile": "Vous"
+  },
+  "buttons": {
+    "enter": "Entrer dans Cirkle",
+    "skip": "Passer",
+    "continue": "Continuer",
+    "post": "Publier",
+    "reply": "Répondre",
+    "rsvp": "Confirmer",
+    "going": "J'y vais",
+    "interested": "Intéressé",
+    "notGoing": "Je n'y vais pas",
+    "createPost": "Créer une publication",
+    "askAi": "Demander à l'IA",
+    "explore": "Explorer"
+  },
+  "sections": {
+    "featured": "À la une",
+    "nearby": "À proximité",
+    "forYou": "Pour vous",
+    "trending": "Tendance dans votre ville",
+    "workspace": "Mises à jour pro",
+    "spaces": "Espaces en direct",
+    "sponsored": "Sponsorisé",
+    "upcomingCircles": "À venir dans vos cercles",
+    "exclusives": "Exclusivités Cirkle",
+    "news": "Actualités",
+    "miniApps": "Mini-apps dans Cirkle",
+    "mail": "Cirkle Mail"
+  },
+  "onboarding": {
+    "slide1": { "title": "Bienvenue sur Cirkle", "body": "Une seule app. Chaque conversation, vidéo, photo, paiement et voyage — magnifiquement unifiés." },
+    "slide2": { "title": "Huit mondes. Un Cirkle.", "body": "Wasl, Mashahd, Lamahat, Midan, Rihla, Pay, Mail et votre copilote IA. Tout gratuit, pour toujours." },
+    "slide3": { "title": "La vie privée est le produit", "body": "Vos données restent sur votre appareil. Mode fantôme, chiffrement de bout en bout et IA sur appareil par défaut." },
+    "slide4": { "title": "Fonctionne sans Internet", "body": "Le réseau maillé via Bluetooth et Wi-Fi Direct vous garde connecté dans les tunnels, déserts et foules." },
+    "slide5": { "title": "Conçu pour vous", "body": "Choisissez une langue, une ambiance, et entrez. Tout est modifiable plus tard." },
+    "cta": "Entrer dans Cirkle",
+    "skip": "Passer",
+    "next": "Continuer"
+  },
+  "nav": {
+    "home": "Accueil", "wasl": "Wasl", "mashahd": "Mashahd", "lamahat": "Lamahat",
+    "midan": "Midan", "rihla": "Rihla", "pay": "Payer", "profile": "Vous"
+  },
+  "home": {
+    "hello": "Bonsoir",
+    "featured": "À la une",
+    "nearby": "À proximité",
+    "forYou": "Pour vous",
+    "trending": "Tendance dans votre ville",
+    "workspace": "Mises à jour pro",
+    "ask": "Demandez n'importe quoi à Cirkle...",
+    "miniApps": "Mini-apps dans Cirkle",
+    "mail": "Cirkle Mail",
+    "mailSub": "3 nouveaux · 1 attend une réponse",
+    "id": "Cirkle ID · Vérifié",
+    "idSub": "Une seule identité pour tous les services Cirkle",
+    "mesh": "Mesh en ligne · 4 pairs à proximité",
+    "spaces": "Espaces en direct"
+  },
+  "ai": {
+    "title": "Cirkle IA",
+    "sub": "Sur appareil · Privé par conception",
+    "placeholder": "Demandez, planifiez, traduisez, résumez...",
+    "send": "Envoyer",
+    "examples": ["Résumer ma journée", "Planifier mon voyage à Istanbul", "Répondre à Layla dans mon ton", "Rédiger un non poli"]
+  },
+  "palette": {
+    "placeholder": "Recherchez tout, lancez n'importe quelle commande"
+  },
+  "sponsored": {
+    "label": "Sponsorisé",
+    "why": "Pourquoi je vois ça ?",
+    "hide": "Masquer la pub"
+  },
+  "upcoming": {
+    "title": "À venir dans vos cercles",
+    "empty": "Aucun événement à venir dans vos cercles",
+    "rsvpGoing": "Vous y allez",
+    "rsvpInterested": "Vous êtes intéressé"
+  }
+}

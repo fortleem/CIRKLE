@@ -390,6 +390,31 @@ export function MidanScreen() {
       .map((x) => x.p);
   }, [allPosts]);
 
+  // ── Sponsored hashtags (Blueprint §7.3.5). Non-targeted, city-level
+  // only. We fetch the active sponsored hashtags for the viewer's
+  // country/city and prepend them to the trending rail with a clear
+  // "Sponsored" disclosure. Privacy: only country + city are sent.
+  const { data: sponsoredHashtags } = useQuery<Array<{
+    id: string;
+    tag: string;
+    advertiser: string;
+    category: string | null;
+    headline: string;
+    url: string;
+    sponsored: true;
+  }>>({
+    queryKey: ["midan-sponsored", country, city],
+    queryFn: async () => {
+      const params = new URLSearchParams({ country });
+      if (city) params.set("city", city);
+      const r = await fetch(`/api/midan/sponsored?${params.toString()}`, { cache: "no-store" });
+      if (!r.ok) return [];
+      const data = await r.json();
+      return Array.isArray(data?.sponsored) ? data.sponsored : [];
+    },
+    staleTime: 60_000,
+  });
+
   // ── Trending hashtags: mined from the live feed (#hashtag), with a
   // curated fallback list when the feed has no hashtags yet. Each trend
   // is decorated with a category + post count for the Twitter-style rail.
@@ -417,6 +442,38 @@ export function MidanScreen() {
       }));
     return fromFeed.length > 0 ? fromFeed : FALLBACK_TRENDS;
   }, [allPosts]);
+
+  // Merge sponsored hashtags at the TOP of the trending rail, marked
+  // with `sponsored: true` so the UI can render the disclosure badge.
+  const trendingWithSponsored = useMemo(() => {
+    const sponsored = (sponsoredHashtags ?? []).map((s) => ({
+      id: s.id,
+      tag: s.tag,
+      count: 0, // sponsored trends don't show a post count
+      category: s.category || `Sponsored · ${s.advertiser}`,
+      advertiser: s.advertiser,
+      headline: s.headline,
+      url: s.url,
+      sponsored: true as const,
+    }));
+    const organic = trendingTopics.map((t) => ({ ...t, sponsored: false as const }));
+    return [...sponsored, ...organic];
+  }, [sponsoredHashtags, trendingTopics]);
+
+  /** Tracks a sponsored hashtag click (best-effort) and opens the URL. */
+  const openSponsored = (s: { id: string; url: string; tag: string }) => {
+    try {
+      fetch("/api/midan/sponsored", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: s.id, event: "click" }),
+      }).catch(() => {});
+    } catch { /* no-op */ }
+    toast(`Opening sponsored #${s.tag}…`);
+    if (typeof window !== "undefined" && s.url) {
+      window.open(s.url, "_blank", "noopener,noreferrer");
+    }
+  };
 
   // ── Who to follow: pick 3 distinct authors the user doesn't follow yet.
   // Prefers verified authors first, then the rest by engagement score.
@@ -1124,39 +1181,67 @@ export function MidanScreen() {
               onClick={() => toast("Trend settings — coming soon")}
               className="w-7 h-7 rounded-full hover:bg-muted/60 flex items-center justify-center text-muted-foreground hover:text-foreground transition"
               aria-label="Trends info"
-              title="Trending from real engagement — no promoted trends"
+              title="Trending from real engagement — sponsored trends are clearly labelled"
             >
               <Info className="w-3.5 h-3.5" />
             </button>
           </div>
           <ul className="space-y-0.5">
-            {trendingTopics.map((t, idx) => (
-              <li key={t.tag}>
-                <button
-                  onClick={() => toast(`Exploring #${t.tag}…`)}
-                  className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-muted/40 transition text-start group"
-                >
-                  <div className="w-9 h-9 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center shrink-0 group-hover:bg-secondary/20 transition">
-                    <Hash className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[10px] text-muted-foreground leading-tight truncate">{t.category}</div>
-                    <div className="font-medium text-sm truncate">#{t.tag}</div>
-                    <div className="text-[10px] text-muted-foreground leading-tight">
-                      {fmt(t.count)} posts
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-0.5 shrink-0">
-                    <span className="text-[10px] font-bold text-accent tabular-nums">#{idx + 1}</span>
-                    <TrendingUp className="w-3 h-3 text-accent/60 group-hover:scale-110 transition" />
-                  </div>
-                </button>
-              </li>
-            ))}
+            {trendingWithSponsored.map((t, idx) => {
+              const sponsored = (t as any).sponsored === true;
+              return (
+                <li key={`${sponsored ? "sp" : "og"}-${t.tag}`}>
+                  {sponsored ? (
+                    <button
+                      onClick={() => openSponsored(t as any)}
+                      className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-muted/40 transition text-start group"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-gold/15 text-gold flex items-center justify-center shrink-0 group-hover:bg-gold/25 transition">
+                        <Sparkles className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[10px] text-gold leading-tight truncate flex items-center gap-1">
+                          <span className="font-semibold uppercase tracking-wider">Sponsored</span>
+                          <span>· {(t as any).advertiser}</span>
+                        </div>
+                        <div className="font-medium text-sm truncate">#{t.tag}</div>
+                        <div className="text-[10px] text-muted-foreground leading-tight truncate">
+                          {(t as any).headline}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-0.5 shrink-0">
+                        <span className="text-[10px] font-bold text-gold tabular-nums">AD</span>
+                        <Sparkles className="w-3 h-3 text-gold/60 group-hover:scale-110 transition" />
+                      </div>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => toast(`Exploring #${t.tag}…`)}
+                      className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-muted/40 transition text-start group"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center shrink-0 group-hover:bg-secondary/20 transition">
+                        <Hash className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[10px] text-muted-foreground leading-tight truncate">{t.category}</div>
+                        <div className="font-medium text-sm truncate">#{t.tag}</div>
+                        <div className="text-[10px] text-muted-foreground leading-tight">
+                          {fmt(t.count)} posts
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-0.5 shrink-0">
+                        <span className="text-[10px] font-bold text-accent tabular-nums">#{idx + 1}</span>
+                        <TrendingUp className="w-3 h-3 text-accent/60 group-hover:scale-110 transition" />
+                      </div>
+                    </button>
+                  )}
+                </li>
+              );
+            })}
           </ul>
           <div className="mt-3 pt-3 border-t border-border/40 text-[10px] text-muted-foreground flex items-center gap-1.5">
             <ShieldCheck className="w-3 h-3 text-secondary" />
-            Trending from real engagement — no promoted trends, no boosted hashtags.
+            Organic trends from real engagement · Sponsored trends are clearly labelled.
           </div>
         </section>
       )}

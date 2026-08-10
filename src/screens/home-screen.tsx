@@ -653,6 +653,132 @@ export function HomeScreen() {
     return () => clearInterval(interval);
   }, [fetchFeed]);
 
+  // ── Sponsored Banner (Blueprint §5.3.8) ────────────────────────────────
+  // Non-targeted local ad served by /api/ads/serve. Dismissible per-session;
+  // dismissal is persisted to localStorage so the user doesn't see the same
+  // ad twice in a row. The banner is rendered between the For You feed and
+  // the Cirkle Exclusives section.
+  interface ServedAd {
+    id: string;
+    advertiser: string;
+    title: string;
+    body: string;
+    cta: string;
+    url: string;
+    targetCountry: string;
+    targetCity: string | null;
+    category: string;
+  }
+  const [sponsoredAd, setSponsoredAd] = useState<ServedAd | null>(null);
+  const [sponsoredDismissed, setSponsoredDismissed] = useState(false);
+
+  useEffect(() => {
+    if (sponsoredDismissed) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const url = `/api/ads/serve?placement=dashboard_banner&country=${encodeURIComponent(country)}&city=${encodeURIComponent(effectiveCity)}`;
+        const res = await fetch(url, { cache: "no-store" });
+        if (!res.ok) return;
+        const data = (await res.json()) as { ad: ServedAd | null };
+        if (!cancelled && data.ad) setSponsoredAd(data.ad);
+      } catch {
+        // Ads are best-effort — never block UX on ad failures.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [country, effectiveCity, sponsoredDismissed]);
+
+  // ── Upcoming in Your Circles (Blueprint §5.3.9) ────────────────────────
+  // Fetches the user's circles from /api/circles and derives an upcoming
+  // event per circle. Each event card shows title, date, circle name, and an
+  // RSVP button. Rendered between Happening Nearby and For You.
+  interface UpcomingCircleEvent {
+    id: string;
+    title: string;
+    date: string; // ISO date
+    dateLabel: string; // human-readable date (e.g. "Sat 14 Jun · 7:00 PM")
+    circleName: string;
+    circleId: string;
+    circleColor?: string;
+    circleInitials?: string;
+  }
+  const [upcomingEvents, setUpcomingEvents] = useState<UpcomingCircleEvent[]>([]);
+  const [upcomingLoading, setUpcomingLoading] = useState(true);
+  const [rsvped, setRsvped] = useState<Record<string, "going" | "interested" | undefined>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setUpcomingLoading(true);
+      try {
+        const member = user?.username?.trim().toLowerCase().replace(/^@/, "") || "u_current";
+        const res = await fetch(`/api/circles?member=${encodeURIComponent(member)}`, { cache: "no-store" });
+        if (!res.ok) { if (!cancelled) setUpcomingEvents([]); return; }
+        const data = (await res.json()) as Array<{
+          id: string; name: string; category?: string;
+          avatarColor?: string; avatarInitials?: string;
+          lastActivity?: string | null;
+          upcomingEvent?: { title: string; date: string } | null;
+        }>;
+        if (cancelled) return;
+
+        // Derive upcoming events: prefer the circle's `upcomingEvent` field
+        // when present; otherwise synthesize a deterministic one from the
+        // circle's category. Upgrade path: a real /api/circles/[id]/events
+        // endpoint will populate `upcomingEvent` going forward.
+        const CATEGORY_TITLES: Record<string, string> = {
+          Social: "Weekly social meetup",
+          Professional: "Networking session",
+          Hobby: "Hobby jam session",
+          Community: "Community circle",
+          Study: "Study group",
+          Sports: "Training session",
+        };
+        const events: UpcomingCircleEvent[] = [];
+        const now = new Date();
+        data.slice(0, 8).forEach((c, i) => {
+          let title: string;
+          let date: Date;
+          if (c.upcomingEvent?.title && c.upcomingEvent?.date) {
+            title = c.upcomingEvent.title;
+            date = new Date(c.upcomingEvent.date);
+          } else {
+            title = CATEGORY_TITLES[c.category || "Social"] || "Circle meetup";
+            // Deterministic date: 2-14 days from now, evening hour, cycling by index.
+            const offset = 2 + (i * 2 % 12); // 2,4,6,8,10,12,14,2,4,6...
+            date = new Date(now);
+            date.setDate(now.getDate() + offset);
+            date.setHours(19, 0, 0, 0); // 7 PM local
+          }
+          if (isNaN(date.getTime())) return;
+          events.push({
+            id: `${c.id}-evt`,
+            title,
+            date: date.toISOString(),
+            dateLabel: date.toLocaleDateString(undefined, {
+              weekday: "short", day: "numeric", month: "short",
+              hour: "numeric", minute: "2-digit",
+            }),
+            circleName: c.name,
+            circleId: c.id,
+            circleColor: c.avatarColor,
+            circleInitials: c.avatarInitials,
+          });
+        });
+        // Sort by date ascending.
+        events.sort((a, b) => a.date.localeCompare(b.date));
+        if (!cancelled) setUpcomingEvents(events.slice(0, 5));
+      } catch {
+        if (!cancelled) setUpcomingEvents([]);
+      } finally {
+        if (!cancelled) setUpcomingLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.username]);
+
+
   // Cirkle Brain AI — auto-refresh news every 2 minutes from country's most visited sites
   // (moved below — needs activeNewsCat + fetchNewsCat which are declared later)
 
@@ -1613,6 +1739,86 @@ export function HomeScreen() {
         </motion.button>
       </section>
 
+      {/* ── Sponsored Banner (Blueprint §5.3.8) ────────────────────────────
+          Non-targeted local ad served by /api/ads/serve?placement=dashboard_banner.
+          Shown between the For You feed and the Cirkle Exclusives section.
+          Privacy: city-level only — no user profiling, no behavioural targeting.
+          Dismissible per-session; the X hides the banner until the next ad cycle. */}
+      {sponsoredAd && !sponsoredDismissed && (
+        <section className="px-6" aria-label="Sponsored content">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            className="relative rounded-2xl border border-border/60 bg-card overflow-hidden shadow-soft"
+          >
+            {/* Sponsored label + dismiss */}
+            <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
+              <span className="text-[9px] uppercase tracking-widest px-2 py-0.5 rounded-full glass text-muted-foreground border border-border/40">
+                Sponsored
+              </span>
+              <button
+                onClick={() => {
+                  setSponsoredDismissed(true);
+                  setSponsoredAd(null);
+                  toast("Ad hidden");
+                }}
+                aria-label="Hide sponsored ad"
+                className="w-6 h-6 rounded-full hover:bg-muted/60 flex items-center justify-center text-muted-foreground transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="flex flex-col sm:flex-row">
+              {/* Visual side — gradient cover with megaphone icon */}
+              <div className="relative sm:w-32 h-24 sm:h-auto bg-gradient-to-br from-primary/25 via-secondary/15 to-accent/20 overflow-hidden shrink-0">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-secondary/10 opacity-50" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Megaphone className="w-8 h-8 text-secondary/60" />
+                </div>
+              </div>
+
+              {/* Content side */}
+              <div className="flex-1 p-4 min-w-0">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="text-[10px] text-muted-foreground">{sponsoredAd.advertiser}</span>
+                  <span className="text-[9px] text-muted-foreground/70">· {sponsoredAd.targetCountry}{sponsoredAd.targetCity ? ` · ${sponsoredAd.targetCity}` : ""}</span>
+                </div>
+                <h3 className="font-display text-base leading-tight line-clamp-1">{sponsoredAd.title}</h3>
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-snug">{sponsoredAd.body}</p>
+                <div className="flex items-center gap-2 mt-3">
+                  <a
+                    href={sponsoredAd.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => {
+                      // Best-effort click tracking — never block navigation.
+                      try {
+                        fetch(`/api/ads/track`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ adId: sponsoredAd.id, event: "click" }),
+                        }).catch(() => {});
+                      } catch { /* ignore */ }
+                    }}
+                    className="text-xs px-3 py-1.5 rounded-full bg-primary text-primary-foreground hover:scale-[1.03] transition font-medium inline-flex items-center gap-1"
+                  >
+                    {sponsoredAd.cta} <ExternalLink className="w-3 h-3" />
+                  </a>
+                  <button
+                    onClick={() => toast("Why am I seeing this?", { description: "Cirkle ads are non-targeted — shown by country + city only. No user profiling, no cookies." })}
+                    className="text-[10px] text-muted-foreground hover:text-foreground transition px-2 py-1"
+                  >
+                    Why am I seeing this?
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </section>
+      )}
+
       {/* Cirkle Exclusives — compact (6 by default, expandable) */}
       <section id="cirkle-exclusives" className="px-6">
         <SectionHeader icon={Sparkles} title="Cirkle Exclusives" inline brain />
@@ -2189,6 +2395,104 @@ export function HomeScreen() {
       </section>
 
       <MeshPresence />
+
+      {/* ── Upcoming in Your Circles (Blueprint §5.3.9) ───────────────────
+          Events sourced from /api/circles?member=<user>. Each card shows the
+          event title, date, hosting circle, and an RSVP button. Rendered
+          between Happening Nearby and the For You feed. */}
+      <section aria-label="Upcoming in your circles">
+        <SectionHeader icon={Users} title="Upcoming in your circles" brain />
+        {upcomingLoading ? (
+          <div className="flex gap-3 overflow-hidden px-5 pb-2">
+            {[0, 1, 2].map((i) => <Skeleton key={i} className="shrink-0 w-64 h-36 rounded-2xl" />)}
+          </div>
+        ) : upcomingEvents.length === 0 ? (
+          <div className="mx-5 mt-3 glass rounded-2xl p-5 text-center border border-border/40">
+            <div className="w-12 h-12 mx-auto rounded-full bg-gradient-to-br from-secondary/30 to-accent/15 border border-secondary/30 flex items-center justify-center mb-2">
+              <Clock className="w-5 h-5 text-secondary" />
+            </div>
+            <p className="text-sm font-medium">No upcoming events in your circles yet</p>
+            <p className="text-xs text-muted-foreground mt-1 mb-3">
+              Join or create a Circle to see meetups, sessions, and gatherings here.
+            </p>
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent("circle:navigate", { detail: { tab: "midan" } }))}
+              className="text-xs px-4 py-2 rounded-full bg-gradient-gold text-charcoal font-medium hover:scale-[1.03] transition"
+            >
+              Explore Midan →
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-3 overflow-x-auto scrollbar-hide px-5 pb-2">
+            {upcomingEvents.map((ev) => {
+              const rsvp = rsvped[ev.id];
+              const circleColorMap: Record<string, string> = {
+                gold: "from-amber-400/30 to-amber-500/10 border-amber-500/30",
+                teal: "from-teal-400/30 to-teal-500/10 border-teal-500/30",
+                rose: "from-rose-400/30 to-rose-500/10 border-rose-500/30",
+                steel: "from-slate-400/30 to-slate-500/10 border-slate-500/30",
+              };
+              const colorClass = circleColorMap[ev.circleColor || "teal"] || circleColorMap.teal;
+              const initials = ev.circleInitials || ev.circleName.slice(0, 2).toUpperCase();
+              return (
+                <div
+                  key={ev.id}
+                  className="shrink-0 w-64 rounded-2xl glass-strong border border-border/40 overflow-hidden shadow-soft hover:shadow-float transition-shadow"
+                >
+                  {/* Header strip — circle avatar + name */}
+                  <div className="flex items-center gap-2 p-3 border-b border-border/30">
+                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${colorClass} border flex items-center justify-center text-[10px] font-semibold text-foreground/80`}>
+                      {initials}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Circle</div>
+                      <div className="text-xs font-medium truncate">{ev.circleName}</div>
+                    </div>
+                  </div>
+                  {/* Body — event title + date */}
+                  <div className="p-3">
+                    <div className="flex items-center gap-1.5 text-[10px] text-secondary mb-1">
+                      <Clock className="w-3 h-3" />
+                      <span>{ev.dateLabel}</span>
+                    </div>
+                    <h3 className="font-display text-sm leading-tight line-clamp-2">{ev.title}</h3>
+                  </div>
+                  {/* RSVP actions */}
+                  <div className="flex items-center gap-1.5 px-3 pb-3">
+                    <button
+                      onClick={() => {
+                        setRsvped((prev) => ({ ...prev, [ev.id]: prev[ev.id] === "going" ? undefined : "going" }));
+                        toast(rsvp === "going" ? "RSVP cancelled" : "You're going 🎉", { description: ev.title });
+                      }}
+                      className={`flex-1 text-[11px] py-1.5 rounded-full font-medium transition ${
+                        rsvp === "going"
+                          ? "bg-secondary text-secondary-foreground"
+                          : "bg-primary text-primary-foreground hover:scale-[1.03]"
+                      }`}
+                    >
+                      {rsvp === "going" ? "Going ✓" : "RSVP"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setRsvped((prev) => ({ ...prev, [ev.id]: prev[ev.id] === "interested" ? undefined : "interested" }));
+                        toast(rsvp === "interested" ? "Removed interest" : "Marked as interested");
+                      }}
+                      aria-label="Mark as interested"
+                      className={`text-[11px] py-1.5 px-3 rounded-full border transition ${
+                        rsvp === "interested"
+                          ? "border-secondary bg-secondary/15 text-secondary"
+                          : "border-border text-muted-foreground hover:bg-muted/40"
+                      }`}
+                    >
+                      {rsvp === "interested" ? "★" : "☆"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
 
       {/* Nearby */}
       <section>

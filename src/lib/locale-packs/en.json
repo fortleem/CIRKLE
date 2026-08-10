@@ -1,0 +1,121 @@
+{
+  "appName": "Cirkle",
+  "tagline": "A new social operating system",
+  "dir": "ltr",
+  "greeting": {
+    "morning": "Good morning",
+    "afternoon": "Good afternoon",
+    "evening": "Good evening",
+    "welcome": "Welcome back"
+  },
+  "common": {
+    "ok": "OK",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "share": "Share",
+    "close": "Close",
+    "retry": "Retry",
+    "loading": "Loading…",
+    "search": "Search",
+    "send": "Send",
+    "join": "Join",
+    "leave": "Leave",
+    "dismiss": "Dismiss",
+    "learnMore": "Learn more",
+    "viewAll": "View all",
+    "showMore": "Show more",
+    "showLess": "Show less"
+  },
+  "tabs": {
+    "home": "Home",
+    "wasl": "Wasl",
+    "mashahd": "Mashahd",
+    "lamahat": "Lamahat",
+    "midan": "Midan",
+    "rihla": "Rihla",
+    "pay": "Pay",
+    "mail": "Mail",
+    "profile": "You"
+  },
+  "buttons": {
+    "enter": "Enter Cirkle",
+    "skip": "Skip",
+    "continue": "Continue",
+    "post": "Post",
+    "reply": "Reply",
+    "rsvp": "RSVP",
+    "going": "Going",
+    "interested": "Interested",
+    "notGoing": "Not going",
+    "createPost": "Create post",
+    "askAi": "Ask AI",
+    "explore": "Explore"
+  },
+  "sections": {
+    "featured": "Featured",
+    "nearby": "Nearby happenings",
+    "forYou": "For you",
+    "trending": "Trending in your city",
+    "workspace": "Workspace updates",
+    "spaces": "Live spaces",
+    "sponsored": "Sponsored",
+    "upcomingCircles": "Upcoming in your circles",
+    "exclusives": "Cirkle Exclusives",
+    "news": "News",
+    "miniApps": "Mini apps inside Cirkle",
+    "mail": "Cirkle Mail"
+  },
+  "onboarding": {
+    "slide1": { "title": "Welcome to Cirkle", "body": "One app. Every conversation, video, photo, payment and journey — beautifully unified." },
+    "slide2": { "title": "Eight worlds. One Cirkle.", "body": "Wasl, Mashahd, Lamahat, Midan, Rihla, Pay, Mail and your AI co-pilot. All free, forever." },
+    "slide3": { "title": "Privacy is the product", "body": "Your data lives on your device. Ghost mode, end-to-end encryption, and on-device AI by default." },
+    "slide4": { "title": "Works without internet", "body": "Mesh networking over Bluetooth and Wi-Fi Direct keeps you connected in tunnels, deserts and crowds." },
+    "slide5": { "title": "Designed for you", "body": "Pick a language, a vibe, and step inside. You can change anything later." },
+    "cta": "Enter Cirkle",
+    "skip": "Skip",
+    "next": "Continue"
+  },
+  "nav": {
+    "home": "Home", "wasl": "Wasl", "mashahd": "Mashahd", "lamahat": "Lamahat",
+    "midan": "Midan", "rihla": "Rihla", "pay": "Pay", "profile": "You"
+  },
+  "home": {
+    "hello": "Good evening",
+    "featured": "Featured",
+    "nearby": "Nearby happenings",
+    "forYou": "For you",
+    "trending": "Trending in your city",
+    "workspace": "Workspace updates",
+    "ask": "Ask Cirkle anything...",
+    "miniApps": "Mini apps inside Cirkle",
+    "mail": "Cirkle Mail",
+    "mailSub": "3 new · 1 needs a reply",
+    "id": "Cirkle ID · Verified",
+    "idSub": "One identity across every Cirkle service",
+    "mesh": "Mesh online · 4 peers nearby",
+    "spaces": "Live spaces"
+  },
+  "ai": {
+    "title": "Cirkle AI",
+    "sub": "On-device · Private by design",
+    "placeholder": "Ask, plan, translate, summarize...",
+    "send": "Send",
+    "examples": ["Summarize today", "Plan my Istanbul trip", "Reply to Layla in my tone", "Draft a polite no"]
+  },
+  "palette": {
+    "placeholder": "Search anything, run any command"
+  },
+  "sponsored": {
+    "label": "Sponsored",
+    "why": "Why am I seeing this?",
+    "hide": "Hide ad"
+  },
+  "upcoming": {
+    "title": "Upcoming in your circles",
+    "empty": "No upcoming events in your circles yet",
+    "rsvpGoing": "You're going",
+    "rsvpInterested": "You're interested"
+  }
+}

@@ -1648,3 +1648,278 @@ model VideoTranscode {
   @@index([videoId])
   @@index([status])
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GAPS-BATCH-2 — Circle events/members/join-requests/audit + tipping +
+// affiliate + sponsored hashtags + moderation queue + nearby photos.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Circle Group events calendar (Blueprint §10.5.1).
+/// One row per scheduled event in a Circle.
+model CircleEvent {
+  id          String   @id @default(cuid())
+  circleId    String
+  /// Cirkle username (lowercase) of the event creator.
+  createdBy   String
+  title       String
+  description String   @default("")
+  /// Optional physical / virtual location label (free text).
+  location    String?
+  /// ISO date+time the event starts.
+  startsAt    DateTime
+  /// ISO date+time the event ends (optional — defaults to startsAt + 1h
+  /// on the API side when omitted).
+  endsAt      DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rsvps       EventRSVP[]
+
+  @@index([circleId, startsAt])
+  @@index([createdBy])
+}
+
+/// Per-user RSVP state for a CircleEvent.
+/// One row per (event, user) — status: going | maybe | not_going.
+model EventRSVP {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     CircleEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  /// Cirkle username (lowercase) of the responder.
+  userLabel String
+  /// going | maybe | not_going
+  status    String   @default("going")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([eventId, userLabel])
+  @@index([eventId, status])
+  @@index([userLabel])
+}
+
+/// Join request to a private Circle (Blueprint §10.5.7).
+/// One row per (circle, requester) until approved/denied.
+model CircleJoinRequest {
+  id         String   @id @default(cuid())
+  circleId   String
+  /// Cirkle username (lowercase) of the user requesting to join.
+  userLabel  String
+  /// Optional note from the requester to the circle owner/admin.
+  note       String   @default("")
+  /// pending | approved | denied
+  status     String   @default("pending")
+  /// Username of the admin who reviewed the request (null while pending).
+  reviewedBy String?
+  reviewedAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([circleId, userLabel])
+  @@index([circleId, status])
+  @@index([userLabel])
+}
+
+/// Circle audit log (Blueprint §10.5.8).
+/// Records all admin/role/settings/membership mutations in a Circle for
+/// transparency. One row per auditable action.
+model CircleAuditLog {
+  id         String   @id @default(cuid())
+  circleId   String
+  /// "member_joined" | "member_left" | "role_changed" | "settings_changed"
+  /// | "event_created" | "event_removed" | "join_request_approved"
+  /// | "join_request_denied" | "circle_created"
+  action     String
+  /// Username of the actor performing the action.
+  actor      String
+  /// Username of the target of the action (e.g. the member whose role
+  /// changed). May be null for circle-wide actions (settings_changed).
+  target     String?
+  /// Human-readable summary of the action + before/after state.
+  summary    String
+  createdAt  DateTime @default(now())
+
+  @@index([circleId, createdAt])
+  @@index([action])
+}
+
+/// Creator tip (Blueprint §7.4).
+/// One row per tip sent from one Cirkle user to a creator.
+model CreatorTip {
+  id          String   @id @default(cuid())
+  /// Cirkle username (lowercase) of the sender.
+  fromUser    String
+  /// Cirkle username (lowercase) of the receiving creator.
+  toCreator   String
+  amount      Float
+  currency    String   @default("USD")
+  /// Payment method id (e.g. "fawry", "stc-pay", "stripe", "usdc").
+  method      String
+  /// Platform processing fee (in same currency as amount).
+  fee         Float    @default(0)
+  /// Net amount the creator receives (amount - fee).
+  netAmount   Float    @default(0)
+  /// "pending" | "completed" | "failed" | "refunded"
+  status      String   @default("completed")
+  /// Optional message attached to the tip.
+  message     String?
+  createdAt   DateTime @default(now())
+
+  @@index([toCreator, status])
+  @@index([fromUser])
+  @@index([method])
+}
+
+/// Affiliate click tracking (Blueprint §7.3.2).
+/// One row per click on a creator's affiliate link.
+model AffiliateClick {
+  id           String   @id @default(cuid())
+  /// Cirkle username (lowercase) of the affiliate creator.
+  affiliateId  String
+  /// Optional product/order identifier the click was for.
+  productId    String?
+  /// Best-effort country code of the clicker (no user id — privacy).
+  country      String?
+  /// Referrer URL or "direct" — never personal data.
+  referrer     String?
+  createdAt    DateTime @default(now())
+
+  @@index([affiliateId, createdAt])
+  @@index([productId])
+}
+
+/// Affiliate sale tracking (Blueprint §7.3.2).
+/// One row per purchase attributed to a creator's affiliate link.
+model AffiliateSale {
+  id           String   @id @default(cuid())
+  affiliateId  String
+  /// Merchant order id (opaque to Cirkle — we only store attribution).
+  orderId      String
+  /// Total order amount (in `currency`).
+  amount       Float
+  currency     String   @default("USD")
+  /// Commission rate the creator earns (0..1). e.g. 0.05 = 5%.
+  commissionRate Float  @default(0.05)
+  /// Commission the creator earned on this sale (amount * rate).
+  commission   Float    @default(0)
+  /// "pending" | "confirmed" | "paid" | "cancelled"
+  status       String   @default("pending")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([affiliateId, orderId])
+  @@index([affiliateId, status])
+}
+
+/// Sponsored hashtag (Blueprint §7.3.5).
+/// A paid-for promoted hashtag shown in the Midan trending rail.
+/// Non-targeted (city-level only) per Blueprint §30.4 — no user profiling.
+model SponsoredHashtag {
+  id              String   @id @default(cuid())
+  /// The hashtag (without #) being sponsored.
+  tag             String
+  /// Advertiser name shown in the disclosure.
+  advertiser      String
+  /// Target country code (ISO-2). Required.
+  targetCountry   String
+  /// Optional target city (null = nationwide).
+  targetCity      String?
+  /// Optional category label (e.g. "Tech", "Food").
+  category        String?
+  /// Headline displayed on the trending card.
+  headline        String
+  /// Click-through URL.
+  url             String
+  /// Sponsored CPM budget (best-effort settlement, like ad-engine).
+  budget          Float    @default(0)
+  spent           Float    @default(0)
+  impressions     Int      @default(0)
+  clicks          Int      @default(0)
+  startDate       DateTime
+  endDate         DateTime
+  status          String   @default("active") // active | paused | ended | exhausted
+  createdAt       DateTime @default(now())
+
+  @@index([targetCountry, status, startDate, endDate])
+  @@index([tag])
+}
+
+/// NSFW / content moderation flag (Blueprint §8.8).
+/// One row per piece of content flagged for human review.
+/// (On-device NSFW model is deferred per ADR-003; the queue + workflow
+/// ships now.)
+model ModerationFlag {
+  id           String   @id @default(cuid())
+  /// ID of the moderated content (Post id, Comment id, etc.).
+  contentId    String
+  /// "post" | "comment" | "account" | "message"
+  contentType  String   @default("post")
+  /// Username of the flagger. May be "system" when auto-flagged.
+  flaggedBy    String   @default("system")
+  /// Reason category: "nsfw" | "spam" | "harassment" | "violence" |
+  /// "illegal" | "other".
+  reason       String
+  /// Optional free-text note from the flagger.
+  note         String?
+  /// "pending" | "approved" | "removed" | "blurred" | "dismissed"
+  status       String   @default("pending")
+  /// Username of the moderator who reviewed (null while pending).
+  reviewedBy   String?
+  /// Moderator's note explaining the decision.
+  reviewNote   String?
+  reviewedAt   DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  appeals      ModerationActionAppeal[]
+
+  @@index([status, createdAt])
+  @@index([contentId])
+  @@index([contentType])
+}
+
+/// Appeal against a moderation decision (Blueprint §8.8).
+/// One row per appeal filed by a user against a ModerationFlag decision.
+/// (Distinct from the P2.4 `ModerationAppeal` model — that one is the
+/// governance jury-voted appeal against automated moderation; this one
+/// is the §8.8 single-user appeal workflow.)
+model ModerationActionAppeal {
+  id         String   @id @default(cuid())
+  flagId     String
+  flag       ModerationFlag @relation(fields: [flagId], references: [id], onDelete: Cascade)
+  /// Username filing the appeal (the content's author).
+  appellant  String
+  reason     String
+  /// "open" | "upheld" | "overturned" | "closed"
+  status     String   @default("open")
+  /// Moderator note on the appeal decision.
+  decisionNote String?
+  decidedBy  String?
+  decidedAt  DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([flagId, status])
+  @@index([appellant])
+}
+
+/// Privacy-preserving geohash index for nearby photo discovery
+/// (Blueprint §8.4). Stores ONLY the geohash — never exact coordinates.
+/// A geohash of precision 7 (~153m × 153m cells) is precise enough for
+/// discovery within a city block while preventing exact re-identification.
+model GeoPhotoIndex {
+  id         String   @id @default(cuid())
+  /// Post id this geo entry is for (Post with module=lamahat).
+  postId     String
+  /// Geohash string (lowercase base32). Precision 6 (~1.2km × 0.6km)
+  /// by default — provides strong k-anonymity (100s of users per cell
+  /// in dense areas). The client never sends the original lat/lng to
+  /// the server; it computes the geohash locally and sends only that.
+  geohash    String
+  /// Best-effort country code (for region scoping queries).
+  country    String?
+  createdAt  DateTime @default(now())
+
+  @@unique([postId])
+  @@index([geohash])
+  @@index([country, geohash])
+}
