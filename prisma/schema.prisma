@@ -1923,3 +1923,49 @@ model GeoPhotoIndex {
   @@index([geohash])
   @@index([country, geohash])
 }
+
+/// Offline content stash item (Blueprint §8.9 / §26).
+/// Stores a server-side copy of content (post, article, video, audio,
+/// wiki page, URL) the user has saved for offline access. Items are
+/// created on the client when the user taps "Save for offline" and
+/// synced up to the server when connectivity returns. The stash is
+/// per-user (`userLabel`) and content-addressable via `contentHash`
+/// for dedup. A best-effort `expiresAt` enforces a retention window
+/// (§26 — data minimisation): clients SHOULD prune expired items
+/// locally, and the server MAY purge expired rows on read.
+model OfflineStashItem {
+  id          String   @id @default(cuid())
+  /// Owner handle (lowercase, no leading @).
+  userLabel   String
+  /// "post" | "article" | "video" | "audio" | "wiki" | "url" | "lamahat" | "midan"
+  contentType String
+  /// Server-side id of the source content when known (nullable for
+  /// arbitrary URL stash).
+  contentId   String?
+  /// Snapshot fields for offline display (so the client doesn't need
+  /// a second round-trip to render the stashed item).
+  title       String?
+  body        String?
+  mediaUrl    String?
+  sourceUrl   String?
+  /// JSON-encoded blob (author, tags, duration, etc.).
+  metadata    String?
+  /// "pending" (queued for upload) | "synced" (server has copy) |
+  /// "failed" (upload failed — retry) | "stale" (source changed).
+  syncStatus  String   @default("pending")
+  /// sha256 hex of canonical content for dedup. Null when the source
+  /// is too large to hash on-device.
+  contentHash String?
+  /// Estimated payload size (bytes) — for offline storage budget UI.
+  sizeBytes   Int      @default(0)
+  /// Optional retention window. Null = no expiry.
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lastSyncedAt DateTime?
+
+  @@unique([userLabel, contentType, contentHash])
+  @@index([userLabel, syncStatus])
+  @@index([userLabel, contentType])
+  @@index([expiresAt])
+}
