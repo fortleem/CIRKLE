@@ -1,8 +1,10 @@
-// Circle (دواير) — Prisma schema
+// CIRKLE — Prisma schema
+// Database: Turso (libsql) — synced across GitHub, Vercel, and Turso
 // Learn more: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
