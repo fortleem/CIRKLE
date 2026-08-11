@@ -1,0 +1,171 @@
+{
+  "dir": "ltr",
+  "appName": "서클",
+  "tagline": "새로운 소셜 시스템",
+  "greeting": {
+    "morning": "좋은 아침이에요",
+    "afternoon": "안녕하세요",
+    "evening": "좋은 저녁이에요",
+    "welcome": "다시 오신 것을 환영해요"
+  },
+  "common": {
+    "ok": "확인",
+    "cancel": "취소",
+    "save": "저장",
+    "delete": "삭제",
+    "edit": "편집",
+    "share": "공유",
+    "close": "닫기",
+    "retry": "다시 시도",
+    "loading": "로딩 중…",
+    "search": "검색",
+    "send": "보내기",
+    "join": "참여",
+    "leave": "나가기",
+    "dismiss": "닫기",
+    "learnMore": "더 알아보기",
+    "viewAll": "전체 보기",
+    "showMore": "더 보기",
+    "showLess": "줄여서 보기"
+  },
+  "tabs": {
+    "home": "홈",
+    "wasl": "와슬",
+    "mashahd": "마샤드",
+    "lamahat": "라마핫",
+    "midan": "미단",
+    "rihla": "리흐라",
+    "pay": "결제",
+    "mail": "메일",
+    "profile": "프로필",
+    "more": "더보기"
+  },
+  "buttons": {
+    "enter": "서클 입장",
+    "skip": "건너뛰기",
+    "continue": "계속",
+    "post": "게시",
+    "reply": "답글",
+    "rsvp": "참석하시겠어요?",
+    "going": "참석",
+    "interested": "관심",
+    "notGoing": "불참",
+    "createPost": "게시물 작성",
+    "askAi": "AI에게 물어보기",
+    "explore": "탐색",
+    "cancel": "취소",
+    "save": "저장",
+    "delete": "삭제",
+    "edit": "편집",
+    "share": "공유",
+    "like": "좋아요",
+    "comment": "댓글",
+    "follow": "팔로우",
+    "unfollow": "언팔로우",
+    "send": "보내기",
+    "search": "검색",
+    "filter": "필터",
+    "sort": "정렬",
+    "close": "닫기",
+    "back": "뒤로",
+    "next": "다음",
+    "done": "완료",
+    "create": "만들기",
+    "join": "참여",
+    "leave": "나가기",
+    "invite": "초대",
+    "accept": "수락",
+    "decline": "거절",
+    "retry": "재시도",
+    "refresh": "새로고침",
+    "loadMore": "더 불러오기",
+    "showMore": "더 보기",
+    "showLess": "줄이기",
+    "customize": "맞춤 설정",
+    "settings": "설정"
+  },
+  "sections": {
+    "featured": "추천",
+    "nearby": "주변",
+    "forYou": "회원님을 위해",
+    "trending": "트렌드",
+    "workspace": "워크스페이스",
+    "spaces": "라이브 스페이스",
+    "sponsored": "스폰서",
+    "upcomingCircles": "예정된 서클",
+    "exclusives": "서클 익스클루시브",
+    "news": "뉴스",
+    "miniApps": "미니 앱",
+    "mail": "서클 메일"
+  },
+  "onboarding": {
+    "slide1": {
+      "title": "서클에 오신 것을 환영합니다",
+      "body": "하나의 앱. 모든 대화, 비디오, 사진, 결제, 여정—아름답게 통합."
+    },
+    "slide2": {
+      "title": "여덟 세계. 하나의 서클.",
+      "body": "와슬, 마샤드, 라마핫, 미단, 리흐라, 결제, 메일, AI. 모두 무료."
+    },
+    "slide3": {
+      "title": "프라이버시가 제품입니다",
+      "body": "데이터는 기기에. 고스트 모드, 종단 간 암호화, 온디바이스 AI."
+    },
+    "slide4": {
+      "title": "인터넷 없이 작동",
+      "body": "블루투스와 Wi-Fi Direct 메쉬 네트워크."
+    },
+    "slide5": {
+      "title": "당신을 위해",
+      "body": "언어와 스타일을 선택하세요. 나중에 변경 가능."
+    },
+    "cta": "서클 입장",
+    "skip": "건너뛰기",
+    "next": "계속"
+  },
+  "nav": {
+    "home": "홈",
+    "wasl": "와슬",
+    "mashahd": "마샤드",
+    "lamahat": "라마핫",
+    "midan": "미단",
+    "rihla": "리흐라",
+    "pay": "결제",
+    "profile": "프로필"
+  },
+  "home": {
+    "hello": "좋은 저녁이에요",
+    "featured": "추천",
+    "nearby": "주변",
+    "forYou": "회원님을 위해",
+    "trending": "트렌드",
+    "workspace": "워크스페이스"
+  },
+  "ai": {
+    "brainActive": "AI 활성",
+    "askBrain": "서클에게 물어보기",
+    "brainThinking": "생각 중…"
+  },
+  "palette": {
+    "vibrant": "비비드"
+  },
+  "privacy": {
+    "noAds": "광고 없음",
+    "noTracking": "추적 없음",
+    "dataOnDevice": "데이터 on device",
+    "freeForever": "영구 무료",
+    "encrypted": "암호화",
+    "yourKeysYourMoney": "당신의 키, 당신의 돈"
+  },
+  "sponsored": {
+    "label": "스폰서",
+    "yourAdHere": "여기에 광고"
+  },
+  "upcoming": {
+    "events": "예정",
+    "rsvp": "참석하시겠어요?",
+    "going": "참석",
+    "maybe": "아마도",
+    "notGoing": "불참"
+  }
+}

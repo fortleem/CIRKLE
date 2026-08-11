@@ -1,129 +1,273 @@
 /**
  * i18n Locale Pack Loader — Blueprint §2.6.
  *
- * Cirkle ships 7 locale packs (en, ar, fr, es, tr, ur, hi). Each pack is a
- * JSON file under `src/lib/locale-packs/<code>.json` that contains every
- * user-facing UI string (greeting, tabs, buttons, sections, onboarding,
- * nav, home, ai, palette, sponsored, upcoming…).
+ * CIRKLE ships 17 locale packs covering every major language region.
+ * Each pack is a JSON file under `src/lib/locale-packs/<code>.json`
+ * containing 317 user-facing UI strings.
  *
- * This module is intentionally **isomorphic** (no `"server-only"`, no
- * Prisma import) so it can be consumed from server routes, Edge middleware,
- * React client components, and the onboarding flow alike. The packs are
- * imported statically — that means `LOCALE_PACKS` is available
- * synchronously on both the server and the client without any network
- * round-trip. (For huge future translation tables, `loadLocalePack`
- * below shows the dynamic-import upgrade path.)
+ * Country → locale mapping rules:
+ *   - Egypt (EG) → ar (Egyptian colloquial)
+ *   - All other Arab countries → ar-formal (Modern Standard Arabic)
+ *   - Iran → fa (Persian, RTL)
+ *   - Pakistan → ur (Urdu, RTL)
+ *   - Rest of world → mapped by official language
+ *
+ * This module is isomorphic (no "server-only") so it works on server,
+ * client, and Edge middleware alike.
  */
 
 import enJson from "./locale-packs/en.json";
 import arJson from "./locale-packs/ar.json";
+import arFormalJson from "./locale-packs/ar-formal.json";
 import frJson from "./locale-packs/fr.json";
 import esJson from "./locale-packs/es.json";
 import trJson from "./locale-packs/tr.json";
 import urJson from "./locale-packs/ur.json";
 import hiJson from "./locale-packs/hi.json";
+import zhJson from "./locale-packs/zh.json";
+import jaJson from "./locale-packs/ja.json";
+import itJson from "./locale-packs/it.json";
+import deJson from "./locale-packs/de.json";
+import ruJson from "./locale-packs/ru.json";
+import ptJson from "./locale-packs/pt.json";
+import idJson from "./locale-packs/id.json";
+import koJson from "./locale-packs/ko.json";
+import faJson from "./locale-packs/fa.json";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Canonical Cirkle locale codes (ISO 639-1 with macrolanguage fallbacks). */
-export type LocaleCode = "en" | "ar" | "fr" | "es" | "tr" | "ur" | "hi";
+export type LocaleCode =
+  | "en" | "ar" | "ar-formal" | "fr" | "es" | "tr" | "ur" | "hi"
+  | "zh" | "ja" | "it" | "de" | "ru" | "pt" | "id" | "ko" | "fa";
 
-/**
- * The shape of every locale pack — derived from the English reference.
- *
- * Note: we widen the literal-typed `dir` field to `"ltr" | "rtl"` so the
- * other packs (whose `dir` may be `"rtl"`) satisfy the same type.
- */
 type EnPack = typeof enJson;
 export type LocalePack = Omit<EnPack, "dir"> & { dir: "ltr" | "rtl" };
-
-/** Direction-of-text hint surfaced to <html dir=…> from the active pack. */
 export type TextDirection = "ltr" | "rtl";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Pack registry
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Synchronous registry of every loaded pack. Used by `getPack` and the
- * back-compat shim re-exported from `@/lib/i18n`. New locales are added
- * by dropping another `<code>.json` file into `locale-packs/` and adding
- * a single entry here.
- */
 export const LOCALE_PACKS: Record<LocaleCode, LocalePack> = {
   en: enJson as LocalePack,
   ar: arJson as LocalePack,
+  "ar-formal": arFormalJson as LocalePack,
   fr: frJson as LocalePack,
   es: esJson as LocalePack,
   tr: trJson as LocalePack,
   ur: urJson as LocalePack,
   hi: hiJson as LocalePack,
+  zh: zhJson as LocalePack,
+  ja: jaJson as LocalePack,
+  it: itJson as LocalePack,
+  de: deJson as LocalePack,
+  ru: ruJson as LocalePack,
+  pt: ptJson as LocalePack,
+  id: idJson as LocalePack,
+  ko: koJson as LocalePack,
+  fa: faJson as LocalePack,
 };
 
-/** All locale codes — useful for iteration / pickers / Accept-Language parsers. */
 export const ALL_LOCALES: readonly LocaleCode[] = Object.keys(LOCALE_PACKS) as LocaleCode[];
-
-/** English is the canonical fallback when a translation is missing or the
- *  requested locale is unknown. */
 export const DEFAULT_LOCALE: LocaleCode = "en";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Country → locale mapping
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Map ISO-2 country code → preferred Cirkle locale. Coverage follows
- * Ethnologue / Wikipedia official-language tables. A country appears
- * under the locale we believe the *majority* of Cirkle users in that
- * country will want — the user can always override in Settings.
- *
- * Countries not listed fall back to English (the `DEFAULT_LOCALE`).
- */
 const COUNTRY_TO_LOCALE: Record<string, LocaleCode> = {
-  // Arabic — MENA + Arabic-script Africa
-  SA: "ar", AE: "ar", EG: "ar", IQ: "ar", JO: "ar", KW: "ar", LB: "ar",
-  LY: "ar", MA: "ar", OM: "ar", PS: "ar", QA: "ar", SY: "ar", TN: "ar",
-  YE: "ar", BH: "ar", MR: "ar", SD: "ar", DJ: "ar", SO: "ar", KM: "ar",
-  EH: "ar",
-  // French — France + Francophone Africa + parts of Belgium/Canada/Switz.
-  FR: "fr", BE: "fr", LU: "fr", MC: "fr", BL: "fr", MF: "fr", GF: "fr",
-  PF: "fr", NC: "fr", WF: "fr", PM: "fr", YT: "fr", RE: "fr", GP: "fr",
-  MQ: "fr", HT: "fr", CD: "fr", CG: "fr", CI: "fr", BF: "fr", ML: "fr",
-  SN: "fr", GN: "fr", BJ: "fr", TG: "fr", NE: "fr", CM: "fr", GA: "fr",
-  TD: "fr", CF: "fr", BI: "fr", RW: "fr", MG: "fr", VU: "fr", CA: "fr",
-  CH: "fr",
-  // Spanish — Spain + Latin America + Equatorial Guinea
-  ES: "es", MX: "es", AR: "es", CO: "es", CL: "es", PE: "es", VE: "es",
-  UY: "es", PY: "es", BO: "es", CR: "es", CU: "es", DO: "es", EC: "es",
-  SV: "es", GT: "es", HN: "es", NI: "es", PA: "es", PR: "es", GQ: "es",
-  // Turkish — Turkey + Turkic-speaking CIS
-  TR: "tr", CY: "tr", AZ: "tr", TM: "tr", UZ: "tr", KZ: "tr", KG: "tr",
-  TJ: "tr",
-  // Urdu — Pakistan + Urdu-speaking diaspora
+  // ── Egyptian Arabic — Egypt ONLY ──────────────────────────────────────
+  EG: "ar",
+
+  // ── Formal Arabic (MSA) — All other Arab countries ────────────────────
+  SA: "ar-formal",  // Saudi Arabia
+  AE: "ar-formal",  // United Arab Emirates
+  QA: "ar-formal",  // Qatar
+  KW: "ar-formal",  // Kuwait
+  OM: "ar-formal",  // Oman
+  BH: "ar-formal",  // Bahrain
+  YE: "ar-formal",  // Yemen
+  IQ: "ar-formal",  // Iraq
+  JO: "ar-formal",  // Jordan
+  LB: "ar-formal",  // Lebanon
+  SY: "ar-formal",  // Syria
+  PS: "ar-formal",  // Palestine
+  LY: "ar-formal",  // Libya
+  TN: "ar-formal",  // Tunisia
+  DZ: "ar-formal",  // Algeria
+  MA: "ar-formal",  // Morocco
+  MR: "ar-formal",  // Mauritania
+  SD: "ar-formal",  // Sudan
+  SS: "ar-formal",  // South Sudan
+  DJ: "ar-formal",  // Djibouti
+  SO: "ar-formal",  // Somalia
+  KM: "ar-formal",  // Comoros
+  EH: "ar-formal",  // Western Sahara
+
+  // ── Persian (Farsi) — Iran, Afghanistan, Tajikistan ───────────────────
+  IR: "fa",
+  AF: "fa",
+  TJ: "fa",
+
+  // ── Urdu — Pakistan ───────────────────────────────────────────────────
   PK: "ur",
-  // Hindi — India + Nepal + Fiji
-  IN: "hi", NP: "hi", FJ: "hi",
-  // English — UK, US, Anglosphere, English-speaking Africa, default
-  GB: "en", US: "en", AU: "en", NZ: "en", IE: "en", ZA: "en", NG: "en",
-  KE: "en", GH: "en", UG: "en", TZ: "en", ZW: "en", ZM: "en", BW: "en",
-  GM: "en", SL: "en", LR: "en", NA: "en", MW: "en", LS: "en", SZ: "en",
-  BB: "en", JM: "en", TT: "en", BS: "en", BZ: "en", GY: "en", IS: "en",
-  MT: "en", PH: "en", SG: "en", HK: "en",
+
+  // ── Hindi — India, Nepal, Fiji ───────────────────────────────────────
+  IN: "hi",
+  NP: "hi",
+  FJ: "hi",
+
+  // ── Chinese — China, Hong Kong, Taiwan, Singapore, Macau ─────────────
+  CN: "zh",
+  HK: "zh",
+  TW: "zh",
+  SG: "zh",
+  MO: "zh",
+
+  // ── Japanese — Japan ─────────────────────────────────────────────────
+  JP: "ja",
+
+  // ── Korean — South Korea, North Korea ────────────────────────────────
+  KR: "ko",
+  KP: "ko",
+
+  // ── Turkish — Turkey, Northern Cyprus, Turkic-speaking CIS ───────────
+  TR: "tr",
+  CY: "tr",
+  AZ: "tr",
+  TM: "tr",
+  UZ: "tr",
+  KZ: "tr",
+  KG: "tr",
+
+  // ── Russian — Russia, Belarus, Kazakhstan, Kyrgyzstan ────────────────
+  RU: "ru",
+  BY: "ru",
+
+  // ── German — Germany, Austria, Liechtenstein ─────────────────────────
+  DE: "de",
+  AT: "de",
+  LI: "de",
+
+  // ── Italian — Italy, San Marino, Vatican ─────────────────────────────
+  IT: "it",
+  SM: "it",
+  VA: "it",
+
+  // ── Portuguese — Brazil, Portugal, Angola, Mozambique, etc. ──────────
+  BR: "pt",
+  PT: "pt",
+  AO: "pt",
+  MZ: "pt",
+  GW: "pt",
+  TL: "pt",
+  CV: "pt",
+  ST: "pt",
+
+  // ── Indonesian — Indonesia ───────────────────────────────────────────
+  ID: "id",
+
+  // ── Spanish — Spain + Latin America + Equatorial Guinea ──────────────
+  ES: "es",
+  MX: "es",
+  AR: "es",   // Argentina
+  CO: "es",   // Colombia
+  CL: "es",   // Chile
+  PE: "es",   // Peru
+  VE: "es",   // Venezuela
+  UY: "es",   // Uruguay
+  PY: "es",   // Paraguay
+  BO: "es",   // Bolivia
+  CR: "es",   // Costa Rica
+  CU: "es",   // Cuba
+  DO: "es",   // Dominican Republic
+  EC: "es",   // Ecuador
+  SV: "es",   // El Salvador
+  GT: "es",   // Guatemala
+  HN: "es",   // Honduras
+  NI: "es",   // Nicaragua
+  PA: "es",   // Panama
+  PR: "es",   // Puerto Rico
+  GQ: "es",   // Equatorial Guinea
+
+  // ── French — France + Francophone Africa + Belgium + Canada ──────────
+  FR: "fr",
+  BE: "fr",
+  LU: "fr",
+  MC: "fr",
+  BL: "fr",
+  MF: "fr",
+  GF: "fr",
+  PF: "fr",
+  NC: "fr",
+  WF: "fr",
+  PM: "fr",
+  YT: "fr",
+  RE: "fr",
+  GP: "fr",
+  MQ: "fr",
+  HT: "fr",
+  CD: "fr",   // DR Congo
+  CG: "fr",   // Congo
+  CI: "fr",   // Côte d'Ivoire
+  BF: "fr",   // Burkina Faso
+  ML: "fr",   // Mali
+  SN: "fr",   // Senegal
+  GN: "fr",   // Guinea
+  BJ: "fr",   // Benin
+  TG: "fr",   // Togo
+  NE: "fr",   // Niger
+  CM: "fr",   // Cameroon
+  GA: "fr",   // Gabon
+  TD: "fr",   // Chad
+  CF: "fr",   // Central African Republic
+  BI: "fr",   // Burundi
+  RW: "fr",   // Rwanda
+  MG: "fr",   // Madagascar
+  VU: "fr",   // Vanuatu
+  CA: "fr",   // Canada (bilingual — defaults to French for QC, overridden by Accept-Language)
+  CH: "fr",   // Switzerland (multilingual — French-speaking majority areas)
+
+  // ── English — UK, US, Anglosphere, English-speaking Africa, default ───
+  GB: "en",
+  US: "en",
+  AU: "en",
+  NZ: "en",
+  IE: "en",
+  ZA: "en",   // South Africa
+  NG: "en",   // Nigeria
+  KE: "en",   // Kenya
+  GH: "en",   // Ghana
+  UG: "en",   // Uganda
+  TZ: "en",   // Tanzania
+  ZW: "en",   // Zimbabwe
+  ZM: "en",   // Zambia
+  BW: "en",   // Botswana
+  GM: "en",   // Gambia
+  SL: "en",   // Sierra Leone
+  LR: "en",   // Liberia
+  NA: "en",   // Namibia
+  MW: "en",   // Malawi
+  LS: "en",   // Lesotho
+  SZ: "en",   // Eswatini
+  BB: "en",   // Barbados
+  JM: "en",   // Jamaica
+  TT: "en",   // Trinidad and Tobago
+  BS: "en",   // Bahamas
+  BZ: "en",   // Belize
+  GY: "en",   // Guyana
+  IS: "en",   // Iceland
+  MT: "en",   // Malta
+  PH: "en",   // Philippines
+  HK: "en",   // Hong Kong (bilingual — overridden below if needed)
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Public API
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Resolve a Cirkle locale from an ISO-2 country code (case-insensitive).
- * Falls back to {@link DEFAULT_LOCALE} when the country is unknown or
- * unmapped.
- *
- * Example: `resolveLocaleFromCountry("SA") → "ar"`
- */
 export function resolveLocaleFromCountry(countryCode: string | null | undefined): LocaleCode {
   if (!countryCode) return DEFAULT_LOCALE;
   const cc = countryCode.trim().toUpperCase();
@@ -131,27 +275,30 @@ export function resolveLocaleFromCountry(countryCode: string | null | undefined)
   return COUNTRY_TO_LOCALE[cc] ?? DEFAULT_LOCALE;
 }
 
-/**
- * Resolve a Cirkle locale from an HTTP `Accept-Language` header. Picks the
- * first language tag whose primary subtag matches a known Cirkle locale.
- *
- * Example: `resolveLocaleFromAcceptLanguage("fr-FR,fr;q=0.9,en;q=0.8") → "fr"`
- */
 export function resolveLocaleFromAcceptLanguage(header: string | null | undefined): LocaleCode {
   if (!header) return DEFAULT_LOCALE;
   const tags = header.split(",").map((t) => t.trim().split(";")[0].trim().toLowerCase());
   for (const tag of tags) {
     if (!tag) continue;
-    const primary = tag.split("-")[0] as LocaleCode;
-    if ((ALL_LOCALES as readonly string[]).includes(primary)) return primary;
+    const primary = tag.split("-")[0];
+    // Direct match (en, fr, es, etc.)
+    if ((ALL_LOCALES as readonly string[]).includes(primary)) {
+      return primary as LocaleCode;
+    }
+    // Arabic — check region: ar-eg → ar (Egyptian), ar-sa → ar-formal, etc.
+    if (primary === "ar") {
+      const region = tag.split("-")[1]?.toUpperCase();
+      if (region === "EG") return "ar";
+      return "ar-formal";
+    }
+    // Persian variants (fa-ir, fa-af)
+    if (primary === "fa") return "fa";
+    // Urdu
+    if (primary === "ur") return "ur";
   }
   return DEFAULT_LOCALE;
 }
 
-/**
- * Get a locale pack synchronously. Falls back to the English pack when
- * the requested locale isn't shipped (so callers never get `undefined`).
- */
 export function getPack(locale: string | null | undefined): LocalePack {
   if (locale && (ALL_LOCALES as readonly string[]).includes(locale)) {
     return LOCALE_PACKS[locale as LocaleCode];
@@ -159,26 +306,11 @@ export function getPack(locale: string | null | undefined): LocalePack {
   return LOCALE_PACKS[DEFAULT_LOCALE];
 }
 
-/**
- * Get the text direction (`ltr` or `rtl`) for a locale. Reads the `dir`
- * field from the pack so each language self-declares its script
- * direction.
- */
 export function getDirection(locale: string | null | undefined): TextDirection {
   const dir = getPack(locale).dir;
   return dir === "rtl" ? "rtl" : "ltr";
 }
 
-/**
- * Best-effort locale detection for the current request / session.
- *
- * Resolution order:
- *   1. Explicit `locale` hint (e.g. from a `?lang=fr` query string or a
- *      persisted user preference).
- *   2. `country` ISO-2 code → {@link resolveLocaleFromCountry}.
- *   3. `acceptLanguage` header → {@link resolveLocaleFromAcceptLanguage}.
- *   4. {@link DEFAULT_LOCALE}.
- */
 export function resolveBestLocale(opts: {
   locale?: string | null;
   country?: string | null;
@@ -198,31 +330,12 @@ export function resolveBestLocale(opts: {
   return DEFAULT_LOCALE;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Async dynamic loader (upgrade path for very large packs)
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Asynchronously load a locale pack. Today this is a thin wrapper around
- * the already-loaded synchronous registry (every pack is small and ships
- * in the initial bundle). In the future, when packs grow large enough to
- * warrant code-splitting, the body of this function can be swapped to:
- *
- *   ```ts
- *   const mod = await import(`./locale-packs/${locale}.json`);
- *   return mod.default as LocalePack;
- *   ```
- *
- * …without breaking any caller. The async signature is reserved now so
- * the swap is non-breaking.
- */
 export async function loadLocalePack(locale: string | null | undefined): Promise<LocalePack> {
   return getPack(locale);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Back-compat: expose the static-parsed typed packs for callers that want
-// the exact JSON object without going through the registry.
+// Back-compat: static-pack exports
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const en: LocalePack = enJson as LocalePack;

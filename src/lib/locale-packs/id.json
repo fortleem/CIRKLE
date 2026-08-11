@@ -1,0 +1,171 @@
+{
+  "dir": "ltr",
+  "appName": "Cirkle",
+  "tagline": "Sistem sosial baru",
+  "greeting": {
+    "morning": "Selamat pagi",
+    "afternoon": "Selamat siang",
+    "evening": "Selamat malam",
+    "welcome": "Selamat datang kembali"
+  },
+  "common": {
+    "ok": "OK",
+    "cancel": "Batal",
+    "save": "Simpan",
+    "delete": "Hapus",
+    "edit": "Edit",
+    "share": "Bagikan",
+    "close": "Tutup",
+    "retry": "Coba lagi",
+    "loading": "Memuat…",
+    "search": "Cari",
+    "send": "Kirim",
+    "join": "Gabung",
+    "leave": "Keluar",
+    "dismiss": "Tutup",
+    "learnMore": "Pelajari",
+    "viewAll": "Lihat semua",
+    "showMore": "Tampilkan lebih",
+    "showLess": "Tampilkan lebih sedikit"
+  },
+  "tabs": {
+    "home": "Beranda",
+    "wasl": "Wasl",
+    "mashahd": "Mashahd",
+    "lamahat": "Lamahat",
+    "midan": "Midan",
+    "rihla": "Rihla",
+    "pay": "Bayar",
+    "mail": "Mail",
+    "profile": "Profil",
+    "more": "Lainnya"
+  },
+  "buttons": {
+    "enter": "Masuk Cirkle",
+    "skip": "Lewati",
+    "continue": "Lanjut",
+    "post": "Posting",
+    "reply": "Balas",
+    "rsvp": "Akan hadir?",
+    "going": "Hadir",
+    "interested": "Tertarik",
+    "notGoing": "Tidak hadir",
+    "createPost": "Buat posting",
+    "askAi": "Tanya AI",
+    "explore": "Jelajahi",
+    "cancel": "Batal",
+    "save": "Simpan",
+    "delete": "Hapus",
+    "edit": "Edit",
+    "share": "Bagikan",
+    "like": "Suka",
+    "comment": "Komentar",
+    "follow": "Ikuti",
+    "unfollow": "Berhenti ikuti",
+    "send": "Kirim",
+    "search": "Cari",
+    "filter": "Filter",
+    "sort": "Urutkan",
+    "close": "Tutup",
+    "back": "Kembali",
+    "next": "Berikutnya",
+    "done": "Selesai",
+    "create": "Buat",
+    "join": "Gabung",
+    "leave": "Keluar",
+    "invite": "Undang",
+    "accept": "Terima",
+    "decline": "Tolak",
+    "retry": "Coba lagi",
+    "refresh": "Segarkan",
+    "loadMore": "Muat lebih",
+    "showMore": "Tampilkan lebih",
+    "showLess": "Lebih sedikit",
+    "customize": "Sesuaikan",
+    "settings": "Pengaturan"
+  },
+  "sections": {
+    "featured": "Unggulan",
+    "nearby": "Di dekat Anda",
+    "forYou": "Untuk Anda",
+    "trending": "Trending",
+    "workspace": "Update workspace",
+    "spaces": "Ruang live",
+    "sponsored": "Sponsor",
+    "upcomingCircles": "Lingkaran mendatang",
+    "exclusives": "Eksklusif Cirkle",
+    "news": "Berita",
+    "miniApps": "Mini apps",
+    "mail": "Cirkle Mail"
+  },
+  "onboarding": {
+    "slide1": {
+      "title": "Selamat datang di Cirkle",
+      "body": "Satu aplikasi. Semua percakapan, video, foto, pembayaran, dan perjalanan—terpadu."
+    },
+    "slide2": {
+      "title": "Delapan dunia. Satu Cirkle.",
+      "body": "Wasl, Mashahd, Lamahat, Midan, Rihla, Bayar, Mail, dan AI. Semua gratis."
+    },
+    "slide3": {
+      "title": "Privasi adalah produk",
+      "body": "Data Anda di perangkat Anda. Mode hantu, enkripsi end-to-end, AI di perangkat."
+    },
+    "slide4": {
+      "title": "Tanpa internet",
+      "body": "Jaringan mesh via Bluetooth dan Wi-Fi Direct."
+    },
+    "slide5": {
+      "title": "Dirancang untuk Anda",
+      "body": "Pilih bahasa dan gaya. Dapat diubah nanti."
+    },
+    "cta": "Masuk Cirkle",
+    "skip": "Lewati",
+    "next": "Lanjut"
+  },
+  "nav": {
+    "home": "Beranda",
+    "wasl": "Wasl",
+    "mashahd": "Mashahd",
+    "lamahat": "Lamahat",
+    "midan": "Midan",
+    "rihla": "Rihla",
+    "pay": "Bayar",
+    "profile": "Profil"
+  },
+  "home": {
+    "hello": "Selamat malam",
+    "featured": "Unggulan",
+    "nearby": "Di dekat Anda",
+    "forYou": "Untuk Anda",
+    "trending": "Trending",
+    "workspace": "Workspace"
+  },
+  "ai": {
+    "brainActive": "AI aktif",
+    "askBrain": "Tanya Cirkle",
+    "brainThinking": "Berpikir…"
+  },
+  "palette": {
+    "vibrant": "Cerah"
+  },
+  "privacy": {
+    "noAds": "Tanpa iklan",
+    "noTracking": "Tanpa pelacakan",
+    "dataOnDevice": "Data di perangkat",
+    "freeForever": "Gratis selamanya",
+    "encrypted": "Terenkripsi",
+    "yourKeysYourMoney": "Kunci Anda, uang Anda"
+  },
+  "sponsored": {
+    "label": "Sponsor",
+    "yourAdHere": "Iklan Anda di sini"
+  },
+  "upcoming": {
+    "events": "Mendatang",
+    "rsvp": "Akan hadir?",
+    "going": "Hadir",
+    "maybe": "Mungkin",
+    "notGoing": "Tidak hadir"
+  }
+}

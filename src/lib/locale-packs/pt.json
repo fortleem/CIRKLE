@@ -1,0 +1,171 @@
+{
+  "dir": "ltr",
+  "appName": "Cirkle",
+  "tagline": "Um novo sistema social",
+  "greeting": {
+    "morning": "Bom dia",
+    "afternoon": "Boa tarde",
+    "evening": "Boa noite",
+    "welcome": "Bem-vindo de volta"
+  },
+  "common": {
+    "ok": "OK",
+    "cancel": "Cancelar",
+    "save": "Salvar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "share": "Compartilhar",
+    "close": "Fechar",
+    "retry": "Tentar novamente",
+    "loading": "Carregando…",
+    "search": "Buscar",
+    "send": "Enviar",
+    "join": "Entrar",
+    "leave": "Sair",
+    "dismiss": "Fechar",
+    "learnMore": "Saiba mais",
+    "viewAll": "Ver tudo",
+    "showMore": "Mostrar mais",
+    "showLess": "Mostrar menos"
+  },
+  "tabs": {
+    "home": "Início",
+    "wasl": "Wasl",
+    "mashahd": "Mashahd",
+    "lamahat": "Lamahat",
+    "midan": "Midan",
+    "rihla": "Rihla",
+    "pay": "Pagar",
+    "mail": "Email",
+    "profile": "Perfil",
+    "more": "Mais"
+  },
+  "buttons": {
+    "enter": "Entrar no Cirkle",
+    "skip": "Pular",
+    "continue": "Continuar",
+    "post": "Publicar",
+    "reply": "Responder",
+    "rsvp": "Vai participar?",
+    "going": "Vou",
+    "interested": "Interessado",
+    "notGoing": "Não vou",
+    "createPost": "Criar post",
+    "askAi": "Perguntar à IA",
+    "explore": "Explorar",
+    "cancel": "Cancelar",
+    "save": "Salvar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "share": "Compartilhar",
+    "like": "Curtir",
+    "comment": "Comentar",
+    "follow": "Seguir",
+    "unfollow": "Deixar de seguir",
+    "send": "Enviar",
+    "search": "Buscar",
+    "filter": "Filtrar",
+    "sort": "Ordenar",
+    "close": "Fechar",
+    "back": "Voltar",
+    "next": "Próximo",
+    "done": "Concluído",
+    "create": "Criar",
+    "join": "Entrar",
+    "leave": "Sair",
+    "invite": "Convidar",
+    "accept": "Aceitar",
+    "decline": "Recusar",
+    "retry": "Tentar novamente",
+    "refresh": "Atualizar",
+    "loadMore": "Carregar mais",
+    "showMore": "Mostrar mais",
+    "showLess": "Mostrar menos",
+    "customize": "Personalizar",
+    "settings": "Configurações"
+  },
+  "sections": {
+    "featured": "Destaque",
+    "nearby": "Acontecendo perto",
+    "forYou": "Para você",
+    "trending": "Em alta",
+    "workspace": "Atualizações do workspace",
+    "spaces": "Espaços ao vivo",
+    "sponsored": "Patrocinado",
+    "upcomingCircles": "Próximos círculos",
+    "exclusives": "Exclusivos Cirkle",
+    "news": "Notícias",
+    "miniApps": "Mini apps",
+    "mail": "Cirkle Mail"
+  },
+  "onboarding": {
+    "slide1": {
+      "title": "Bem-vindo ao Cirkle",
+      "body": "Um app. Cada conversa, vídeo, foto, pagamento e viagem—unificados."
+    },
+    "slide2": {
+      "title": "Oito mundos. Um Cirkle.",
+      "body": "Wasl, Mashahd, Lamahat, Midan, Rihla, Pagar, Mail e seu copiloto IA. Tudo grátis."
+    },
+    "slide3": {
+      "title": "Privacidade é o produto",
+      "body": "Seus dados no seu dispositivo. Modo fantasma, criptografia ponta a ponta, IA no dispositivo."
+    },
+    "slide4": {
+      "title": "Funciona sem internet",
+      "body": "Rede mesh via Bluetooth e Wi-Fi Direct mantém você conectado."
+    },
+    "slide5": {
+      "title": "Feito para você",
+      "body": "Escolha idioma e estilo. Tudo alterável depois."
+    },
+    "cta": "Entrar no Cirkle",
+    "skip": "Pular",
+    "next": "Continuar"
+  },
+  "nav": {
+    "home": "Início",
+    "wasl": "Wasl",
+    "mashahd": "Mashahd",
+    "lamahat": "Lamahat",
+    "midan": "Midan",
+    "rihla": "Rihla",
+    "pay": "Pagar",
+    "profile": "Perfil"
+  },
+  "home": {
+    "hello": "Boa noite",
+    "featured": "Destaque",
+    "nearby": "Acontecendo perto",
+    "forYou": "Para você",
+    "trending": "Em alta",
+    "workspace": "Workspace"
+  },
+  "ai": {
+    "brainActive": "IA ativa",
+    "askBrain": "Perguntar ao Cirkle",
+    "brainThinking": "Pensando…"
+  },
+  "palette": {
+    "vibrant": "Vibrante"
+  },
+  "privacy": {
+    "noAds": "Sem anúncios",
+    "noTracking": "Sem rastreamento",
+    "dataOnDevice": "Dados no dispositivo",
+    "freeForever": "Grátis para sempre",
+    "encrypted": "Criptografado",
+    "yourKeysYourMoney": "Suas chaves, seu dinheiro"
+  },
+  "sponsored": {
+    "label": "Patrocinado",
+    "yourAdHere": "Seu anúncio aqui"
+  },
+  "upcoming": {
+    "events": "Próximos",
+    "rsvp": "Vai participar?",
+    "going": "Vou",
+    "maybe": "Talvez",
+    "notGoing": "Não vou"
+  }
+}
