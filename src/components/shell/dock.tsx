@@ -1,5 +1,11 @@
 "use client";
-import { TABS, type TabId } from "@/lib/tabs";
+import {
+  PRIMARY_TABS,
+  SECONDARY_TABS,
+  MORE_TAB_ICON,
+  isSecondaryTab,
+  type TabId,
+} from "@/lib/tabs";
 import { useApp } from "@/lib/app-store";
 import { dict } from "@/lib/i18n";
 import { motion, AnimatePresence } from "framer-motion";
@@ -27,8 +33,16 @@ import {
   Settings,
   Palette,
   LogOut,
+  Check,
   type LucideIcon,
 } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 
 // ── Radial menu action model ─────────────────────────────────
 type RadialAction = {
@@ -87,12 +101,61 @@ const RADIAL_BUTTON_SIZE = 56;
 const LONG_PRESS_MS = 500;
 const LONG_PRESS_MOVE_THRESHOLD = 10;
 
+// ── Recently-used secondary tabs (localStorage) ──────────────
+const RECENT_KEY = "cirkle-dock-recent";
+const MAX_RECENT = 3;
+
+function readRecent(): TabId[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(RECENT_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((x): x is TabId => typeof x === "string" && isSecondaryTab(x as TabId))
+      .slice(0, MAX_RECENT);
+  } catch {
+    return [];
+  }
+}
+
+function writeRecent(ids: TabId[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(RECENT_KEY, JSON.stringify(ids.slice(0, MAX_RECENT)));
+  } catch {
+    /* no-op */
+  }
+}
+
+function pushRecent(id: TabId): void {
+  const cur = readRecent().filter((x) => x !== id);
+  cur.unshift(id);
+  writeRecent(cur);
+}
+
+// Total dock items = 5 primary tabs + 1 More button
+const DOCK_LEN = PRIMARY_TABS.length + 1;
+
+/** Index of the dock button that should be focused/highlighted for `active`. */
+function getDockIdx(activeTab: TabId): number {
+  const pIdx = PRIMARY_TABS.findIndex((t) => t.id === activeTab);
+  if (pIdx >= 0) return pIdx;
+  // Secondary tab → the More button (last dock item) represents it.
+  return PRIMARY_TABS.length;
+}
+
 export function Dock({ active, onChange }: { active: TabId; onChange: (id: TabId) => void }) {
   const { locale } = useApp();
   const t = dict[locale].nav;
   const [unread, setUnread] = useState(0);
   const [radialMenu, setRadialMenu] = useState<{ tab: TabId; x: number; y: number } | null>(null);
   const [isScrolling, setIsScrolling] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  // Lazy initialiser — reads localStorage once on first client render without
+  // triggering a cascading setState-in-effect.
+  const [recent, setRecent] = useState<TabId[]>(() => readRecent());
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const longPressStart = useRef<{ x: number; y: number } | null>(null);
   const scrollTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -219,6 +282,14 @@ export function Dock({ active, onChange }: { active: TabId; onChange: (id: TabId
     setRadialMenu(null);
   };
 
+  /** Pick a secondary tab from the More sheet — tracks recent + closes sheet. */
+  const pickSecondary = (id: TabId) => {
+    pushRecent(id);
+    setRecent(readRecent());
+    onChange(id);
+    setMoreOpen(false);
+  };
+
   // Precompute semicircle positions: angles 180° → 360° (passing through 270°
   // = straight up), so the menu fans out above the dock.
   const actions = radialMenu ? RADIAL_ACTIONS[radialMenu.tab] ?? [] : [];
@@ -229,6 +300,9 @@ export function Dock({ active, onChange }: { active: TabId; onChange: (id: TabId
     return { x: RADIAL_RADIUS * Math.cos(rad), y: RADIAL_RADIUS * Math.sin(rad) };
   });
 
+  // Whether the More button should show as "active" (current tab is secondary).
+  const moreActive = isSecondaryTab(active);
+
   return (
     <div className="fixed bottom-0 inset-x-0 z-50 pb-[env(safe-area-inset-bottom)] pointer-events-none">
       <div className="px-3 pb-3 flex justify-center pointer-events-auto">
@@ -238,24 +312,28 @@ export function Dock({ active, onChange }: { active: TabId; onChange: (id: TabId
           aria-orientation="horizontal"
           onKeyDown={(e) => {
             // Arrow-key navigation between dock tabs — roving-tabindex style.
-            const idx = TABS.findIndex((tt) => tt.id === active);
-            const next = e.key === "ArrowRight" ? (idx + 1) % TABS.length
-                       : e.key === "ArrowLeft"  ? (idx - 1 + TABS.length) % TABS.length
+            // The dock now has 6 slots: 5 primary tabs + 1 More button.
+            const idx = getDockIdx(active);
+            const next = e.key === "ArrowRight" ? (idx + 1) % DOCK_LEN
+                       : e.key === "ArrowLeft"  ? (idx - 1 + DOCK_LEN) % DOCK_LEN
                        : e.key === "Home"      ? 0
-                       : e.key === "End"       ? TABS.length - 1
+                       : e.key === "End"       ? DOCK_LEN - 1
                        : -1;
             if (next >= 0) {
               e.preventDefault();
-              onChange(TABS[next].id);
-              // Move DOM focus to the newly active tab button.
               const nav = e.currentTarget as HTMLElement;
               const btns = Array.from(nav.querySelectorAll<HTMLButtonElement>("button[role='tab']"));
               btns[next]?.focus();
+              // Only switch tabs when arrowing onto a primary tab. The More
+              // button just receives focus — Enter/Space opens the sheet.
+              if (next < PRIMARY_TABS.length) {
+                onChange(PRIMARY_TABS[next].id);
+              }
             }
           }}
           className={`shadow-float rounded-full px-2 py-2 flex items-center gap-0.5 max-w-full overflow-x-auto scrollbar-hide transition-all duration-300 ${isScrolling ? "glass-strong" : "bg-background/95 backdrop-blur-md border border-border/40"}`}
         >
-          {TABS.map((tab) => {
+          {PRIMARY_TABS.map((tab) => {
             const Icon = tab.icon;
             const isActive = active === tab.id;
             const badge = tab.id === "wasl" ? unread : 0;
@@ -291,8 +369,120 @@ export function Dock({ active, onChange }: { active: TabId; onChange: (id: TabId
               </button>
             );
           })}
+
+          {/* ── More button — opens the secondary-tab Sheet ── */}
+          <button
+            role="tab"
+            aria-selected={moreActive}
+            aria-label="More tabs"
+            aria-haspopup="dialog"
+            aria-expanded={moreOpen}
+            tabIndex={moreActive ? 0 : -1}
+            onClick={() => setMoreOpen(true)}
+            className="relative flex items-center justify-center min-w-11 h-11 px-3 rounded-full transition-colors select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            {moreActive && <motion.span layoutId="dock-pill" className="absolute inset-0 rounded-full bg-gradient-hero" transition={{ type: "spring", stiffness: 400, damping: 32 }} />}
+            <span className={`relative flex items-center gap-2 ${moreActive ? "text-primary-foreground" : "text-muted-foreground"}`}>
+              <MORE_TAB_ICON className="w-5 h-5" strokeWidth={moreActive ? 2.4 : 1.8} aria-hidden />
+              {moreActive && (
+                <motion.span
+                  initial={{ opacity: 0, width: 0 }}
+                  animate={{ opacity: 1, width: "auto" }}
+                  className="text-xs font-medium whitespace-nowrap pr-1"
+                >
+                  {(() => {
+                    const cur = SECONDARY_TABS.find((s) => s.id === active);
+                    return cur ? t[cur.labelKey as keyof typeof t] : "More";
+                  })()}
+                </motion.span>
+              )}
+            </span>
+            {/* Small dot indicator when there are recently-used secondary tabs */}
+            {recent.length > 0 && !moreActive && (
+              <span
+                className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-secondary"
+                aria-hidden
+              />
+            )}
+          </button>
         </nav>
       </div>
+
+      {/* ── More Sheet — bottom drawer with secondary tabs ── */}
+      <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+        <SheetContent side="bottom" className="rounded-t-3xl p-0">
+          <SheetHeader className="px-4 pt-4 pb-2 border-b border-border/60">
+            <SheetTitle className="font-display text-xl flex items-center gap-2">
+              <MORE_TAB_ICON className="w-5 h-5 text-secondary" /> More
+            </SheetTitle>
+            <SheetDescription>
+              Explore Cirkle&apos;s media, photos, and travel pillars.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="p-3 pb-[max(1rem,env(safe-area-inset-bottom))] space-y-2">
+            {SECONDARY_TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = active === tab.id;
+              const isRecent = recent.includes(tab.id);
+              return (
+                <button
+                  key={tab.id}
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => pickSecondary(tab.id)}
+                  className={`w-full flex items-center gap-3 p-3 rounded-2xl transition text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                    isActive
+                      ? "bg-gradient-hero text-primary-foreground"
+                      : "glass hover:bg-muted/50"
+                  }`}
+                >
+                  <div
+                    className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
+                      isActive ? "bg-white/15" : "bg-secondary/15"
+                    }`}
+                  >
+                    <Icon className={`w-5 h-5 ${isActive ? "text-primary-foreground" : "text-secondary"}`} strokeWidth={2} aria-hidden />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-display text-base">{t[tab.labelKey as keyof typeof t]}</span>
+                      {tab.subtitle && (
+                        <span
+                          className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                            isActive ? "bg-white/15 text-primary-foreground" : "bg-secondary/15 text-secondary"
+                          }`}
+                        >
+                          {tab.subtitle}
+                        </span>
+                      )}
+                      {isRecent && (
+                        <span
+                          className={`text-[9px] px-1.5 py-0.5 rounded-full flex items-center gap-0.5 ${
+                            isActive ? "bg-white/15 text-primary-foreground" : "bg-muted text-muted-foreground"
+                          }`}
+                          aria-label="Recently used"
+                        >
+                          <Check className="w-2.5 h-2.5" /> Recent
+                        </span>
+                      )}
+                    </div>
+                    <div className={`text-xs mt-0.5 ${isActive ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
+                      {tab.id === "mashahd" && "Watch videos, live streams, and playlists."}
+                      {tab.id === "lamahat" && "Capture, share, and browse photos and albums."}
+                      {tab.id === "rihla" && "Plan trips — flights, hotels, and visas."}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+            {recent.length > 0 && (
+              <div className="text-[10px] text-muted-foreground text-center pt-1">
+                {recent.length} recently used · stored on this device
+              </div>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <AnimatePresence>
         {radialMenu && (

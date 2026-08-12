@@ -9,7 +9,7 @@ import {
   Cookie, FileCheck, AlertTriangle, Loader2, Download, Brain,
   Image as ImageIcon, Video, Type, Heart, MessageCircle, Share2,
   Settings as SettingsIcon, Pencil, Trophy, Crown, Rocket, Zap, Star, Award, Camera,
-  type LucideIcon,
+  Check, Compass, UserCheck, PenLine, type LucideIcon,
 } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useApp } from "@/lib/app-store";
@@ -19,6 +19,66 @@ import { Switch } from "@/components/ui/switch";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+
+// ── Getting-Started checklist (localStorage: cirkle-profile-checklist) ──────
+const CHECKLIST_KEY = "cirkle-profile-checklist";
+
+type ChecklistItemId = "account" | "photo" | "post" | "circle" | "invite";
+
+interface ChecklistItem {
+  id: ChecklistItemId;
+  label: string;
+  icon: LucideIcon;
+  hint: string;
+  defaultDone?: boolean;
+}
+
+const CHECKLIST_ITEMS: ChecklistItem[] = [
+  { id: "account", label: "Account created", icon: BadgeCheck, hint: "You're in — welcome to Cirkle", defaultDone: true },
+  { id: "photo", label: "Add a profile photo", icon: Camera, hint: "Personalize your presence" },
+  { id: "post", label: "Make your first post", icon: FileText, hint: "Share a thought, photo, or video" },
+  { id: "circle", label: "Join a Circle", icon: Users, hint: "Find your people" },
+  { id: "invite", label: "Invite a friend", icon: UserPlus, hint: "Grow your inner circle" },
+];
+
+function readChecklist(): Record<ChecklistItemId, boolean> {
+  const fallback: Record<ChecklistItemId, boolean> = {
+    account: true, photo: false, post: false, circle: false, invite: false,
+  };
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = window.localStorage.getItem(CHECKLIST_KEY);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return fallback;
+    return { ...fallback, ...parsed };
+  } catch {
+    return fallback;
+  }
+}
+
+function writeChecklist(state: Record<ChecklistItemId, boolean>): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(CHECKLIST_KEY, JSON.stringify(state));
+  } catch { /* no-op */ }
+}
+
+// ── Suggested people (mock, UI preview — no backend yet) ────────────────────
+interface SuggestedPerson {
+  id: string;
+  name: string;
+  handle: string;
+  bio: string;
+  initials: string;
+  gradient: string; // tailwind gradient stops
+}
+
+const SUGGESTED_PEOPLE: SuggestedPerson[] = [
+  { id: "p1", name: "Layla Hassan", handle: "@layla", bio: "Photographer · captures the city at dawn", initials: "LH", gradient: "from-rose-500 to-pink-600" },
+  { id: "p2", name: "Omar Khalil", handle: "@omar", bio: "Travel writer · 47 countries and counting", initials: "OK", gradient: "from-teal-500 to-emerald-600" },
+  { id: "p3", name: "Noor Abed", handle: "@noor", bio: "Foodie · reviews the best bites in town", initials: "NA", gradient: "from-amber-500 to-orange-600" },
+];
 
 /**
  * Brain AI connection for the Profile screen.
@@ -87,6 +147,75 @@ export function ProfileScreen() {
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [exportBusy, setExportBusy] = useState(false);
   const [brainBusy, setBrainBusy] = useState(false);
+
+  // ── New-user empty-state UI ─────────────────────────────────
+  // Getting-Started checklist (persisted to localStorage) + suggested
+  // people to follow + posts-count for the empty posts-grid CTA.
+  const [checklist, setChecklist] = useState<Record<ChecklistItemId, boolean>>(() => readChecklist());
+  const [followed, setFollowed] = useState<Set<string>>(() => new Set());
+  const [postsCount, setPostsCount] = useState<number>(0);
+
+  /** Mark a checklist item as complete (idempotent). Persists to localStorage. */
+  const markChecklistItem = (id: ChecklistItemId) => {
+    setChecklist((prev) => {
+      if (prev[id]) return prev;
+      const next = { ...prev, [id]: true };
+      writeChecklist(next);
+      return next;
+    });
+  };
+
+  /** Toggle a checklist item on/off (used by the manual checkboxes). */
+  const toggleChecklistItem = (id: ChecklistItemId) => {
+    setChecklist((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      writeChecklist(next);
+      return next;
+    });
+  };
+
+  /** "Invite friends" CTA — opens contact QR + marks checklist invite item. */
+  const onInviteFriends = () => {
+    window.dispatchEvent(new CustomEvent("circle:contact-qr"));
+    markChecklistItem("invite");
+    toast.success("Opening your invite QR…", { description: "Share it with a friend to bring them to Cirkle." });
+  };
+
+  /** "Discover people" CTA — opens Circle Hub discovery. */
+  const onDiscoverPeople = () => {
+    window.dispatchEvent(new CustomEvent("circle:hub"));
+    toast.success("Opening people discovery…", { description: "Find friends, creators, and Circles to follow." });
+  };
+
+  /** "Create your first post" CTA — opens composer + marks checklist post item. */
+  const onCreateFirstPost = () => {
+    window.dispatchEvent(new CustomEvent("circle:composer", { detail: { kind: "post" } }));
+    markChecklistItem("post");
+    // Optimistically show the post grid (mock preview) so the user sees what
+    // their feed will look like after their first post.
+    setPostsCount(MOCK_POSTS.length);
+  };
+
+  /** "Join a Circle" CTA — opens Circle Hub + marks checklist circle item. */
+  const onJoinCircle = () => {
+    window.dispatchEvent(new CustomEvent("circle:hub"));
+    markChecklistItem("circle");
+    toast.success("Opening Circles…", { description: "Browse and join a Circle that fits you." });
+  };
+
+  /** Follow / unfollow a suggested person. */
+  const onFollowPerson = (person: SuggestedPerson) => {
+    setFollowed((prev) => {
+      const next = new Set(prev);
+      if (next.has(person.id)) {
+        next.delete(person.id);
+      } else {
+        next.add(person.id);
+        toast.success(`Following ${person.name}`, { description: person.handle });
+      }
+      return next;
+    });
+  };
 
   /** Wipe IndexedDB so all on-device Brain memory is destroyed. */
   const wipeIndexedDB = async (): Promise<void> => {
@@ -310,10 +439,34 @@ export function ProfileScreen() {
                 </span>
               </div>
               <div className="text-xs opacity-80 font-mono">{handle} · {regionLabel} {regionCity}</div>
-              <div className="flex gap-4 mt-2 text-xs">
-                <span><b className="font-display text-base">0</b> followers</span>
-                <span><b className="font-display text-base">0</b> following</span>
-                <span><b className="font-display text-base">{user?.verified ? "Verified" : "New"}</b> tier</span>
+              {/* Empty-state CTAs — replace the "0 followers / 0 following" stats
+                  with engaging, actionable chips for new users. Once the user
+                  has followers/following, the numeric stats would render here. */}
+              <div className="flex gap-1.5 mt-2 flex-wrap text-xs">
+                <button
+                  type="button"
+                  onClick={onInviteFriends}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white/10 border border-white/20 hover:bg-white/20 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                  aria-label="Be the first to invite friends"
+                >
+                  <UserPlus className="w-3 h-3" />
+                  <span className="text-[10px] font-medium">Be the first to invite friends</span>
+                  <span className="text-[10px] underline decoration-dotted">Invite</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={onDiscoverPeople}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white/10 border border-white/20 hover:bg-white/20 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                  aria-label="Discover people to follow"
+                >
+                  <Compass className="w-3 h-3" />
+                  <span className="text-[10px] font-medium">Discover people to follow</span>
+                  <span className="text-[10px] underline decoration-dotted">Explore</span>
+                </button>
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white/10 border border-white/20">
+                  <span className="text-[10px] font-medium font-display">{user?.verified ? "Verified" : "New"}</span>
+                  <span className="text-[10px] opacity-80">tier</span>
+                </span>
               </div>
               {/* Privacy badges */}
               <div className="flex items-center gap-1.5 mt-2">
@@ -385,6 +538,158 @@ export function ProfileScreen() {
         ))}
       </div>
 
+      {/* === NEW: Getting Started checklist — new-user onboarding progress === */}
+      {(() => {
+        const completedCount = CHECKLIST_ITEMS.reduce((n, item) => n + (checklist[item.id] ? 1 : 0), 0);
+        const allDone = completedCount === CHECKLIST_ITEMS.length;
+        return (
+          <div className="px-4 mt-4">
+            <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2 px-1 flex items-center gap-1.5">
+              <Sparkles className="w-3 h-3 text-secondary" /> Getting Started
+              <span className="ml-auto text-[9px] normal-case tracking-normal text-muted-foreground/80">
+                {completedCount}/{CHECKLIST_ITEMS.length} complete
+              </span>
+            </h3>
+            <div className="glass rounded-2xl p-4">
+              {/* Progress bar */}
+              <div className="h-1.5 rounded-full bg-muted overflow-hidden mb-3" aria-hidden>
+                <div
+                  className="h-full bg-gradient-gold transition-all duration-500"
+                  style={{ width: `${(completedCount / CHECKLIST_ITEMS.length) * 100}%` }}
+                />
+              </div>
+              <ul className="space-y-1">
+                {CHECKLIST_ITEMS.map((item) => {
+                  const done = !!checklist[item.id];
+                  const Icon = item.icon;
+                  return (
+                    <li key={item.id}>
+                      <button
+                        type="button"
+                        onClick={() => toggleChecklistItem(item.id)}
+                        aria-pressed={done}
+                        aria-label={`${item.label}${done ? " (done)" : " (not done)"}. Tap to toggle.`}
+                        className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-muted/40 transition text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        {/* Checkbox / check icon */}
+                        <span
+                          className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center transition ${
+                            done
+                              ? "bg-gradient-gold text-charcoal"
+                              : "bg-muted border border-border text-muted-foreground"
+                          }`}
+                          aria-hidden
+                        >
+                          {done ? <Check className="w-3.5 h-3.5" strokeWidth={3} /> : <Icon className="w-3 h-3" />}
+                        </span>
+                        <span className="flex-1 min-w-0">
+                          <span className={`block text-xs font-medium ${done ? "text-muted-foreground line-through" : "text-foreground"}`}>
+                            {item.label}
+                          </span>
+                          <span className="block text-[10px] text-muted-foreground truncate">{item.hint}</span>
+                        </span>
+                        {/* Quick action for non-completed items */}
+                        {!done && (
+                          <span
+                            role="button"
+                            tabIndex={0}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (item.id === "photo") {
+                                toast.success("Opening profile photo uploader…");
+                                markChecklistItem("photo");
+                              } else if (item.id === "post") {
+                                onCreateFirstPost();
+                              } else if (item.id === "circle") {
+                                onJoinCircle();
+                              } else if (item.id === "invite") {
+                                onInviteFriends();
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                e.currentTarget.click();
+                              }
+                            }}
+                            className="shrink-0 text-[10px] px-2 py-1 rounded-full bg-secondary/15 text-secondary hover:bg-secondary/25 transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            {item.id === "photo" && "Upload"}
+                            {item.id === "post" && "Post"}
+                            {item.id === "circle" && "Join"}
+                            {item.id === "invite" && "Invite"}
+                          </span>
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+              <div className="mt-3 pt-2 border-t border-border/40 text-[10px] text-muted-foreground flex items-center gap-1.5">
+                <ShieldCheck className="w-2.5 h-2.5" />
+                {allDone
+                  ? "All done — you're a Cirkle pro! · Saved on this device"
+                  : "Progress saved on this device · Tap any row to toggle"}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* === NEW: Suggested People to Follow — 3 mock suggestions === */}
+      <div className="px-4 mt-4">
+        <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2 px-1 flex items-center gap-1.5">
+          <Users className="w-3 h-3 text-secondary" /> Suggested for You
+        </h3>
+        <div className="glass rounded-2xl p-3 space-y-2">
+          {SUGGESTED_PEOPLE.map((person) => {
+            const isFollowing = followed.has(person.id);
+            return (
+              <div
+                key={person.id}
+                className="flex items-center gap-3 p-2 rounded-xl hover:bg-muted/40 transition"
+              >
+                <div className={`shrink-0 w-11 h-11 rounded-full bg-gradient-to-br ${person.gradient} flex items-center justify-center text-white font-display text-sm`}>
+                  {person.initials}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm font-medium truncate">{person.name}</span>
+                    <BadgeCheck className="w-3.5 h-3.5 text-secondary shrink-0" />
+                  </div>
+                  <div className="text-[10px] text-muted-foreground font-mono">{person.handle}</div>
+                  <div className="text-[11px] text-muted-foreground truncate mt-0.5">{person.bio}</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onFollowPerson(person)}
+                  aria-pressed={isFollowing}
+                  aria-label={isFollowing ? `Unfollow ${person.name}` : `Follow ${person.name}`}
+                  className={`shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                    isFollowing
+                      ? "bg-muted text-muted-foreground hover:bg-accent/15 hover:text-accent"
+                      : "bg-gradient-gold text-charcoal hover:scale-105"
+                  }`}
+                >
+                  {isFollowing ? (
+                    <><UserCheck className="w-3 h-3" /> Following</>
+                  ) : (
+                    <><UserPlus className="w-3 h-3" /> Follow</>
+                  )}
+                </button>
+              </div>
+            );
+          })}
+          <button
+            type="button"
+            onClick={onDiscoverPeople}
+            className="w-full mt-1 py-2 rounded-full glass text-[11px] font-medium hover:bg-muted/50 transition flex items-center justify-center gap-1.5"
+          >
+            <Compass className="w-3.5 h-3.5 text-secondary" /> Explore more people
+          </button>
+        </div>
+      </div>
+
       {/* === NEW: Quick Actions Row — Edit Profile / Share Profile / Settings === */}
       <div className="grid grid-cols-3 gap-2 px-4 mt-3">
         <QuickActionButton
@@ -432,24 +737,60 @@ export function ProfileScreen() {
           <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
             <Grid3x3 className="w-3 h-3 text-secondary" /> Recent Posts
           </h3>
-          <button
-            onClick={() => toast.success("Opening posts feed…")}
-            className="text-[10px] text-secondary hover:underline flex items-center gap-0.5"
-          >
-            View all <ChevronRight className="w-2.5 h-2.5" />
-          </button>
+          {postsCount > 0 && (
+            <button
+              onClick={() => toast.success("Opening posts feed…")}
+              className="text-[10px] text-secondary hover:underline flex items-center gap-0.5"
+            >
+              View all <ChevronRight className="w-2.5 h-2.5" />
+            </button>
+          )}
         </div>
-        <div className="grid grid-cols-3 gap-2">
-          {MOCK_POSTS.map((post) => (
-            <PostGridItem key={post.id} post={post} />
-          ))}
-        </div>
-        {/* Color legend */}
-        <div className="flex items-center justify-center gap-3 mt-3 text-[9px] text-muted-foreground">
-          <span className="flex items-center gap-1"><Type className="w-2.5 h-2.5 text-steel" /> Text</span>
-          <span className="flex items-center gap-1"><ImageIcon className="w-2.5 h-2.5 text-rose" /> Photo</span>
-          <span className="flex items-center gap-1"><Video className="w-2.5 h-2.5 text-teal" /> Video</span>
-        </div>
+        {postsCount === 0 ? (
+          /* Empty-state CTA — replaces the grid for new users with 0 posts.
+             Clicking "Post" opens the composer and optimistically reveals
+             the post grid below as a "what your feed will look like" preview. */
+          <div className="glass rounded-2xl p-5 flex flex-col items-center text-center">
+            <div className="w-14 h-14 rounded-2xl bg-secondary/15 flex items-center justify-center mb-3 ring-1 ring-secondary/20">
+              <FileText className="w-7 h-7 text-secondary" />
+            </div>
+            <div className="font-display text-base">Create your first post</div>
+            <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+              Share a thought, photo, or video with your Circle. Your first post unlocks the feed preview below.
+            </p>
+            <button
+              type="button"
+              onClick={onCreateFirstPost}
+              className="mt-3 px-5 py-2 rounded-full bg-gradient-gold text-charcoal text-xs font-medium hover:scale-105 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background inline-flex items-center gap-1.5"
+            >
+              <PenLine className="w-3.5 h-3.5" /> Post
+            </button>
+            {/* Tiny preview hint of what's coming */}
+            <div className="mt-4 grid grid-cols-3 gap-1.5 w-full opacity-40" aria-hidden>
+              {[Type, ImageIcon, Video].map((PreviewIcon, i) => (
+                <div key={i} className="rounded-xl border border-dashed border-border p-3 flex flex-col items-center gap-1">
+                  <PreviewIcon className="w-3 h-3 text-muted-foreground" />
+                  <div className="h-1.5 w-8 rounded-full bg-muted" />
+                  <div className="h-1.5 w-6 rounded-full bg-muted" />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-3 gap-2">
+              {MOCK_POSTS.map((post) => (
+                <PostGridItem key={post.id} post={post} />
+              ))}
+            </div>
+            {/* Color legend */}
+            <div className="flex items-center justify-center gap-3 mt-3 text-[9px] text-muted-foreground">
+              <span className="flex items-center gap-1"><Type className="w-2.5 h-2.5 text-steel" /> Text</span>
+              <span className="flex items-center gap-1"><ImageIcon className="w-2.5 h-2.5 text-rose" /> Photo</span>
+              <span className="flex items-center gap-1"><Video className="w-2.5 h-2.5 text-teal" /> Video</span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Brain AI Profile banner — routes the user's "analyze my Cirkle

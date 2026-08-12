@@ -8289,3 +8289,163 @@ Stage Summary:
 - Deployment caveat (same as prior agents): the new `/api/stash` route returns 404 against the running prebuilt `.next/standalone` sandbox until the next system-managed production rebuild. All code is correct + lint-clean; route will become reachable after the rebuild.
 - Items 1–9 (circle events / members / join-requests / audit / tipping / affiliate / sponsored hashtags / moderation queue / nearby photos) confirmed present + lint-clean from the prior agent — no regressions.
 - Agent-ctx work record: `/home/z/my-project/agent-ctx/GAPS-BATCH-2-offline-stash-full-stack-developer.md`.
+
+---
+Task ID: FIX-QUICK
+Agent: full-stack-developer
+Task: Fix 3 quick UI issues — (1) Dock 5+More structure, (2) Error Boundaries on all 8 screens, (3) Profile empty-state CTAs + Getting Started checklist + Suggested people.
+
+Work Log:
+- Verified baseline: `bun run lint` → 0 errors, 0 warnings ✅.
+- Read `/home/z/my-project/worklog.md` (last 50 lines) — confirmed GAPS-BATCH-2 follow-up was the prior task; no outstanding conflicts.
+- Read `src/lib/tabs.ts` — confirmed `PRIMARY_TABS` (5: Home, Wasl, Midan, Pay, Profile), `SECONDARY_TABS` (3: Mashahd, Lamahat, Rihla), `MORE_TAB_ICON = LayoutGrid`, and helpers `isPrimaryTab` / `isSecondaryTab` / `getTab` were already in place.
+- Read `src/components/error-boundary.tsx` — confirmed the class component exists, exposes `screenName` prop, shows retry + go-home buttons, and dispatches `circle:navigate` on home.
+
+### Task 1 — Dock 5+More structure (`src/components/shell/dock.tsx`)
+- Switched imports from `TABS` to `PRIMARY_TABS`, `SECONDARY_TABS`, `MORE_TAB_ICON`, `isSecondaryTab`, `type TabId` (kept `TABS` import removed since it's no longer used directly).
+- Added Sheet imports from `@/components/ui/sheet`.
+- Replaced the dock body so it now renders the 5 PRIMARY_TABS buttons followed by a "More" button (uses `MORE_TAB_ICON` = `LayoutGrid`). The More button opens a bottom `Sheet` that lists the 3 SECONDARY_TABS. Each secondary row shows: icon (in a tinted square) + label + subtitle chip ("Video" / "Photos" / "Travel") + a one-line description + a "Recent" badge when the tab is in the recently-used list. Active secondary tab uses `bg-gradient-hero` styling for emphasis.
+- Implemented recently-used tracking at `cirkle-dock-recent` localStorage: `readRecent()`, `writeRecent()`, `pushRecent()` helpers; cap = 3 entries; filtered to only valid secondary TabIds. Updated on every `pickSecondary()` call. State hydrated via lazy `useState(() => readRecent())` initialiser (avoids cascading setState-in-effect lint error).
+- When the active tab is a secondary tab, the More button renders the shared `motion.span layoutId="dock-pill"` so the active pill smoothly animates between primary tabs and the More button. The More button's label expands to show the current secondary tab's localized name when it's the active one.
+- Added a small secondary-colored dot indicator on the More button when there are any recently-used secondary tabs AND the More button isn't currently active — gives the user a hint that there's something to revisit.
+- Keyboard nav (`onKeyDown` on `<nav>`) now treats the dock as 6 items (5 primary + 1 More). Added `getDockIdx(active)` helper that maps a secondary-tab active state to the More button's position. ArrowLeft/Right/Home/End move focus between the 6 dock buttons; when the next index is a primary tab, `onChange` is called (preserving the previous auto-switch behavior); when the next index is the More button, only focus moves (Enter/Space on the button opens the sheet via the onClick handler).
+- Preserved ALL existing functionality: radial menu (RADIAL_ACTIONS map unchanged — still keyed by all 8 TabIds so the menu data is intact for any future use), long-press (500ms timer + 10px move threshold), pointer cancel/capture, right-click context menu, scroll-aware glass opacity, unread-conversations polling for the Wasl badge, ARIA `role="tablist"` / `role="tab"` / `aria-selected` / `aria-label` / roving `tabIndex`, focus-visible ring. Added `aria-haspopup="dialog"` + `aria-expanded` on the More button.
+- The Sheet's secondary-tab buttons also use `role="tab"` + `aria-selected` for consistency with the dock tablist semantics. Sheet closes on selection, on Escape (built-in to Radix), and on overlay tap (built-in).
+
+### Task 2 — Error Boundaries on all 8 screens (`src/app/page.tsx`)
+- Imported `ErrorBoundary` from `@/components/error-boundary`.
+- Refactored the `screens: Record<TabId, () => ReactElement>` map so each entry is an arrow-function wrapper that renders the screen inside `<ErrorBoundary screenName="...">` with the correct screen name (home / wasl / mashahd / lamahat / midan / rihla / pay / profile). All 8 screens are explicitly wrapped — the previous plain `HomeScreen` / `WaslScreen` / … references were replaced with `() => (<ErrorBoundary screenName="home"><HomeScreen /></ErrorBoundary>)` etc.
+- The render site at `src/app/page.tsx:913` (`<Screen />`) is unchanged — when `Screen = screens[tab]` is invoked, the wrapper returns the ErrorBoundary-wrapped screen, so a render-time crash in any one pillar is contained and shows the bilingual retry / go-home fallback UI (the `motion.main key={tab}` parent already remounts on tab switch, which also resets the boundary's error state when navigating away and back).
+- Did NOT touch Brain AI, proxy.ts, or any other protected system.
+
+### Task 3 — Profile empty-state CTAs + Getting Started + Suggested people (`src/screens/profile-screen.tsx`)
+- Added new imports: `Check`, `Compass`, `UserCheck`, `PenLine` (existing `UserPlus`, `Users`, `Camera`, `FileText`, `BadgeCheck`, `Sparkles`, `ShieldCheck`, `Grid3x3`, `ChevronRight` etc. cover the rest).
+- Added module-level helpers + constants:
+  • `CHECKLIST_KEY = "cirkle-profile-checklist"` (localStorage key).
+  • `ChecklistItemId` type = `"account" | "photo" | "post" | "circle" | "invite"`.
+  • `CHECKLIST_ITEMS` array — 5 items: Account created (default done), Add a profile photo, Make your first post, Join a Circle, Invite a friend — each with `icon` + `hint` text.
+  • `readChecklist()` / `writeChecklist()` — SSR-safe localStorage helpers that return/accept a `Record<ChecklistItemId, boolean>` (fallback = `{ account: true, others: false }`).
+  • `SUGGESTED_PEOPLE` array — 3 mock people: Layla Hassan (photographer, rose gradient), Omar Khalil (travel writer, teal gradient), Noor Abed (foodie, amber gradient). Each has `id`, `name`, `handle`, `bio`, `initials`, `gradient`.
+- Added component state: `checklist` (lazy initialiser `() => readChecklist()`), `followed` (Set<string>), `postsCount` (number, default 0).
+- Added component handlers:
+  • `markChecklistItem(id)` — idempotent setState that also persists to localStorage.
+  • `toggleChecklistItem(id)` — for the manual toggle on each row.
+  • `onInviteFriends()` — dispatches `circle:contact-qr` event + marks invite checklist item + toast.
+  • `onDiscoverPeople()` — dispatches `circle:hub` event + toast.
+  • `onCreateFirstPost()` — dispatches `circle:composer` (kind: post) + marks post checklist item + optimistically sets `postsCount = MOCK_POSTS.length` to reveal the grid (so the user sees what their feed will look like).
+  • `onJoinCircle()` — dispatches `circle:hub` + marks circle checklist item + toast.
+  • `onFollowPerson(person)` — toggles followed Set + toast on follow.
+- Replaced the inline "0 followers / 0 following / tier" stats row in the profile header (was lines 313-317) with three compact CTA chips:
+  1. **"Be the first to invite friends"** chip with an `Invite` link → calls `onInviteFriends()`.
+  2. **"Discover people to follow"** chip with an `Explore` link → calls `onDiscoverPeople()`.
+  3. Tier badge chip ("Verified" or "New") — preserves the existing tier display.
+  All chips use `bg-white/10 border border-white/20` styling to fit the dark hero gradient section.
+- Added a new **"Getting Started"** section immediately after the Activity Stats 4-column grid (before the Quick Actions row). Contains:
+  • Header with `Sparkles` icon, "Getting Started" title, and a `completedCount/total` counter on the right.
+  • A gold progress bar (`bg-gradient-gold`) showing completion percentage.
+  • A `<ul>` of 5 checklist rows — each row is a `<button>` with:
+    – Left: a 24px circle that shows a `Check` icon (gold gradient) when done, or the item's icon (muted, bordered) when not done.
+    – Middle: the item label (strikethrough + muted when done) + a hint subtitle.
+    – Right (only when not done): a small "Upload" / "Post" / "Join" / "Invite" action chip that dispatches the corresponding handler. (Account row has no action chip since it's pre-completed.)
+  • Tap on the row itself toggles the done state (manual override).
+  • Footer: "Progress saved on this device · Tap any row to toggle" or "All done — you're a Cirkle pro!" when 5/5 complete.
+  • Full ARIA: `aria-pressed`, `aria-label` on each row, keyboard-accessible action chip (`role="button"` + `tabIndex={0}` + `onKeyDown` for Enter/Space).
+- Added a new **"Suggested for You"** section right after the Getting Started checklist. Contains:
+  • Header with `Users` icon.
+  • 3 mock person rows — each shows: gradient avatar with initials, name + verified badge, @handle, one-line bio, and a Follow / Following toggle button (gold gradient when not following, muted glass when following). Uses `aria-pressed` + `aria-label`.
+  • An "Explore more people" button at the bottom that calls `onDiscoverPeople()`.
+- Updated the **Recent Posts** section so it conditionally renders:
+  • When `postsCount === 0` (the new-user default): shows a centered empty-state CTA card — `FileText` icon in a tinted square, "Create your first post" title, descriptive subtitle, and a gold "Post" button (with `PenLine` icon) that calls `onCreateFirstPost()`. Below the button is a faded 3-cell dashed-border preview hint (text/photo/video icons + placeholder bars) so the user can see what the grid will look like.
+  • When `postsCount > 0`: shows the existing 3-column `MOCK_POSTS` grid (unchanged) + the color legend. The "View all" button only renders when postsCount > 0.
+- Did NOT remove any existing features: the cover photo banner, avatar, verified/privacy badges, Stats grid (Trust score / Workspaces / Verified items), Activity Stats 4-column grid (Posts / Followers / Following / Circles), Quick Actions row, Achievement Badges, Brain AI banner, all 4 grouped settings cards (Account / Appearance / Privacy & Data / About), Region sheet, Detail sheet, Sign-out sheet, Account-deletion AlertDialog — all preserved verbatim.
+
+Stage Summary:
+- Files modified:
+  • `src/components/shell/dock.tsx` — rewrote the dock body to render 5 PRIMARY_TABS + 1 More button (Sheet-backed). ~574 LOC.
+  • `src/app/page.tsx` — wrapped all 8 screens in `ErrorBoundary` via the `screens` map. +43 LOC.
+  • `src/screens/profile-screen.tsx` — added Getting Started checklist + Suggested People + empty-state CTAs (header chips + posts-grid empty state). +340 LOC.
+- Lint: `bun run lint` → 0 errors, 0 warnings ✅.
+- No protected systems touched (Brain AI, proxy.ts, auth, etc.).
+- localStorage keys added: `cirkle-dock-recent` (max 3 secondary TabIds), `cirkle-profile-checklist` (5-item completion record). Both are SSR-safe and gracefully no-op when `window` is undefined.
+- A11y: new sections all carry proper ARIA (`aria-pressed`, `aria-label`, `aria-haspopup`, `aria-expanded`, `role="tab"` / `role="tablist"`, focus-visible rings, keyboard handlers on custom interactive elements).
+- ADR-001 (web-first PWA): all new state is client-only (localStorage + useState). No server changes. No new API routes. No DB schema changes.
+- Agent-ctx work record: `/home/z/my-project/agent-ctx/FIX-QUICK-full-stack-developer.md`.
+
+---
+Task ID: FIX-PRODUCTION
+Agent: full-stack-developer
+Task: Add 4 production-readiness features (input validation, rate limiting, error monitoring, API smoke tests) without touching protected systems.
+
+Work Log:
+- Baseline verified: `bun run lint` → 0 errors, 0 warnings before starting.
+- Read existing `src/lib/rate-limit.ts` to learn its API (`rateLimit`, `getClientIP`, `getRateLimitHeaders`, `RATE_LIMIT_TIERS`) and the 5 critical API routes to be hardened (`/api/conversations/[id]/messages`, `/api/posts`, `/api/payments/send`, `/api/news/search`, `/api/ai/translate`).
+- Created `src/lib/api-validation.ts`:
+  • `validateBody<T, R extends Request, Args>(schema, handler)` — wraps an API route handler with zod body validation. On invalid JSON → 400 `{error:"invalid_json"}`. On validation failure → 400 `{error:"validation_failed", issues:[{path,message,code}]}`. On success → delegates to `handler(req, parsedData, ...rest)`.
+  • `validateQuery<T, R, Args>(schema, handler)` — same pattern for URL search params (coerces all values to strings, use `z.coerce.number()` for non-string fields).
+  • Re-exports `z` from zod so callers can `import { validateBody, z } from "@/lib/api-validation"`.
+  • Generic over `R extends Request` so handlers typed with `NextRequest` compose without `strictFunctionTypes` contravariance errors.
+  • `ValidationIssue` + `ValidationFailure` exported types for client-side error rendering.
+- Created `src/lib/api-rate-limit.ts`:
+  • `withRateLimit<R extends Request, Args>(handler, options)` — applies rate limiting before the handler runs. On limit exceeded → 429 `{error:"rate_limit_exceeded", retryAfter}` + `Retry-After` + `X-RateLimit-{Limit,Remaining,Reset}` headers. On success → calls handler and attaches the same headers to the response.
+  • `RateLimitOptions`: `{maxRequests, windowMs, keyBy?: "ip"|"userId", scope?}`. `keyBy:"userId"` reads `x-cirkle-user-id` header (set by authenticated proxy in prod) and falls back to IP when missing.
+  • `RATE_LIMIT_PRESETS` — convenience constants for ai (20/min), newsSearch (30/min), posts (10/min), news (60/min).
+  • Uses the existing `rateLimit`, `getClientIP`, `getRateLimitHeaders` functions from `src/lib/rate-limit.ts` — no new limiter implementation.
+- Created `src/lib/error-monitoring.ts`:
+  • `captureError(error, context?)` — normalises any thrown value (Error / string / object) into `{message, name, stack}`, captures with `{id, timestamp, kind:"error", level:"error", message, name?, stack?, context?, url?, userAgent?}`.
+  • `captureMessage(message, level?, context?)` — captures a free-form string with severity level (`fatal|error|warning|info|debug`).
+  • `getErrorHistory()` — defensive copy of the last 100 entries (newest last).
+  • `clearErrorHistory()` — wipes the buffer (admin only).
+  • `getErrorStats()` — aggregate counts by level + kind + oldest/newest timestamps.
+  • `withCapture(label, fn, context?)` — async wrapper that captures any thrown error before re-throwing.
+  • In-memory ring buffer (cap 100), mirrors to console with level-appropriate method (`error`/`warn`/`log`).
+  • Isomorphic — `envContext()` detects browser vs server and captures `window.location.href` + `navigator.userAgent` only on the client.
+  • Surface mirrors Sentry's `captureError` / `captureMessage` so swapping to a real Sentry (or any other vendor) later only requires editing this single file.
+- Created `src/app/api/monitoring/errors/route.ts`:
+  • `GET` → returns `{stats, errors, count}` (last 100 errors, newest last) with `Cache-Control: no-store`.
+  • `DELETE` → wipes the buffer + captures an info message so the clear event itself shows up in the dashboard.
+  • Not auth-gated (CIRKLE auth is client-side); intended to be restricted at the reverse-proxy layer (Caddy / Cloudflare Access) in production.
+- Updated `src/components/error-boundary.tsx`:
+  • Imported `captureError` from `@/lib/error-monitoring`.
+  • `componentDidCatch(error, errorInfo)` now calls `captureError(error, {screenName, source:"ErrorBoundary", componentStack: errorInfo.componentStack})` after the existing `console.error` call.
+  • The `console.error` is preserved so dev feedback is unchanged.
+- Created `src/lib/api-tests.ts`:
+  • Framework-free test runner — no vitest/jest dependency. Just async functions that throw `AssertionError` on failure.
+  • `assert(condition, message)`, `assertEqual(actual, expected, message)`, `assertOk(value, message)` helpers.
+  • `runApiTests()` returns `{total, passed, failed, durationMs, results: TestResult[]}`.
+  • `TestResult` shape: `{name, ok, message, durationMs, details?}`.
+  • 5 read-only smoke tests:
+    1. `GET /api/health` → 200 + `status` ∈ {healthy, ok, degraded}
+    2. `GET /api/news?country=EG` → 200 + `breaking` or `articles` is an array
+    3. `GET /api/aike/status` → 200 + `status === "operational"`
+    4. `GET /api/brain/status` → 200 + `online === true`
+    5. `GET /api/features?country=SA` → 200 + `enabled` or `all` is an array
+  • Tests fetch `${BASE_URL || http://localhost:3000}<path>` with an 8s `AbortController` timeout.
+- Created `src/app/api/_test/route.ts`:
+  • `GET` → runs `runApiTests()` and returns the suite result. `export const dynamic = "force-dynamic"` so the page is never cached.
+  • In `NODE_ENV === "production"` → returns 404 so the endpoint is impossible to trigger from a public deploy.
+  • Captures a `captureMessage` summary after each run (info on success, warning on failure) so test runs surface in the error-monitoring dashboard.
+- Applied validation to 5 critical routes:
+  • `POST /api/conversations/[id]/messages` — schema mirrors the existing `PostBody` interface (all optional fields so E2EE-only / attachment-only / system-event-only messages still pass). Existing cross-field invariants (ciphertext OR body OR attachment required, 8MB ciphertext cap, replyToId existence check, TTL ceiling) preserved verbatim. Handler signature changed from `(req, ctx)` to `validateBody(schema, async (req, body, ctx) => ...)`. `req.json()` call removed.
+  • `POST /api/posts` — `postCreateSchema` validates body/content/module/author*/visibility/tags/mediaKind/anonymousId with sensible max-length caps. sendBeacon tracking POSTs (empty body + tracking query params) bypass validation by checking query params first inside the rate-limited outer wrapper, then delegating to `validateBody`-wrapped `createPost` for the post-creation path. Original P1.6 anonymous-privacy covenant (no User FK linkage when `anonymousId` present) preserved.
+  • `POST /api/payments/send` — `paymentSendSchema` validates amount (coerced to number, positive, ≤1B), counterparty/to (1–100 chars), currency (1–10 chars), method (enum of 8 valid methods), memo (≤500 chars). Handler still re-checks amount positivity as defence in depth.
+  • `POST /api/news/search` — NEW POST handler added alongside the existing GET. `newsSearchSchema` validates `q` (1–200 chars, required), optional `country` (2 chars), optional `category` (≤40 chars). Existing GET preserved inside its own rate-limit wrapper.
+  • `POST /api/ai/translate` — `translateSchema` validates `text` (1–10k chars, required), optional `from`/`to`/`targetLang` (2–20 chars). Existing 200ms delay + `aiComplete` 5-provider chain + fallback-to-input behaviour preserved.
+- Applied rate limiting to 4 endpoint groups:
+  • `POST /api/ai/{translate,summarize,smart-reply,itinerary,memoir}` — 20 req/min (AI is expensive). All 5 routes wrapped. Existing fallbacks (FALLBACK_SUMMARY, FALLBACK_REPLIES, FALLBACK_MEMOIR) preserved.
+  • `GET /api/news/search` + new `POST /api/news/search` — 30 req/min.
+  • `POST /api/posts` — 10 req/min (anti-spam). Wraps the combined tracking + createPost handler.
+  • `GET /api/news` — 60 req/min. Existing orchestrator + news-fallback chain preserved.
+- Composition order: `withRateLimit(validateBody(schema, handler), opts)` — rate limit runs first (cheap IP lookup) so over-limit callers never burn CPU on zod parsing.
+- `@ts-nocheck` retained on the AI + news route files (they were already untyped before this task). Wrappers still work at runtime; type-safety is layered on top via the schema inference.
+- Removed 3 unused `eslint-disable no-console` directives in `error-monitoring.ts` after lint flagged them as unnecessary (the project's eslint config doesn't ban `console.*`).
+- Did NOT touch: Brain AI (`src/lib/brain-*.ts`, `src/app/api/brain/*`), `proxy.ts`, OIDC, E2EE, auth, any DB schema, any client screen, any existing feature flag.
+- Agent-ctx work record: `/home/z/my-project/agent-ctx/FIX-PRODUCTION-full-stack-developer.md`.
+
+Stage Summary:
+- Files added (6): `src/lib/api-validation.ts`, `src/lib/api-rate-limit.ts`, `src/lib/error-monitoring.ts`, `src/lib/api-tests.ts`, `src/app/api/monitoring/errors/route.ts`, `src/app/api/_test/route.ts`.
+- Files modified (9): `src/components/error-boundary.tsx`, `src/app/api/conversations/[id]/messages/route.ts`, `src/app/api/posts/route.ts`, `src/app/api/payments/send/route.ts`, `src/app/api/news/search/route.ts`, `src/app/api/news/route.ts`, `src/app/api/ai/translate/route.ts`, `src/app/api/ai/summarize/route.ts`, `src/app/api/ai/smart-reply/route.ts`, `src/app/api/ai/itinerary/route.ts`, `src/app/api/ai/memoir/route.ts`.
+- Lint: `bun run lint` → 0 errors, 0 warnings ✅.
+- All wrappers are generic over `R extends Request` so they compose with `NextRequest` handlers under `strictFunctionTypes` without contravariance errors.
+- Rate-limit buckets + error buffer are in-memory (per the existing platform stack — no Redis). Both files are structured so a future Redis / Sentry migration only requires editing the single library file.
+- Production vs dev gating: `/api/_test` returns 404 in production. `/api/monitoring/errors` is intended to be reverse-proxy-gated (Caddy / Cloudflare Access) in production.
+- No protected systems touched. No existing features removed. All original handler logic preserved; validation + rate limiting are additive gates.

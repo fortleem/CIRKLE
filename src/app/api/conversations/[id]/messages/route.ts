@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { ensureSeeded } from "@/lib/circle/seed";
 import type { ChatMessage } from "@/lib/circle/types";
+import { validateBody, z } from "@/lib/api-validation";
 
 interface MessageRow {
   id: string;
@@ -173,6 +174,40 @@ interface PostBody {
 }
 
 /**
+ * Zod schema mirroring `PostBody`. Runs as the first gate of the POST
+ * handler via `validateBody` so malformed payloads are rejected with a
+ * structured 400 before any DB work happens. Limits are deliberately
+ * generous — the handler still enforces the E2EE / size / cross-field
+ * rules below.
+ */
+const postMessageSchema = z.object({
+  body: z.string().max(50_000).optional(),
+  ciphertext: z.string().max(8 * 1024 * 1024).optional(),
+  senderId: z.string().max(100).optional(),
+  senderName: z.string().max(100).optional(),
+  senderInitials: z.string().max(10).optional(),
+  senderColor: z.string().max(30).optional(),
+  replyToId: z.string().max(100).optional(),
+  attachmentKind: z
+    .enum(["image", "audio", "file", "location", "payment"])
+    .nullable()
+    .optional(),
+  attachmentName: z.string().max(500).nullable().optional(),
+  attachmentUrl: z.string().max(2048).nullable().optional(),
+  attachmentMime: z.string().max(200).nullable().optional(),
+  attachmentSize: z.number().int().nonnegative().nullable().optional(),
+  forwardedFromId: z.string().max(100).nullable().optional(),
+  ttlSeconds: z
+    .number()
+    .int()
+    .positive()
+    .max(30 * 24 * 60 * 60)
+    .nullable()
+    .optional(),
+  systemEvent: z.string().max(200).nullable().optional(),
+});
+
+/**
  * POST /api/conversations/:id/messages
  * Body: PostBody
  *
@@ -183,132 +218,139 @@ interface PostBody {
  * the ciphertext blob — `body` is left null so the server never persists
  * plaintext. The `encrypted` flag is set true. Decryption happens entirely
  * client-side using the recipient's private key (never sent to the server).
+ *
+ * The handler is wrapped with `validateBody(postMessageSchema, …)` so the
+ * JSON body is type-checked by zod before any DB write. The validated body
+ * is then re-asserted through `PostBody` for backward compatibility with
+ * the existing inline checks.
  */
-export async function POST(
-  req: NextRequest,
-  ctx: { params: Promise<{ id: string }> },
-) {
-  try {
-    // ensureSeeded removed — no mock data();
-    const { id } = await ctx.params;
+export const POST = validateBody(
+  postMessageSchema,
+  async (
+    _req: NextRequest,
+    body: z.infer<typeof postMessageSchema>,
+    ctx: { params: Promise<{ id: string }> },
+  ) => {
+    try {
+      const { id } = await ctx.params;
 
-    const body = (await req.json().catch(() => null)) as PostBody | null;
+      const payload = body as PostBody;
+      const ciphertext = payload.ciphertext?.trim() ?? "";
+      const text = payload.body?.trim() ?? "";
+      const hasAttachment = !!payload.attachmentKind;
+      const hasForward = !!payload.forwardedFromId;
+      const hasSystemEvent = !!payload.systemEvent;
 
-    const ciphertext = body?.ciphertext?.trim() ?? "";
-    const text = body?.body?.trim() ?? "";
-    const hasAttachment = !!body?.attachmentKind;
-    const hasForward = !!body?.forwardedFromId;
-    const hasSystemEvent = !!body?.systemEvent;
+      // E2EE ciphertext takes precedence — when present, no plaintext is
+      // accepted on this request (defence in depth: callers should omit `body`
+      // when sending ciphertext, but we enforce it server-side too).
+      const isEncrypted = ciphertext.length > 0;
+      const effectiveBody = isEncrypted ? null : text || (payload.attachmentName ?? "");
 
-    // E2EE ciphertext takes precedence — when present, no plaintext is
-    // accepted on this request (defence in depth: callers should omit `body`
-    // when sending ciphertext, but we enforce it server-side too).
-    const isEncrypted = ciphertext.length > 0;
-    const effectiveBody = isEncrypted ? null : text || (body?.attachmentName ?? "");
-
-    if (!ciphertext && !effectiveBody && !hasAttachment && !hasForward && !hasSystemEvent) {
-      return NextResponse.json(
-        { error: "ciphertext or body or attachment is required" },
-        { status: 400 },
-      );
-    }
-
-    // Cap ciphertext size to protect the SQLite DB (matches Family Vault bound).
-    if (ciphertext.length > 8 * 1024 * 1024) {
-      return NextResponse.json(
-        { error: "ciphertext too large (max 8 MB)" },
-        { status: 413 },
-      );
-    }
-
-    const exists = await db.conversation.findUnique({ where: { id } });
-    if (!exists) {
-      return NextResponse.json(
-        { error: "conversation not found" },
-        { status: 404 },
-      );
-    }
-
-    // Validate replyToId if provided.
-    if (body?.replyToId) {
-      const ref = await db.message.findUnique({ where: { id: body.replyToId } });
-      if (!ref) {
+      if (!ciphertext && !effectiveBody && !hasAttachment && !hasForward && !hasSystemEvent) {
         return NextResponse.json(
-          { error: "replyTo message not found" },
+          { error: "ciphertext or body or attachment is required" },
           { status: 400 },
         );
       }
+
+      // Cap ciphertext size to protect the SQLite DB (matches Family Vault bound).
+      if (ciphertext.length > 8 * 1024 * 1024) {
+        return NextResponse.json(
+          { error: "ciphertext too large (max 8 MB)" },
+          { status: 413 },
+        );
+      }
+
+      const exists = await db.conversation.findUnique({ where: { id } });
+      if (!exists) {
+        return NextResponse.json(
+          { error: "conversation not found" },
+          { status: 404 },
+        );
+      }
+
+      // Validate replyToId if provided.
+      if (payload.replyToId) {
+        const ref = await db.message.findUnique({ where: { id: payload.replyToId } });
+        if (!ref) {
+          return NextResponse.json(
+            { error: "replyTo message not found" },
+            { status: 400 },
+          );
+        }
+      }
+
+      const now = new Date();
+      const ttl = payload.ttlSeconds && payload.ttlSeconds > 0 ? payload.ttlSeconds : null;
+      const expiresAt = ttl ? new Date(now.getTime() + ttl * 1000) : null;
+
+      const created = await db.message.create({
+        data: {
+          conversationId: id,
+          senderId: payload.senderId ?? null,
+          senderName: payload.senderName ?? "You",
+          senderInitials: payload.senderInitials ?? "ME",
+          senderColor: payload.senderColor ?? "rose",
+          // Store ONLY ciphertext when encrypted; plaintext body otherwise.
+          body: effectiveBody,
+          ciphertext: isEncrypted ? ciphertext : null,
+          status: "sent",
+          encrypted: isEncrypted ? true : (effectiveBody ? false : true),
+          replyToId: payload.replyToId ?? null,
+          attachmentKind: payload.attachmentKind ?? null,
+          attachmentName: payload.attachmentName ?? null,
+          attachmentUrl: payload.attachmentUrl ?? null,
+          attachmentMime: payload.attachmentMime ?? null,
+          attachmentSize: payload.attachmentSize ?? null,
+          forwardedFromId: payload.forwardedFromId ?? null,
+          ttlSeconds: ttl,
+          expiresAt,
+          systemEvent: payload.systemEvent ?? null,
+        },
+        include: { reactions: { select: { emoji: true, displayName: true } } },
+      });
+
+      // Bump the conversation's updatedAt so it floats to the top.
+      await db.conversation.update({
+        where: { id },
+        data: { updatedAt: created.createdAt },
+      });
+
+      // Resolve reply + forward snapshots for the response shape. We surface
+      // ciphertext as the body for E2EE messages so the recipient's client can
+      // decrypt locally — the server never decrypts.
+      const refIds = new Set<string>();
+      if (created.replyToId) refIds.add(created.replyToId);
+      if (created.forwardedFromId) refIds.add(created.forwardedFromId);
+      const refs =
+        refIds.size > 0
+          ? await db.message.findMany({
+              where: { id: { in: Array.from(refIds) } },
+              select: { id: true, senderName: true, body: true, ciphertext: true },
+            })
+          : [];
+      const refMap = new Map<string, { senderName: string; body: string }>();
+      for (const r of refs) {
+        refMap.set(r.id, { senderName: r.senderName, body: r.body ?? r.ciphertext ?? "" });
+      }
+
+      const out = toChatShape(
+        created as unknown as MessageRow,
+        created.replyToId ? refMap.get(created.replyToId) ?? null : null,
+      );
+      if (created.forwardedFromId) {
+        const fwd = refMap.get(created.forwardedFromId);
+        if (fwd) (out as { forwardedFrom?: { senderName: string; body: string } | null }).forwardedFrom = fwd;
+      }
+
+      return NextResponse.json(out, { status: 201 });
+    } catch (err) {
+      logger.error("[/api/conversations/:id/messages POST] error", { error: (err as Error).message });
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : "failed to send message" },
+        { status: 500 },
+      );
     }
-
-    const now = new Date();
-    const ttl = body?.ttlSeconds && body.ttlSeconds > 0 ? body.ttlSeconds : null;
-    const expiresAt = ttl ? new Date(now.getTime() + ttl * 1000) : null;
-
-    const created = await db.message.create({
-      data: {
-        conversationId: id,
-        senderId: body?.senderId ?? null,
-        senderName: body?.senderName ?? "You",
-        senderInitials: body?.senderInitials ?? "ME",
-        senderColor: body?.senderColor ?? "rose",
-        // Store ONLY ciphertext when encrypted; plaintext body otherwise.
-        body: effectiveBody,
-        ciphertext: isEncrypted ? ciphertext : null,
-        status: "sent",
-        encrypted: isEncrypted ? true : (effectiveBody ? false : true),
-        replyToId: body?.replyToId ?? null,
-        attachmentKind: body?.attachmentKind ?? null,
-        attachmentName: body?.attachmentName ?? null,
-        attachmentUrl: body?.attachmentUrl ?? null,
-        attachmentMime: body?.attachmentMime ?? null,
-        attachmentSize: body?.attachmentSize ?? null,
-        forwardedFromId: body?.forwardedFromId ?? null,
-        ttlSeconds: ttl,
-        expiresAt,
-        systemEvent: body?.systemEvent ?? null,
-      },
-      include: { reactions: { select: { emoji: true, displayName: true } } },
-    });
-
-    // Bump the conversation's updatedAt so it floats to the top.
-    await db.conversation.update({
-      where: { id },
-      data: { updatedAt: created.createdAt },
-    });
-
-    // Resolve reply + forward snapshots for the response shape. We surface
-    // ciphertext as the body for E2EE messages so the recipient's client can
-    // decrypt locally — the server never decrypts.
-    const refIds = new Set<string>();
-    if (created.replyToId) refIds.add(created.replyToId);
-    if (created.forwardedFromId) refIds.add(created.forwardedFromId);
-    const refs =
-      refIds.size > 0
-        ? await db.message.findMany({
-            where: { id: { in: Array.from(refIds) } },
-            select: { id: true, senderName: true, body: true, ciphertext: true },
-          })
-        : [];
-    const refMap = new Map<string, { senderName: string; body: string }>();
-    for (const r of refs) {
-      refMap.set(r.id, { senderName: r.senderName, body: r.body ?? r.ciphertext ?? "" });
-    }
-
-    const out = toChatShape(
-      created as unknown as MessageRow,
-      created.replyToId ? refMap.get(created.replyToId) ?? null : null,
-    );
-    if (created.forwardedFromId) {
-      const fwd = refMap.get(created.forwardedFromId);
-      if (fwd) (out as { forwardedFrom?: { senderName: string; body: string } | null }).forwardedFrom = fwd;
-    }
-
-    return NextResponse.json(out, { status: 201 });
-  } catch (err) {
-    logger.error("[/api/conversations/:id/messages POST] error", { error: (err as Error).message });
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "failed to send message" },
-      { status: 500 },
-    );
-  }
-}
+  },
+);

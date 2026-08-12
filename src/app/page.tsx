@@ -135,10 +135,53 @@ import { MidanScreen } from "@/screens/midan-screen";
 import { RihlaScreen } from "@/screens/rihla-screen";
 import { PayScreen } from "@/screens/pay-screen";
 import { ProfileScreen } from "@/screens/profile-screen";
+import { ErrorBoundary } from "@/components/error-boundary";
 
+// Each screen is wrapped in its own ErrorBoundary so a render-time crash in
+// one pillar (e.g. Profile throwing on a missing user field) does not bring
+// down the whole app. The boundary shows retry/home buttons and reports the
+// screenName for debugging.
 const screens: Record<TabId, () => ReactElement> = {
-  home: HomeScreen, wasl: WaslScreen, mashahd: MashahdScreen, lamahat: LamahatScreen,
-  midan: MidanScreen, rihla: RihlaScreen, pay: PayScreen, profile: ProfileScreen,
+  home: () => (
+    <ErrorBoundary screenName="home">
+      <HomeScreen />
+    </ErrorBoundary>
+  ),
+  wasl: () => (
+    <ErrorBoundary screenName="wasl">
+      <WaslScreen />
+    </ErrorBoundary>
+  ),
+  mashahd: () => (
+    <ErrorBoundary screenName="mashahd">
+      <MashahdScreen />
+    </ErrorBoundary>
+  ),
+  lamahat: () => (
+    <ErrorBoundary screenName="lamahat">
+      <LamahatScreen />
+    </ErrorBoundary>
+  ),
+  midan: () => (
+    <ErrorBoundary screenName="midan">
+      <MidanScreen />
+    </ErrorBoundary>
+  ),
+  rihla: () => (
+    <ErrorBoundary screenName="rihla">
+      <RihlaScreen />
+    </ErrorBoundary>
+  ),
+  pay: () => (
+    <ErrorBoundary screenName="pay">
+      <PayScreen />
+    </ErrorBoundary>
+  ),
+  profile: () => (
+    <ErrorBoundary screenName="profile">
+      <ProfileScreen />
+    </ErrorBoundary>
+  ),
 };
 
 const titles: Record<TabId, string | undefined> = {

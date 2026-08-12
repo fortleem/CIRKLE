@@ -5,6 +5,8 @@ import { ensureSeeded } from "@/lib/circle/seed";
 import { getRegionForCountry } from "@/lib/regions";
 import type { Post } from "@/lib/circle/types";
 import { rankFeedForUser, trackInteraction } from "@/lib/feed-algorithm";
+import { validateBody, z } from "@/lib/api-validation";
+import { withRateLimit } from "@/lib/api-rate-limit";
 
 /** Resolve the serving region from the country header set by the proxy. */
 function regionFor(req: NextRequest): string {
@@ -159,17 +161,122 @@ export async function GET(req: NextRequest) {
 }
 
 /**
+ * Zod schema for `POST /api/posts`. Mirrors the inline type the handler
+ * previously accepted. `body` and `content` are both optional here — the
+ * handler still enforces "at least one of body/content must be non-empty"
+ * because the existing UX allows `content` as an alias for `body`.
+ */
+const postCreateSchema = z.object({
+  body: z.string().max(20_000).optional(),
+  content: z.string().max(20_000).optional(),
+  module: z.enum(["midan", "lamahat", "mashahd", "circle"]).optional(),
+  authorName: z.string().max(100).optional(),
+  author: z.string().max(100).optional(),
+  authorHandle: z.string().max(100).optional(),
+  authorId: z.string().max(100).optional(),
+  authorInitials: z.string().max(10).optional(),
+  authorColor: z.string().max(30).optional(),
+  authorVerified: z.boolean().optional(),
+  visibility: z.enum(["public", "followers", "circle", "anonymous"]).optional(),
+  tags: z.array(z.string().max(60)).max(20).optional(),
+  mediaKind: z.string().max(60).optional(),
+  // P1.6 — Anonymous Midan. When `anonymousId` is present, the post
+  // is stored under the pseudonymous identity. The server never
+  // receives the real user's identity, and there is NO mapping
+  // table linking `anonymousId` back to a real user — the mapping
+  // lives exclusively in the authoring device's localStorage.
+  anonymousId: z.string().max(100).optional(),
+});
+
+/** Inner post-creation handler — body already validated by zod. */
+const createPost = validateBody(
+  postCreateSchema,
+  async (req: NextRequest, body: z.infer<typeof postCreateSchema>) => {
+    try {
+      const postBody = body.body ?? body.content;
+      if (!postBody || typeof postBody !== "string" || !postBody.trim()) {
+        return NextResponse.json({ error: "body is required" }, { status: 400 });
+      }
+
+      const validModules = ["midan", "lamahat", "mashahd", "circle"];
+      const moduleValue =
+        body.module && validModules.includes(body.module) ? body.module : "midan";
+
+      const validVis = ["public", "followers", "circle", "anonymous"];
+      // When anonymousId is present, force visibility to "anonymous" so
+      // downstream consumers (feed, search, moderation) can mark the
+      // post accordingly. The privacy covenant is unaffected — the API
+      // only ever sees the pseudonymous identity.
+      const visibility =
+        body.anonymousId
+          ? "anonymous"
+          : body.visibility && validVis.includes(body.visibility)
+            ? body.visibility
+            : "public";
+
+      // P1.6 — Privacy covenant: when anonymousId is present, the server
+      // stores ONLY the pseudonymous identity. The real user's User row is
+      // NOT linked — `authorId` is null so the FK to User is never
+      // exercised. The pseudonymous identity lives in `anonymousId` +
+      // `authorHandle` + `authorName`, none of which can be mapped back
+      // to a real user (the mapping lives exclusively on the authoring
+      // device's localStorage).
+      const isAnonymous = !!body.anonymousId;
+      const created = await db.post.create({
+        data: {
+          // null authorId when anonymous (no User FK linkage) OR when no
+          // authorId was provided — avoids FK violations when the
+          // supplied authorId doesn't match a real User row.
+          authorId: isAnonymous ? null : (body.authorId ?? null),
+          anonymousId: isAnonymous ? body.anonymousId! : null,
+          authorName: isAnonymous ? (body.authorName ?? "Anonymous") : (body.authorName ?? body.author ?? "Anonymous"),
+          authorHandle: isAnonymous ? (body.authorHandle ?? "anonymous") : (body.authorHandle ?? "anonymous"),
+          authorInitials: body.authorInitials ?? "A",
+          authorColor: isAnonymous ? (body.authorColor ?? "steel") : (body.authorColor ?? "teal"),
+          authorVerified: false, // Anonymous posts are never verified by design.
+          body: postBody.trim(),
+          module: moduleValue,
+          visibility,
+          language: "en",
+          tags: body.tags?.length ? body.tags.join(",") : null,
+          mediaKind: body.mediaKind ?? null,
+          likes: 0,
+          comments: 0,
+          shares: 0,
+          views: 0,
+        },
+      });
+
+      return NextResponse.json(toPostShape(created), {
+        status: 201,
+        headers: { "X-Data-Region": regionFor(req) },
+      });
+    } catch (err) {
+      logger.error("[/api/posts POST] error", { error: (err as Error).message });
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : "failed to create post" },
+        { status: 500 },
+      );
+    }
+  },
+);
+
+/**
  * POST /api/posts
  * Body: {body?, content?, module?, authorName?, author?, authorHandle?, visibility?, tags?, mediaKind?}
  *   - `body` is the canonical field for the post text.
  *   - `content` is accepted as a convenience alias for `body`.
  *   - `author` is accepted as a convenience alias for `authorName`.
  * Creates with author defaults from CURRENT_USER. No counters incremented.
+ *
+ * The handler is wrapped with `withRateLimit` (10 req/min — anti-spam) and
+ * the post-creation path is additionally wrapped with `validateBody` so a
+ * malformed payload returns 400 before any DB write. sendBeacon tracking
+ * POSTs (empty body + tracking query params) bypass validation since they
+ * don't carry a JSON body.
  */
-export async function POST(req: NextRequest) {
-  try {
-    // ensureSeeded removed — no mock data();
-
+export const POST = withRateLimit(
+  async (req: NextRequest) => {
     // ── sendBeacon tracking support ────────────────────────────────────
     // navigator.sendBeacon() sends a POST with an empty body. The tracking
     // params (id, username, track, dwellMs) are in the URL query string.
@@ -193,91 +300,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const body = (await req.json().catch(() => null)) as {
-      body?: string;
-      content?: string;
-      module?: string;
-      authorName?: string;
-      author?: string;
-      authorHandle?: string;
-      authorId?: string;
-      authorInitials?: string;
-      authorColor?: string;
-      authorVerified?: boolean;
-      visibility?: string;
-      tags?: string[];
-      mediaKind?: string;
-      // P1.6 — Anonymous Midan. When `anonymousId` is present, the post
-      // is stored under the pseudonymous identity. The server never
-      // receives the real user's identity, and there is NO mapping
-      // table linking `anonymousId` back to a real user — the mapping
-      // lives exclusively in the authoring device's localStorage.
-      anonymousId?: string;
-    } | null;
-
-    const postBody = body?.body ?? body?.content;
-    if (!postBody || typeof postBody !== "string" || !postBody.trim()) {
-      return NextResponse.json({ error: "body is required" }, { status: 400 });
-    }
-
-    const validModules = ["midan", "lamahat", "mashahd", "circle"];
-    const moduleValue =
-      body!.module && validModules.includes(body!.module) ? body!.module : "midan";
-
-    const validVis = ["public", "followers", "circle", "anonymous"];
-    // When anonymousId is present, force visibility to "anonymous" so
-    // downstream consumers (feed, search, moderation) can mark the
-    // post accordingly. The privacy covenant is unaffected — the API
-    // only ever sees the pseudonymous identity.
-    const visibility =
-      body!.anonymousId
-        ? "anonymous"
-        : body!.visibility && validVis.includes(body!.visibility)
-          ? body!.visibility
-          : "public";
-
-    // P1.6 — Privacy covenant: when anonymousId is present, the server
-    // stores ONLY the pseudonymous identity. The real user's User row is
-    // NOT linked — `authorId` is null so the FK to User is never
-    // exercised. The pseudonymous identity lives in `anonymousId` +
-    // `authorHandle` + `authorName`, none of which can be mapped back
-    // to a real user (the mapping lives exclusively on the authoring
-    // device's localStorage).
-    const isAnonymous = !!body!.anonymousId;
-    const created = await db.post.create({
-      data: {
-        // null authorId when anonymous (no User FK linkage) OR when no
-        // authorId was provided — avoids FK violations when the
-        // supplied authorId doesn't match a real User row.
-        authorId: isAnonymous ? null : (body!.authorId ?? null),
-        anonymousId: isAnonymous ? body!.anonymousId! : null,
-        authorName: isAnonymous ? (body!.authorName ?? "Anonymous") : (body!.authorName ?? body!.author ?? "Anonymous"),
-        authorHandle: isAnonymous ? (body!.authorHandle ?? "anonymous") : (body!.authorHandle ?? "anonymous"),
-        authorInitials: body!.authorInitials ?? "A",
-        authorColor: isAnonymous ? (body!.authorColor ?? "steel") : (body!.authorColor ?? "teal"),
-        authorVerified: false, // Anonymous posts are never verified by design.
-        body: postBody.trim(),
-        module: moduleValue,
-        visibility,
-        language: "en",
-        tags: body!.tags?.length ? body!.tags.join(",") : null,
-        mediaKind: body!.mediaKind ?? null,
-        likes: 0,
-        comments: 0,
-        shares: 0,
-        views: 0,
-      },
-    });
-
-    return NextResponse.json(toPostShape(created), {
-      status: 201,
-      headers: { "X-Data-Region": regionFor(req) },
-    });
-  } catch (err) {
-    logger.error("[/api/posts POST] error", { error: (err as Error).message });
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "failed to create post" },
-      { status: 500 },
-    );
-  }
-}
+    // ── Post creation (validated) ──────────────────────────────────────
+    return createPost(req);
+  },
+  { maxRequests: 10, windowMs: 60_000 },
+);
