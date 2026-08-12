@@ -8449,3 +8449,100 @@ Stage Summary:
 - Rate-limit buckets + error buffer are in-memory (per the existing platform stack — no Redis). Both files are structured so a future Redis / Sentry migration only requires editing the single library file.
 - Production vs dev gating: `/api/_test` returns 404 in production. `/api/monitoring/errors` is intended to be reverse-proxy-gated (Caddy / Cloudflare Access) in production.
 - No protected systems touched. No existing features removed. All original handler logic preserved; validation + rate limiting are additive gates.
+
+---
+
+## Task ID CREATIVE-1 — Smart Social Features (social media expert)
+
+Implemented 5 creative social media features for CIRKLE. Lint: 0 errors / 0 warnings ✅.
+
+**Files added (7):**
+- `src/lib/cross-module-share.ts` — Cross-Module Sharing Hub (pure lib). `shareToModules`, `getShareSuggestions`, `transformForModule`, `executeCrossModuleShare`, `MODULE_META`, plus types.
+- `src/lib/social-rituals.ts` — Social Rituals (pure lib). 28 bilingual (Ar/En) daily prompts across morning/afternoon/evening/weekend slots, deterministic per-day rotation (no repeats within a week), localStorage-backed streak tracking with idempotent same-day handling.
+- `src/app/api/rituals/route.ts` — GET returns today's ritual + user streak; POST records participation.
+- `src/app/api/share/cross-module/route.ts` — POST validates + dispatches to per-module endpoints in parallel; returns per-module results + AI suggestions + elapsed time.
+- `src/components/overlays/smart-compose.tsx` — Unified composer (Text/Photo/Video/Poll/Thread). AI Content Coach with 1–10 quality score + contextual tips. Cross-module selector. Privacy selector. AI hashtag + emoji suggestions. Char count + optimal-length indicator. Draft save (localStorage). Schedule for later. Dispatches `circle:smart-compose`.
+- `src/components/overlays/social-analytics.tsx` — Personal engagement dashboard. Weekly stats + deltas, best posting time, top post, CSS-bar growth chart, module breakdown bars, audience insights (countries + ages), AI Insight card. Dispatches `circle:social-analytics`.
+- `src/components/overlays/smart-notifications.tsx` — AI-grouped notifications by intent. Priority levels (Urgent/Important/Normal). Smart snooze by `groupKey` (1h). Batch actions. Filter by type. Per-type prefs panel. Dispatches `circle:smart-notifications`.
+
+**Files modified (3):**
+- `src/app/page.tsx` — 3 dynamic imports, 3 useState flags, 3 event listeners + cleanup, Escape-key handling, 3 component renders.
+- `src/lib/overlay-registry.ts` — 3 new entries appended (all `social` category); updated "65 overlays" → "68 overlays" in 4 doc references.
+- `src/screens/home-screen.tsx` — "All Features" tile count: 65 → 68 (badge + description).
+
+**Cross-Module Sharing Hub design:**
+- Per-module transformers produce format-appropriate payloads: Midan (full text + hashtags + first photo), Lamahat (photo + 140-char caption), Mashahd (video + 80-char title + 500-char description), Wasl (220-char summary + link, no hashtags).
+- `getShareSuggestions` is a pure heuristic (no external AI call) — runs synchronously: video → Mashahd ≥ 0.95; photo → Lamahat ≥ 0.9; long text → Midan ≥ 0.8; hashtags boost Midan; link + short text boosts Wasl.
+- `executeCrossModuleShare` dispatches to per-module APIs in parallel via `Promise.all`; per-module failures do NOT abort the others. 8s per-module AbortController timeout.
+
+**Social Rituals design:**
+- 7 rituals per slot × 4 slots = 28 total. Pool index = `((dayOfYear + year × 7) % pool.length + pool.length) % pool.length` → deterministic per-day, no repeats within a week, wraps across years.
+- Slot: 5–11:59 morning, 12–16:59 afternoon, 17–4:59 evening; Friday + Saturday (Arab weekend) override to `weekend`.
+- Streak logic: yesterday → +1; today → unchanged (idempotent); otherwise reset to 1. `longest = max(longest, current)`; `total += 1` every participation.
+
+**Constraints respected:**
+- No Brain AI, proxy.ts, OIDC, E2EE, auth, or DB schema touched. No existing features removed.
+- Used existing Tailwind classes + glass design system + Lucide icons + Framer Motion + `OverlayShell` / `Button` / `Input` / `Label` / `Textarea` / `Switch`.
+- All API requests use relative paths. Responsive (mobile-first grids, mobile-specific batch-action row). Accessible (aria-label, aria-pressed, focus trap via OverlayShell, Esc-to-close).
+- All 3 new overlays are registered in `overlay-registry.ts` so they surface in both the OverlayBrowser grid and the ⌘K CommandPalette.
+
+**Agent-ctx work record:** `/home/z/my-project/agent-ctx/CREATIVE-1-social-media-expert.md`.
+
+---
+
+## Task ID CREATIVE-2 — More Creative Social Features (social media expert)
+
+Implemented 5 more creative social media features for CIRKLE. Lint: 0 errors / 0 warnings ✅. No protected systems touched. No existing features removed. Baseline verified before starting.
+
+**Files added (7):**
+- `src/lib/mood-engine.ts` — Mood-Based Feed Adaptation (pure lib). 5 moods (energetic / relaxed / social / focused / bored) detected passively from a `MoodSignal` (time of day, minutes since last active, messaging activity, long-form reads, scroll velocity, recent engagement, weather). Exports `detectMood`, `getMoodFeed`, `getMoodTheme`, `buildMoodResponse`, `defaultSignalForNow`. Each mood returns a feed config with 4 module buckets + weights + filters, plus a UI accent recommendation.
+- `src/lib/social-challenges.ts` — Weekly Community Challenges (pure lib). 25-challenge library (5 per module × 5 modules: Wasl / Midan / Lamahat / Mashahd / Rihla). Deterministic per-ISO-week rotation via `weekKeyForDate` + seed = year*100 + week + per-module offset → no challenge repeats week-to-week within a 5-week window. localStorage-backed progress tracking (`recordProgress` is idempotent). 4-tier badge system: Getting Started (1+), Halfway There (3+), Weekly Champion (4+), Perfect Week (5/5). Deterministic per-week leaderboard with current user inserted at correct rank by completed count; ties share a rank.
+- `src/app/api/mood/route.ts` — `GET /api/mood?signal=<JSON>` derives mood from a client-supplied signal; `GET /api/mood?mood=energetic` forces a fixed mood; `POST /api/mood` accepts a richer `MoodSignal` body. All numeric inputs clamped. No-store cache headers.
+- `src/app/api/challenges/route.ts` — `GET /api/challenges` returns this week's 5 challenges + progress + leaderboard + badges; `POST /api/challenges` records start/completion for a single challenge. Client progress echoed via the `progress` query param so a single round-trip returns everything the UI needs.
+- `src/components/overlays/connection-graph.tsx` — Connection Graph (Feature #1). Interactive SVG network graph with 10 nodes (user center + friends + creators + circles) and 18 edges (follow / mutual-circle / shared-interest, color + dash-coded). Node radius scales with interaction frequency (8–36px). Node color = module (Wasl=teal, Midan=gold, Lamahat=rose, Mashahd=steel, self=charcoal). Pointer-drag pan + wheel-zoom + dedicated zoom in/out/reset controls. Click a node → contact card slides in with mutual circles, shared interests, location, follow + message CTAs. AI-suggested connections panel with reason strings ("In 2 of your circles · Same city (Cairo)"). Legend strip. Dispatches `circle:connection-graph`.
+- `src/components/overlays/content-calendar.tsx` — Content Calendar (Feature #2). Monthly calendar grid (Mon–Sun) showing color-coded scheduled posts per module. Drag-and-drop reschedule (HTML5 DnD). Best-time indicators (gold dots at 08:00 / 12:00 / 17:30 / 19:00 / 20:00 / 21:00). Streak tracker: current / longest / days-since-last-post cards. AI hint banner ("You haven't posted in 3 days. Try sharing something in Midan."). Schedule-new sheet with module picker + time picker (with optimal-window hint) + title + notes. localStorage persistence. Seed items on first open. Dispatches `circle:content-calendar`.
+- `src/components/overlays/content-discovery.tsx` — AI Content Discovery (Feature #5). Two tabs: "For You mix" (single blended carousel) + "Browse sections" (5 carousels: Trending in your city / Because you engaged with… / New creators / Hidden gems [quality-scored 89–96, low-view] / Nostalgia [your posts from 1 year ago today]). "Surprise me" button → AI picks a random high-quality post in a spotlight view with rationale. Per-card actions: Save / Share (Web Share API + clipboard fallback) / Follow. Discovery cards carry author avatar, module strip, engagement counts (K/M formatted), time-ago, optional city + seed-topic + quality-score badges. Dispatches `circle:content-discovery`.
+
+**Files modified (3):**
+- `src/app/page.tsx` — 3 dynamic imports, 3 useState flags, 3 event listeners + cleanup, Escape-key handling, 3 component renders.
+- `src/lib/overlay-registry.ts` — 3 new entries appended (connection-graph + content-discovery = `social`, content-calendar = `productivity`); updated "68 overlays" → "71 overlays" in 4 doc references.
+- `src/screens/home-screen.tsx` — "All Features" tile count: 68 → 71 (badge + description).
+
+**Mood Engine design:**
+- 5 candidate moods scored in parallel; the winner takes the slot. Confidence = max(0.5, 0.5 + margin/6) — even a perfect tie returns 0.5 confidence since the tiebreaker is deterministic by CANDIDATES order (energetic > relaxed > social > focused > bored).
+- Each mood has 4 module buckets with weights summing to 1.0 — so the feed algorithm can directly draw from each bucket proportional to weight, with the per-bucket `filter` string passed through to the existing feed layer.
+- The signal is collected passively on the client (no UI prompt). The server endpoint accepts either a query-string `?signal=<JSON>` or a POST body, and falls back to a `defaultSignalForNow` derived purely from the current hour if no signal is supplied.
+
+**Social Challenges design:**
+- ISO 8601 week key (`YYYY-Www`) computed via the standard Thursday-based algorithm — same key for the same Mon–Sun week anywhere in the world.
+- Pool rotation uses `seed = year*100 + weekNum` plus a per-module offset (`i*7`) so the same week doesn't always pick index 0 from every pool, and a 5-pool library means no challenge repeats within a 5-week window per module.
+- `recordProgress` is idempotent — calling it twice with `markCompleted=true` keeps the original `completedAt`. `startedAt` only set on the first `markStarted` call.
+- Leaderboard is deterministic per week key (hash → seed → completed counts) so the same week always returns the same names in the same order; the current user is inserted at the correct rank by their `completedCount`. Ties share a rank (standard competition ranking).
+
+**Connection Graph design:**
+- Pure SVG (no D3, no third-party graph lib). Nodes positioned in normalized [-1, 1] space → mapped to a 600×600 viewBox with 60px padding. Node radius = `8 + (weight/100) * 28` (range 8–36px).
+- Pan via pointer-drag on the SVG background; node clicks stopPropagation so they don't initiate pan. Zoom via wheel (bounded 0.5–2.5×). Dedicated zoom in/out/reset buttons for accessibility (keyboard users can't wheel).
+- Edges have three kinds with distinct colors + dash patterns: follow (solid slate), mutual-circle (dashed teal), shared-interest (dotted rose). Selected node highlights all connected edges (full opacity + thicker stroke).
+- Suggestions panel is the default right-pane content; clicking a node replaces it with a contact card (animated slide-in). The card adapts: friends get a follow/message CTA, circles get an "Open circle" CTA (dispatches `circle:circle-detail`), self shows a static summary.
+
+**Content Calendar design:**
+- Streak is computed from the items set — walking backwards from today (or yesterday if today is empty) counting consecutive days with at least one scheduled item. Longest streak walks the sorted dates forward, tracking the longest consecutive run.
+- AI hint has three states: ≥3 days idle, 0 streak with no idle, ≥5 streak. Bilingual-ready (English-only for now; Arabic variants can be added via the existing i18n pack).
+- Drag-and-drop uses native HTML5 DnD. Drop targets are the day cells — drop fires `moveItem` which persists the new date.
+- Schedule-new sheet is a modal layered on top of the OverlayShell. Click-outside dismisses; stopPropagation on the inner card prevents the click-outside handler from firing when interacting with the form.
+
+**Content Discovery design:**
+- All sections are static module-level arrays (no per-render allocation) so the carousels don't re-trigger React renders. The For-You mix is a curated blend across sections.
+- "Surprise me" picks a random card from the deduped superset of all sections (excluding self-authored), shows it in a spotlight view with a rationale banner, and the user can either go back to discovery or click another "Surprise me" for a fresh roll.
+- Per-card state (saved / followed) is tracked in two Sets at the parent level so the state survives carousel re-renders. Toasts confirm every save/follow/share action.
+
+**Constraints respected:**
+- No Brain AI, proxy.ts, OIDC, E2EE, auth, DB schema, or any existing client screen touched. No existing features removed.
+- Used existing Tailwind classes + glass design system + Lucide icons + Framer Motion + `OverlayShell` / `Button` / `Input` / `Label` / `Textarea` + `CircleAvatar` (existing brand component).
+- All API requests use relative paths only. Responsive (mobile-first grids, mobile-specific composer sheet). Accessible (aria-label, aria-pressed, role=button + tabIndex=0 + Enter/Space handler on SVG nodes, focus trap via OverlayShell, Esc-to-close).
+- All 3 new overlays are registered in `overlay-registry.ts` so they surface in both the OverlayBrowser grid and the ⌘K CommandPalette.
+- Loading states use the derived-state pattern (`open && !hydrated`) so no `setState` calls happen synchronously in effects — the `react-hooks/set-state-in-effect` rule passes clean.
+
+**TypeScript:** 0 new errors introduced. Pre-existing errors in `i18n-loader.ts`, `news-service.ts`, `oidc-client.ts`, `rewards-service.ts`, `storage-service.ts` are unrelated to this task and were not touched.
+
+**Agent-ctx work record:** `/home/z/my-project/agent-ctx/CREATIVE-2-social-media-expert.md`.

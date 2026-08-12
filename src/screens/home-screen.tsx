@@ -1865,11 +1865,11 @@ export function HomeScreen() {
                 <span className="text-sm">🧭</span>
                 <div className="font-display text-base leading-tight">All Features</div>
                 <span className="ms-auto text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded-full bg-secondary/20 text-secondary border border-secondary/30">
-                  65
+                  71
                 </span>
               </div>
               <div className="text-[11px] text-muted-foreground mt-1 leading-snug">
-                Browse all 65 Cirkle overlays in one place.
+                Browse all 71 Cirkle overlays in one place.
               </div>
               <div className="mt-2 text-[10px] text-secondary flex items-center gap-1">
                 Try it <ChevronRight className="w-3 h-3" />

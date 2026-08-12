@@ -4,7 +4,7 @@
  *   • `OverlayBrowser` (full-screen feature grid)
  *   • `CommandPalette` (⌘K launcher)
  *
- * 65 overlays total — sourced from:
+ * 71 overlays total — sourced from:
  *   • 23 surfaced in the home-screen EXCLUSIVES grid
  *   • 6 shell panels (composer, governance, settings, ai, hub, pulse)
  *   • 26 overlay events from page.tsx (mood-chat → word-garden, minus dups)
@@ -643,7 +643,7 @@ export const OVERLAY_REGISTRY: OverlayEntry[] = [
   {
     id: "overlay-browser",
     name: "All Features",
-    description: "Browse all 65 Cirkle overlays in one place.",
+    description: "Browse all 71 Cirkle overlays in one place.",
     emoji: "🧭",
     category: "productivity",
     event: "circle:overlay-browser",
@@ -908,6 +908,64 @@ export const OVERLAY_REGISTRY: OverlayEntry[] = [
     event: "circle:comparison-view",
     keywords: ["comparison", "vs", "facebook", "whatsapp", "youtube", "instagram", "twitter", "linkedin", "competitive"],
   },
+
+  // ── CREATIVE-1: Smart social overlays ────────────────────────────────
+  {
+    id: "smart-compose",
+    name: "Smart Compose",
+    description: "AI-powered multi-format composer. Quality score, hashtag + emoji suggestions, cross-module publish in one flow.",
+    emoji: "✍️",
+    category: "social",
+    event: "circle:smart-compose",
+    keywords: ["compose", "post", "ai", "coach", "quality", "hashtag", "emoji", "schedule", "draft", "poll", "thread", "video", "photo", "cross-module"],
+  },
+  {
+    id: "social-analytics",
+    name: "Social Analytics",
+    description: "Personal engagement dashboard. Weekly stats, growth chart, best posting time, audience insights, AI pro tips.",
+    emoji: "📊",
+    category: "social",
+    event: "circle:social-analytics",
+    keywords: ["analytics", "stats", "engagement", "followers", "growth", "audience", "insights", "reach", "performance"],
+  },
+  {
+    id: "smart-notifications",
+    name: "Smart Notifications",
+    description: "AI-grouped notifications by intent. Priority levels, smart snooze, batch actions, per-type filters.",
+    emoji: "🔔",
+    category: "social",
+    event: "circle:smart-notifications",
+    keywords: ["notifications", "alerts", "inbox", "grouped", "priority", "snooze", "filter", "urgent", "important"],
+  },
+
+  // ── CREATIVE-2: More creative social overlays ────────────────────────
+  {
+    id: "connection-graph",
+    name: "Connection Graph",
+    description: "Visual SVG network of your social connections. Module-colored nodes, AI-suggested connections, zoom + pan.",
+    emoji: "🕸️",
+    category: "social",
+    event: "circle:connection-graph",
+    keywords: ["graph", "network", "connections", "friends", "circles", "creators", "follow", "suggested", "visual", "svg"],
+  },
+  {
+    id: "content-calendar",
+    name: "Content Calendar",
+    description: "Cross-module monthly scheduler. Color-coded posts, best-time dots, drag-to-reschedule, streak tracker, AI hints.",
+    emoji: "📅",
+    category: "productivity",
+    event: "circle:content-calendar",
+    keywords: ["calendar", "schedule", "planner", "content", "streak", "best-time", "drag", "reschedule", "monthly", "cross-module"],
+  },
+  {
+    id: "content-discovery",
+    name: "AI Discovery",
+    description: "AI-curated feed across all modules. Trending, hidden gems, new creators, nostalgia, For-You mix, surprise me.",
+    emoji: "🧭",
+    category: "social",
+    event: "circle:content-discovery",
+    keywords: ["discover", "discovery", "trending", "hidden gems", "new creators", "nostalgia", "for you", "surprise", "ai", "recommendations"],
+  },
 ];
 
 // ── Category metadata ──────────────────────────────────────────────────
@@ -997,7 +1055,7 @@ const QUICK_ACTIONS: CommandEntry[] = [
  * Build the full command list for the ⌘K palette:
  *   1. Quick actions (4)
  *   2. Tabs (8)
- *   3. Every overlay (65, including the overlay-browser self-entry)
+ *   3. Every overlay (68, including the overlay-browser self-entry)
  */
 export function getCommandEntries(): CommandEntry[] {
   const overlayEntries: CommandEntry[] = OVERLAY_REGISTRY.map((o) => ({
@@ -1011,5 +1069,5 @@ export function getCommandEntries(): CommandEntry[] {
   return [...QUICK_ACTIONS, ...TAB_COMMANDS, ...overlayEntries];
 }
 
-/** Total count, useful for the home-screen tile ("Browse all 65 Cirkle overlays"). */
+/** Total count, useful for the home-screen tile ("Browse all 71 Cirkle overlays"). */
 export const OVERLAY_COUNT = OVERLAY_REGISTRY.length;

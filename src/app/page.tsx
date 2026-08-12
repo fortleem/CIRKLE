@@ -123,6 +123,14 @@ const MemoryDashboard = dynamic(() => import("@/components/overlays/memory-dashb
 const TransparencyDashboard = dynamic(() => import("@/components/overlays/transparency-dashboard").then(m => ({ default: m.TransparencyDashboard })), { ssr: false });
 const PerformanceDashboard = dynamic(() => import("@/components/overlays/performance-dashboard").then(m => ({ default: m.PerformanceDashboard })), { ssr: false });
 const ComparisonView = dynamic(() => import("@/components/overlays/comparison-view").then(m => ({ default: m.ComparisonView })), { ssr: false });
+// ── CREATIVE-1: Smart social overlays (compose + analytics + notifications) ──
+const SmartCompose = dynamic(() => import("@/components/overlays/smart-compose").then(m => ({ default: m.SmartCompose })), { ssr: false });
+const SocialAnalytics = dynamic(() => import("@/components/overlays/social-analytics").then(m => ({ default: m.SocialAnalytics })), { ssr: false });
+const SmartNotifications = dynamic(() => import("@/components/overlays/smart-notifications").then(m => ({ default: m.SmartNotifications })), { ssr: false });
+// ── CREATIVE-2: More creative social overlays (graph + calendar + discovery) ──
+const ConnectionGraph = dynamic(() => import("@/components/overlays/connection-graph").then(m => ({ default: m.ConnectionGraph })), { ssr: false });
+const ContentCalendar = dynamic(() => import("@/components/overlays/content-calendar").then(m => ({ default: m.ContentCalendar })), { ssr: false });
+const ContentDiscovery = dynamic(() => import("@/components/overlays/content-discovery").then(m => ({ default: m.ContentDiscovery })), { ssr: false });
 import { useApp } from "@/lib/app-store";
 import { useAuth } from "@/lib/auth-store";
 import { toast } from "sonner";
@@ -401,6 +409,14 @@ export default function Page() {
   const [transparencyDashboardOpen, setTransparencyDashboardOpen] = useState(false);
   const [performanceDashboardOpen, setPerformanceDashboardOpen] = useState(false);
   const [comparisonViewOpen, setComparisonViewOpen] = useState(false);
+  // ── CREATIVE-1: Smart social overlays ──
+  const [smartComposeOpen, setSmartComposeOpen] = useState(false);
+  const [socialAnalyticsOpen, setSocialAnalyticsOpen] = useState(false);
+  const [smartNotificationsOpen, setSmartNotificationsOpen] = useState(false);
+  // ── CREATIVE-2: More creative social overlays ──
+  const [connectionGraphOpen, setConnectionGraphOpen] = useState(false);
+  const [contentCalendarOpen, setContentCalendarOpen] = useState(false);
+  const [contentDiscoveryOpen, setContentDiscoveryOpen] = useState(false);
   const [proNetworkOpen, setProNetworkOpen] = useState(false);
   const [cirkleMapsOpen, setCirkleMapsOpen] = useState(false);
   const [circleMailOpen, setCircleMailOpen] = useState(false);
@@ -457,6 +473,14 @@ export default function Page() {
         setTransparencyDashboardOpen(false);
         setPerformanceDashboardOpen(false);
         setComparisonViewOpen(false);
+        // CREATIVE-1
+        setSmartComposeOpen(false);
+        setSocialAnalyticsOpen(false);
+        setSmartNotificationsOpen(false);
+        // CREATIVE-2
+        setConnectionGraphOpen(false);
+        setContentCalendarOpen(false);
+        setContentDiscoveryOpen(false);
       }
     };
     window.addEventListener("keydown", handler);
@@ -691,6 +715,22 @@ export default function Page() {
     window.addEventListener("circle:performance-dashboard", onPerformanceDashboard);
     window.addEventListener("circle:comparison-view", onComparisonView);
 
+    // ── CREATIVE-1: Smart social overlays ─────────────────────────────
+    const onSmartCompose = () => setSmartComposeOpen(true);
+    const onSocialAnalytics = () => setSocialAnalyticsOpen(true);
+    const onSmartNotifications = () => setSmartNotificationsOpen(true);
+    window.addEventListener("circle:smart-compose", onSmartCompose);
+    window.addEventListener("circle:social-analytics", onSocialAnalytics);
+    window.addEventListener("circle:smart-notifications", onSmartNotifications);
+
+    // ── CREATIVE-2: More creative social overlays ────────────────────
+    const onConnectionGraph = () => setConnectionGraphOpen(true);
+    const onContentCalendar = () => setContentCalendarOpen(true);
+    const onContentDiscovery = () => setContentDiscoveryOpen(true);
+    window.addEventListener("circle:connection-graph", onConnectionGraph);
+    window.addEventListener("circle:content-calendar", onContentCalendar);
+    window.addEventListener("circle:content-discovery", onContentDiscovery);
+
     // ── Legal / privacy overlays ────────────────────────────────
     const onPrivacyPolicy = () => setPrivacyPolicyOpen(true);
     const onTerms = () => setTermsOpen(true);
@@ -826,6 +866,14 @@ export default function Page() {
       window.removeEventListener("circle:transparency-dashboard", onTransparencyDashboard);
       window.removeEventListener("circle:performance-dashboard", onPerformanceDashboard);
       window.removeEventListener("circle:comparison-view", onComparisonView);
+      // CREATIVE-1
+      window.removeEventListener("circle:smart-compose", onSmartCompose);
+      window.removeEventListener("circle:social-analytics", onSocialAnalytics);
+      window.removeEventListener("circle:smart-notifications", onSmartNotifications);
+      // CREATIVE-2
+      window.removeEventListener("circle:connection-graph", onConnectionGraph);
+      window.removeEventListener("circle:content-calendar", onContentCalendar);
+      window.removeEventListener("circle:content-discovery", onContentDiscovery);
       window.removeEventListener("circle:privacy-policy", onPrivacyPolicy);
       window.removeEventListener("circle:terms", onTerms);
       window.removeEventListener("circle:dsr-request", onDSR);
@@ -1036,6 +1084,16 @@ export default function Page() {
       <TransparencyDashboard open={transparencyDashboardOpen} onClose={() => setTransparencyDashboardOpen(false)} />
       <PerformanceDashboard open={performanceDashboardOpen} onClose={() => setPerformanceDashboardOpen(false)} />
       <ComparisonView open={comparisonViewOpen} onClose={() => setComparisonViewOpen(false)} />
+
+      {/* CREATIVE-1: Smart social overlays (AI composer + analytics + notifications) */}
+      <SmartCompose open={smartComposeOpen} onClose={() => setSmartComposeOpen(false)} />
+      <SocialAnalytics open={socialAnalyticsOpen} onClose={() => setSocialAnalyticsOpen(false)} />
+      <SmartNotifications open={smartNotificationsOpen} onClose={() => setSmartNotificationsOpen(false)} />
+
+      {/* CREATIVE-2: More creative social overlays (graph + calendar + discovery) */}
+      <ConnectionGraph open={connectionGraphOpen} onClose={() => setConnectionGraphOpen(false)} />
+      <ContentCalendar open={contentCalendarOpen} onClose={() => setContentCalendarOpen(false)} />
+      <ContentDiscovery open={contentDiscoveryOpen} onClose={() => setContentDiscoveryOpen(false)} />
 
       {/* Legal / privacy overlays */}
       <PrivacyPolicy open={privacyPolicyOpen} onClose={() => setPrivacyPolicyOpen(false)} />
