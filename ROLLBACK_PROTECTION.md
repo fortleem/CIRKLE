@@ -2,49 +2,85 @@
 
 This document describes the **permanent safeguards** that prevent the CIRKLE codebase from being rolled back to older, broken versions.
 
-> **v14.0 CLEAN BASELINE — 2026-07-10**
-> On 2026-07-10 the entire git history was squashed into a single authoritative commit. All prior commits, branches, tags, reflogs, remote-tracking refs, and old backup bundles were **permanently destroyed**. There is no longer any "old git" to roll back to.
+> **Production-stable release — 2026-08-12**
+> Tag `production-stable-2026-08-12` marks the current production state: 97 Prisma tables, 71 overlays, 17 locale packs, Brain AI 9+1 phases with AIKE Phase 7.5, 135 data sources, 10 creative social features. All endpoints verified healthy.
 
 ## TL;DR — What is protected
 
 | Asset | Protection |
 |---|---|
-| Branch `main` | Pre-push hook blocks force-push and non-fast-forward updates; `receive.denyNonFastForwards=true`; `receive.denyDeletes=true` |
-| Tag `v-clean-baseline-v14-*` | Pre-push hook blocks deletion; only protective tag in the repo |
-| Git hooks (post-checkout/merge/reset) | Disabled — they previously auto-triggered `master-restore.sh` which destroyed newer code |
-| `scripts/master-restore.sh` | Neutralized — exits 0 with a warning, does NOT restore anything |
-| Fresh backup | `backups/cirkle-clean-baseline-20260710-231413.tar.gz` (full working-tree tar.gz, restorable offline) |
-| Git history | **Single commit.** 1 commit, 1 branch, 1 tag, 0 reflog entries, 0 remote-tracking refs, 0 loose old objects |
+| Branch `main` (GitHub) | **GitHub Branch Protection API**: `allow_force_pushes=false`, `allow_deletions=false`, `required_linear_history=true`, `enforce_admins=true`, `required_status_checks=strict`. Verified via API on 2026-08-12. |
+| Branch `main` (local) | Pre-push hook (`.git/hooks/pre-push`, mode 555 read-only) blocks force-push and non-fast-forward updates |
+| Tag `production-stable-2026-08-12` | Pre-push hook blocks deletion (matches `production-*` pattern). Also protected server-side by GitHub branch protection rules. |
+| All `v-*`, `cirkle-*`, `backup/*`, `production-*` tags | Pre-push hook blocks deletion |
+| Git config | `receive.denyNonFastForwards=true`, `receive.denyDeletes=true`, `transfer.fsckObjects=true` |
+| `.env` | Filesystem read-only (`chmod 444`); validated at boot by `src/lib/env-validation.ts` |
+| Fresh backup | `backups/cirkle-production-20260812-153447.tar.gz` (full working-tree tar.gz, 393 MB) |
+| CI workflow | `.github/workflows/ci.yml` — runs on every push and PR |
+| Vercel deployment | Auto-deploys on every push to `main`. Project ID: `prj_JGfc6hW2CsP4BWjxKysoWa4RDvZ5`. |
+| Turso database | Edge-replicated libSQL at `cirkle-fortleem.turso.io`, 97 tables. Schema in `prisma/schema.prisma`. |
 
-## 0. Current clean-baseline state (verified 2026-07-10)
+## 0. Current production state (verified 2026-08-12)
 
 ```
-Commits:               1   (39c3b95 — "CIRKLE v14.0 — clean baseline")
-Branches:              1   (main)
-Tags:                  1   (v-clean-baseline-v14-20260710-231413)
-Reflog entries:        0
-Remote-tracking refs:  0
-Loose old objects:     0   (gc --prune=now --aggressive ran)
+HEAD commit:           763e03c — "feat: 10 creative social media features"
+Branch:                main
+Protective tag:        production-stable-2026-08-12 (points at HEAD)
+Locale packs:          17 (ar, ar-formal, en, fr, es, tr, ur, hi, zh, ja, it, de, ru, pt, id, ko, fa)
+Overlays:              71
+API routes:            233
+Prisma models:         97
+AIKE modules:          22 core + 15 domain trainers
+Data sources:          135 across 22 categories
+Docs:                  12 (3 ADRs, blueprint v15, compliance matrix, etc.)
+Backups:               2 (20260812-132736 = 147 MB, 20260812-153447 = 393 MB)
+Lint:                  0 errors, 0 warnings
+Dev server:            http://localhost:3000 — all endpoints healthy
 ```
 
-There is **nothing to roll back to**. The only restorable point is the protective tag, which points to the current clean baseline.
+## 1. GitHub branch protection (server-side, enforced by GitHub)
 
-## 1. Pre-push guard hook
+Set up via the GitHub REST API on 2026-08-12. Affects ALL collaborators, including admins (`enforce_admins=true`).
 
-Location: `.git/hooks/pre-push` (executable)
+```json
+{
+  "required_status_checks": { "strict": true, "contexts": [] },
+  "enforce_admins": true,
+  "required_pull_request_reviews": null,
+  "restrictions": null,
+  "required_linear_history": true,
+  "allow_force_pushes": false,
+  "allow_deletions": false,
+  "block_creations": false
+}
+```
+
+What this prevents:
+- **Force-push to main** → rejected by GitHub (`allow_force_pushes=false`). This is the primary anti-rollback mechanism — nobody can rewrite published history.
+- **Branch deletion** → rejected by GitHub (`allow_deletions=false`).
+- **Merge commits** → rejected by GitHub (`required_linear_history=true`). Only fast-forward or rebase-merges are allowed.
+- **Direct pushes that skip required checks** → blocked once CI contexts are added.
+
+To verify the protection is still active:
+```bash
+gh api repos/fortleem/CIRKLE/branches/main/protection
+# or, without gh:
+node /tmp/verify-protection.mjs   # script in this repo's dev tools
+```
+
+## 2. Pre-push guard hook (client-side, defense in depth)
+
+Location: `.git/hooks/pre-push` (mode 555 — read + execute, no write).
 
 Behavior:
 - **Blocks** force-push (`+refspec`) and non-fast-forward updates to `refs/heads/main` or `refs/heads/master`.
-- **Blocks** deletion of any tag matching `v-*`, `cirkle-*`, or `backup/*`.
+- **Blocks** deletion of any tag matching `v-*`, `cirkle-*`, `backup/*`, or `production-*`.
 - **Allows** legitimate fast-forward pushes and creation of new tags.
-- Emergency bypass: `git push --no-verify` (documented but discouraged).
+- Emergency bypass: `git push --no-verify` (documented but discouraged; will still be blocked by GitHub's server-side protection).
 
-To re-install on a fresh clone:
-```bash
-bash scripts/install-rollback-protection.sh
-```
+The hook file is mode `555` (read + execute only, no write) so it cannot be accidentally edited. To modify it, you must explicitly `chmod u+w` first.
 
-## 2. Disabled destructive hooks
+## 3. Disabled destructive hooks
 
 The following hooks previously auto-ran `scripts/master-restore.sh` on every checkout/merge/reset, which silently rewrote the working tree to an ancient baseline and wiped newer code:
 
@@ -52,14 +88,9 @@ The following hooks previously auto-ran `scripts/master-restore.sh` on every che
 - `.git/hooks/post-merge`
 - `.git/hooks/post-reset`
 
-Each now contains only:
-```
-# Disabled — was causing auto-resets that destroyed newer code
-```
+Each now contains only a comment marking it as disabled. `scripts/master-restore.sh` itself is neutralized — it prints a warning and exits 0 without doing anything. **Do NOT re-enable any of these without explicit CTO approval.**
 
-`scripts/master-restore.sh` itself is neutralized — it prints a warning and exits 0 without doing anything. **Do NOT re-enable any of these without explicit CTO approval.**
-
-## 3. Extra git config hardening (added 2026-07-10)
+## 4. Git config hardening
 
 ```ini
 [receive]
@@ -69,87 +100,111 @@ Each now contains only:
     fsckObjects = true           # verify object integrity on transfer
 ```
 
-These make any future non-fast-forward push or ref deletion fail at the git protocol layer, independent of the pre-push hook.
+These make any future non-fast-forward push or ref deletion fail at the git protocol layer, independent of the pre-push hook or the GitHub API.
 
-## 4. The single protective tag
+## 5. Protective tags
 
-| Tag | Meaning |
-|---|---|
-| `v-clean-baseline-v14-20260710-231413` | The ONLY restorable point. Marks the v14.0 clean baseline after all old history was squashed and wiped. |
+| Tag | Points at | Meaning |
+|---|---|---|
+| `production-stable-2026-08-12` | `763e03c` | The current production-stable release. All endpoints verified healthy, all features verified working. This is the recovery point if anything goes wrong. |
 
 To list all protective tags:
 ```bash
-git tag -l 'v-*' 'cirkle-*' 'backup/*'
+git tag -l 'v-*' 'cirkle-*' 'backup/*' 'production-*'
 ```
 
-## 5. Backups
+To create a new production-stable tag (after verifying a release):
+```bash
+git tag -a production-stable-YYYY-MM-DD -m "Production-stable release: <summary>"
+git push cirkle production-stable-YYYY-MM-DD
+```
+
+## 6. Backups
 
 Location: `backups/` directory (gitignored).
 
-The **only** backup is a full working-tree tar.gz:
-
+Current backups:
 ```
-backups/cirkle-clean-baseline-20260710-231413.tar.gz   (128 MB)
-backups/remotes-20260710-231413.txt                     (remote URLs snapshot)
+backups/cirkle-production-20260812-132736.tar.gz   (147 MB — code only)
+backups/cirkle-production-20260812-153447.tar.gz   (393 MB — full project incl. screenshots)
 ```
 
-Restore from the backup:
+Restore from the latest backup:
 ```bash
-mkdir cirkle-restored && tar -xzf backups/cirkle-clean-baseline-20260710-231413.tar.gz -C cirkle-restored
-cd cirkle-restored && bun install && bun run db:push
+mkdir cirkle-restored && tar -xzf backups/cirkle-production-20260812-153447.tar.gz -C cirkle-restored
+cd cirkle-restored && bun install && bun run db:push && bun run dev
 ```
 
-Old backups were **permanently deleted** on 2026-07-10. Do not recreate old-format `.bundle` backups — they would reintroduce rollback targets.
+Old backups should be rotated out periodically — keep at most the 3 most recent. Do NOT recreate old-format `.bundle` backups — they would reintroduce rollback targets.
 
-## 6. Pushing to remote
+## 7. Remotes & deployment
 
-Two remotes are configured (tokens redacted in display):
+Single remote configured (token redacted in display):
 
-- `origin` → `github.com/fortleem/cirkel_z.git`
 - `cirkle` → `github.com/fortleem/CIRKLE.git`
 
-To push the clean baseline to a remote (requires the remote to accept a non-fast-forward force-push ONE TIME, since the remote still has the old history):
-
+Push flow:
 ```bash
-# ONE-TIME force-push to overwrite remote old history with the clean baseline
-git push --force cirkle main
-git push --force cirkle v-clean-baseline-v14-20260710-231413
+git push cirkle main                    # fast-forward push (the only kind allowed)
+git push cirkle <new-tag>               # create a new protective tag
 ```
 
-After this one-time force-push, the pre-push hook will block all future force-pushes and tag deletions.
+Vercel auto-deploys on every push to `main`. Project ID: `prj_JGfc6hW2CsP4BWjxKysoWa4RDvZ5`. The deployment URL is shown in the Vercel dashboard.
 
-## 7. Recovery procedure (if rollback somehow occurs)
+Turso database is at `cirkle-fortleem.turso.io`. Schema is in `prisma/schema.prisma` and pushed via `bun run db:push`. The Turso auth token is in `.env` (read-only, chmod 444).
 
-Because there is no old history, the only "rollback" possible is accidentally deleting files from the working tree. To recover:
+## 8. Recovery procedure (if rollback somehow occurs)
+
+Because history rewriting is blocked at three layers (local hook + git config + GitHub API), the only realistic "rollback" is accidentally deleting files from the working tree. To recover:
 
 1. **Do NOT commit anything** — preserve uncommitted work first.
-2. Restore from the clean-baseline tag:
+2. Restore from the production-stable tag:
    ```bash
-   git reset --hard v-clean-baseline-v14-20260710-231413
+   git reset --hard production-stable-2026-08-12
    ```
    Or, if `.git` itself is corrupted, restore from the tar.gz backup:
    ```bash
-   tar -xzf backups/cirkle-clean-baseline-20260710-231413.tar.gz -C /path/to/fresh/clone
+   tar -xzf backups/cirkle-production-20260812-153447.tar.gz -C /path/to/fresh/clone
    ```
-3. Verify with `bash scripts/verify-structure.sh` and `bash scripts/audit-overlays.sh`.
+3. Verify with `bun run lint` and `curl http://localhost:3000/api/health`.
 4. Open the app in the browser to confirm runtime health.
+5. If the tag itself was somehow deleted from the remote, re-create it from the local tag (the local tag is protected by the pre-push hook):
+   ```bash
+   git push cirkle production-stable-2026-08-12
+   ```
 
-## 8. Audit commands
+## 9. Audit commands
 
 Quick health check:
 ```bash
-bash scripts/verify-structure.sh   # all expected files present?
-bash scripts/audit-overlays.sh     # all overlays registered?
-
-# Git hygiene audit (should all be 1 / 1 / 1 / 0 / 0 / 0)
+# Git hygiene
 echo "Commits:              $(git rev-list --all --count)"
 echo "Branches:             $(git branch | wc -l)"
 echo "Tags:                 $(git tag | wc -l)"
-echo "Reflog entries:       $(git reflog | wc -l)"
-echo "Remote-tracking refs: $(git branch -r | wc -l)"
-echo "Loose objects:        $(git count-objects -v | awk '/^count/{print $2}')"
+echo "Protective tags:      $(git tag -l 'v-*' 'cirkle-*' 'backup/*' 'production-*' | wc -l)"
+
+# GitHub branch protection (requires gh or node + token)
+node /tmp/verify-protection.mjs
+
+# App health
+curl -s http://localhost:3000/api/health | jq .
+curl -s http://localhost:3000/api/aike/status | jq .
+curl -s http://localhost:3000/api/brain/status | jq .
+
+# Turso health
+curl -s -X POST "https://cirkle-fortleem.turso.io/v2/pipeline" \
+  -H "Authorization: Bearer $TURSO_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{"requests":[{"type":"execute","stmt":{"sql":"SELECT count(*) FROM sqlite_master WHERE type='\''table'\''"}}]}'
 ```
 
-## 9. Why the old history was wiped
+## 10. Why this matters
 
-The old git history (9 phase tags, backup/production-ready, cirkle-stable, 26+ reflog entries, 2 remote-tracking branches) represented a rollback hazard: any of them could be `git reset --hard`-ed to recover a broken pre-v14 state. By squashing everything into a single commit and pruning all old objects, the codebase is now **rollback-immune by construction** — there is no older state to revert to.
+CIRKLE has been through multiple major iterations (v12 → v14 → v15 → production-stable-2026-08-12). At each step, older versions contained broken code, missing features, or architecture decisions that were superseded. By:
+
+1. **Wiping all old history** (done in v14.0 — single-squash baseline)
+2. **Blocking history rewrites** at 3 layers (local hook + git config + GitHub API)
+3. **Tagging every verified production state** (`production-stable-*`)
+4. **Keeping fresh tar.gz backups** of the working tree
+
+…we guarantee that the codebase can only move **forward**. There is no path back to a known-broken state.
