@@ -650,6 +650,17 @@ export const OVERLAY_REGISTRY: OverlayEntry[] = [
     keywords: ["browse", "all", "features", "discover", "search"],
   },
 
+  // ── Admin Panel (building phase — no auth, will be hidden later) ─────
+  {
+    id: "admin-panel",
+    name: "Platform Admin",
+    description: "Full platform administration: users, content, AI, payments, system. DEV MODE — NO AUTH.",
+    emoji: "🛠️",
+    category: "productivity",
+    event: "circle:admin-panel",
+    keywords: ["admin", "platform", "manage", "users", "content", "moderation", "system", "database", "monitoring"],
+  },
+
   // ── Personal AI OS (Feature 5) ──────────────────────────────────────
   {
     id: "personal-ai",

@@ -690,8 +690,8 @@ export function ProfileScreen() {
         </div>
       </div>
 
-      {/* === NEW: Quick Actions Row — Edit Profile / Share Profile / Settings === */}
-      <div className="grid grid-cols-3 gap-2 px-4 mt-3">
+      {/* === NEW: Quick Actions Row — Edit Profile / Share Profile / Settings / Admin === */}
+      <div className="grid grid-cols-4 gap-2 px-4 mt-3">
         <QuickActionButton
           icon={Pencil}
           label="Edit Profile"
@@ -709,6 +709,16 @@ export function ProfileScreen() {
           icon={SettingsIcon}
           label="Settings"
           onClick={() => window.dispatchEvent(new CustomEvent("circle:settings"))}
+        />
+        {/* Admin login icon — BUILDING PHASE only. No password. Will be hidden in a future extension. */}
+        <QuickActionButton
+          icon={ShieldCheck}
+          label="Admin"
+          onClick={() => {
+            toast.info("Opening Admin Panel — DEV MODE (no auth)", { duration: 2500 });
+            window.dispatchEvent(new CustomEvent("circle:admin-panel"));
+          }}
+          accent="amber"
         />
       </div>
 
@@ -1345,20 +1355,36 @@ function QuickActionButton({
   icon: Icon,
   label,
   onClick,
+  accent,
 }: {
   icon: LucideIcon;
   label: string;
   onClick?: () => void;
+  accent?: "gold" | "amber";
 }) {
+  const isAmber = accent === "amber";
   return (
     <button
       onClick={onClick}
-      className="glass rounded-2xl p-3 flex flex-col items-center gap-1.5 hover:bg-muted/50 transition group"
+      aria-label={label}
+      className={
+        isAmber
+          ? "rounded-2xl p-3 flex flex-col items-center gap-1.5 transition group border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20"
+          : "glass rounded-2xl p-3 flex flex-col items-center gap-1.5 hover:bg-muted/50 transition group"
+      }
     >
-      <div className="w-9 h-9 rounded-xl bg-gradient-gold flex items-center justify-center group-hover:scale-105 transition">
+      <div
+        className={
+          isAmber
+            ? "w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center group-hover:scale-105 transition"
+            : "w-9 h-9 rounded-xl bg-gradient-gold flex items-center justify-center group-hover:scale-105 transition"
+        }
+      >
         <Icon className="w-4 h-4 text-charcoal" />
       </div>
-      <span className="text-[10px] font-medium">{label}</span>
+      <span className={isAmber ? "text-[10px] font-semibold text-amber-200" : "text-[10px] font-medium"}>
+        {label}
+      </span>
     </button>
   );
 }

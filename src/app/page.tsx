@@ -119,6 +119,8 @@ const BroadcastChannel = dynamic(() => import("@/components/overlays/broadcast-c
 const GifPicker = dynamic(() => import("@/components/overlays/gif-picker").then(m => ({ default: m.GifPicker })), { ssr: false });
 const WorkMode = dynamic(() => import("@/components/overlays/work-mode").then(m => ({ default: m.WorkMode })), { ssr: false });
 const DeviceVerify = dynamic(() => import("@/components/overlays/device-verify").then(m => ({ default: m.DeviceVerify })), { ssr: false });
+// ── ADMIN PANEL: Platform administration (building phase — no auth) ──
+const AdminPanel = dynamic(() => import("@/components/overlays/admin-panel").then(m => ({ default: m.AdminPanel })), { ssr: false });
 const MemoryDashboard = dynamic(() => import("@/components/overlays/memory-dashboard").then(m => ({ default: m.MemoryDashboard })), { ssr: false });
 const TransparencyDashboard = dynamic(() => import("@/components/overlays/transparency-dashboard").then(m => ({ default: m.TransparencyDashboard })), { ssr: false });
 const PerformanceDashboard = dynamic(() => import("@/components/overlays/performance-dashboard").then(m => ({ default: m.PerformanceDashboard })), { ssr: false });
@@ -405,6 +407,7 @@ export default function Page() {
   const [gifPickerOpen, setGifPickerOpen] = useState(false);
   const [workModeOpen, setWorkModeOpen] = useState(false);
   const [deviceVerifyOpen, setDeviceVerifyOpen] = useState(false);
+  const [adminPanelOpen, setAdminPanelOpen] = useState(false);
   const [memoryDashboardOpen, setMemoryDashboardOpen] = useState(false);
   const [transparencyDashboardOpen, setTransparencyDashboardOpen] = useState(false);
   const [performanceDashboardOpen, setPerformanceDashboardOpen] = useState(false);
@@ -698,9 +701,11 @@ export default function Page() {
     const onGifPicker = () => setGifPickerOpen(true);
     const onWorkMode = () => setWorkModeOpen(true);
     const onDeviceVerify = () => setDeviceVerifyOpen(true);
+    const onAdminPanel = () => setAdminPanelOpen(true);
     window.addEventListener("circle:broadcast-channel", onBroadcast);
     window.addEventListener("circle:gif-picker", onGifPicker);
     window.addEventListener("circle:work-mode", onWorkMode);
+    window.addEventListener("circle:admin-panel", onAdminPanel);
     window.addEventListener("circle:device-verify", onDeviceVerify);
 
     // ── Personal Memory Brain ─────────────────────────────────────
@@ -862,6 +867,7 @@ export default function Page() {
       window.removeEventListener("circle:gif-picker", onGifPicker);
       window.removeEventListener("circle:work-mode", onWorkMode);
       window.removeEventListener("circle:device-verify", onDeviceVerify);
+      window.removeEventListener("circle:admin-panel", onAdminPanel);
       window.removeEventListener("circle:memory", onMemory);
       window.removeEventListener("circle:transparency-dashboard", onTransparencyDashboard);
       window.removeEventListener("circle:performance-dashboard", onPerformanceDashboard);
@@ -1078,6 +1084,7 @@ export default function Page() {
       <GifPicker open={gifPickerOpen} onClose={() => setGifPickerOpen(false)} />
       <WorkMode open={workModeOpen} onClose={() => setWorkModeOpen(false)} />
       <DeviceVerify open={deviceVerifyOpen} onClose={() => setDeviceVerifyOpen(false)} />
+      <AdminPanel open={adminPanelOpen} onClose={() => setAdminPanelOpen(false)} />
       <MemoryDashboard open={memoryDashboardOpen} onClose={() => setMemoryDashboardOpen(false)} />
 
       {/* Blueprint §3.10 / §5.7 / §1.7 dashboards */}
