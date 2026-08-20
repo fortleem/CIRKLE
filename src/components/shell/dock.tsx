@@ -6,6 +6,7 @@ import {
   isSecondaryTab,
   type TabId,
 } from "@/lib/tabs";
+import { usePlatformFeatures } from "@/lib/platform-features-store";
 import { useApp } from "@/lib/app-store";
 import { dict } from "@/lib/i18n";
 import { motion, AnimatePresence } from "framer-motion";
@@ -149,6 +150,27 @@ function getDockIdx(activeTab: TabId): number {
 export function Dock({ active, onChange }: { active: TabId; onChange: (id: TabId) => void }) {
   const { locale } = useApp();
   const t = dict[locale].nav;
+  const { isEnabled, hydrate } = usePlatformFeatures();
+  hydrate();
+  // Map tab ids to platform feature ids. "home" and "profile" are always shown.
+  const tabFeatureId: Record<TabId, string | null> = {
+    home: null,           // always shown
+    wasl: "tab.wasl",
+    midan: "tab.midan",
+    lamahat: "tab.lamahat",
+    mashahd: "tab.mashahd",
+    pay: "tab.pay",
+    rihla: "tab.rihla",
+    profile: null,         // always shown (needed for admin access)
+  };
+  const visiblePrimaryTabs = PRIMARY_TABS.filter(tab => {
+    const fid = tabFeatureId[tab.id];
+    return fid === null || isEnabled(fid);
+  });
+  const visibleSecondaryTabs = SECONDARY_TABS.filter(tab => {
+    const fid = tabFeatureId[tab.id];
+    return fid === null || isEnabled(fid);
+  });
   const [unread, setUnread] = useState(0);
   const [radialMenu, setRadialMenu] = useState<{ tab: TabId; x: number; y: number } | null>(null);
   const [isScrolling, setIsScrolling] = useState(false);
@@ -333,7 +355,7 @@ export function Dock({ active, onChange }: { active: TabId; onChange: (id: TabId
           }}
           className={`shadow-float rounded-full px-2 py-2 flex items-center gap-0.5 max-w-full overflow-x-auto scrollbar-hide transition-all duration-300 ${isScrolling ? "glass-strong" : "bg-background/95 backdrop-blur-md border border-border/40"}`}
         >
-          {PRIMARY_TABS.map((tab) => {
+          {visiblePrimaryTabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = active === tab.id;
             const badge = tab.id === "wasl" ? unread : 0;
@@ -420,7 +442,7 @@ export function Dock({ active, onChange }: { active: TabId; onChange: (id: TabId
             </SheetDescription>
           </SheetHeader>
           <div className="p-3 pb-[max(1rem,env(safe-area-inset-bottom))] space-y-2">
-            {SECONDARY_TABS.map((tab) => {
+            {visibleSecondaryTabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = active === tab.id;
               const isRecent = recent.includes(tab.id);

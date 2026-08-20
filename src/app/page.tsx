@@ -76,6 +76,7 @@ const CitizenShield = dynamic(() => import("@/components/overlays/citizen-shield
 const VesselTracker = dynamic(() => import("@/components/overlays/vessel-tracker").then(m => ({ default: m.VesselTracker })), { ssr: false });
 const AddContact = dynamic(() => import("@/components/overlays/add-contact").then(m => ({ default: m.AddContact })), { ssr: false });
 const ContactQR = dynamic(() => import("@/components/overlays/contact-qr").then(m => ({ default: m.ContactQR })), { ssr: false });
+const InstitutionRegister = dynamic(() => import("@/components/overlays/institution-register").then(m => ({ default: m.InstitutionRegister })), { ssr: false });
 const CirkleCommit = dynamic(() => import("@/components/overlays/cirkle-commit").then(m => ({ default: m.CirkleCommit })), { ssr: false });
 const CirkleSentinel = dynamic(() => import("@/components/overlays/cirkle-sentinel").then(m => ({ default: m.CirkleSentinel })), { ssr: false });
 const CirkleOracle = dynamic(() => import("@/components/overlays/cirkle-oracle").then(m => ({ default: m.CirkleOracle })), { ssr: false });
@@ -369,6 +370,7 @@ export default function Page() {
   const [wordgardenOpen, setWordgardenOpen] = useState(false);
   const [addContactOpen, setAddContactOpen] = useState(false);
   const [contactQrOpen, setContactQrOpen] = useState(false);
+  const [institutionRegisterOpen, setInstitutionRegisterOpen] = useState(false);
   const [commitOpen, setCommitOpen] = useState(false);
   const [sentinelOpen, setSentinelOpen] = useState(false);
   const [oracleOpen, setOracleOpen] = useState(false);
@@ -448,7 +450,8 @@ export default function Page() {
         setAiRecapOpen(false); setUniversalStoryOpen(false); setVesselTrackerOpen(false); setSmartInboxOpen(false);
         setMoodChatOpen(false); setVoiceCloneOpen(false); setTribeChatOpen(false); setAiMediatorOpen(false);
         setNoteSelfOpen(false); setWordAuraOpen(false); setChatMazeOpen(false); setGhostInboxOpen(false);
-        setCitizenShieldOpen(false); setAidirectorOpen(false); setCowatchOpen(false); setColorstoryOpen(false); setDebatearenaOpen(false); setEchobreakerOpen(false); setEchoremixOpen(false); setLamahatviewerOpen(false); setLivingphotosOpen(false); setMashahdplayerOpen(false); setMeshpresenceOpen(false); setMoodplayerOpen(false); setMosaicstoriesOpen(false); setPhotogenealogyOpen(false); setSmartchaptersOpen(false); setThreadtheatreOpen(false); setTimeshiftcamOpen(false); setTopicdnaOpen(false); setWordgardenOpen(false); 
+        setCitizenShieldOpen(false); setAidirectorOpen(false); setCowatchOpen(false); setColorstoryOpen(false); setDebatearenaOpen(false); setEchobreakerOpen(false); setEchoremixOpen(false); setLamahatviewerOpen(false); setLivingphotosOpen(false); setMashahdplayerOpen(false); setMeshpresenceOpen(false); setMoodplayerOpen(false); setMosaicstoriesOpen(false); setPhotogenealogyOpen(false); setSmartchaptersOpen(false); setThreadtheatreOpen(false); setTimeshiftcamOpen(false); setTopicdnaOpen(false); setWordgardenOpen(false);
+        setAddContactOpen(false); setContactQrOpen(false); setInstitutionRegisterOpen(false);
         setOverlayBrowserOpen(false);
         setPersonalAIOpen(false);
         setMeshDashboardOpen(false);
@@ -590,8 +593,10 @@ export default function Page() {
     window.addEventListener("circle:word-garden", onWordgarden);
     const onAddContact = () => setAddContactOpen(true);
     const onContactQr = () => setContactQrOpen(true);
+    const onInstitutionRegister = () => setInstitutionRegisterOpen(true);
     window.addEventListener("circle:add-contact", onAddContact);
     window.addEventListener("circle:contact-qr", onContactQr);
+    window.addEventListener("circle:institution-register", onInstitutionRegister);
 
     // Cirkle Brain AI features
     const onCommit = () => setCommitOpen(true);
@@ -603,6 +608,7 @@ export default function Page() {
     const onGrow = () => setGrowOpen(true);
     const onCare = () => setCareOpen(true);
     window.addEventListener("circle:commit", onCommit);
+    window.addEventListener("circle:cirkle-commit", onCommit);
     window.addEventListener("circle:sentinel", onSentinel);
     window.addEventListener("circle:oracle", onOracle);
     window.addEventListener("circle:spark", onSpark);
@@ -824,7 +830,9 @@ export default function Page() {
       window.removeEventListener("circle:word-garden", onWordgarden);
       window.removeEventListener("circle:add-contact", onAddContact);
       window.removeEventListener("circle:contact-qr", onContactQr);
+      window.removeEventListener("circle:institution-register", onInstitutionRegister);
       window.removeEventListener("circle:commit", onCommit);
+      window.removeEventListener("circle:cirkle-commit", onCommit);
       window.removeEventListener("circle:sentinel", onSentinel);
       window.removeEventListener("circle:oracle", onOracle);
       window.removeEventListener("circle:spark", onSpark);
@@ -1029,6 +1037,7 @@ export default function Page() {
       <WordGarden open={wordgardenOpen} onClose={() => setWordgardenOpen(false)} />
       <AddContact open={addContactOpen} onClose={() => setAddContactOpen(false)} />
       <ContactQR open={contactQrOpen} onClose={() => setContactQrOpen(false)} username={user?.username || "cirkle"} displayName={user?.displayName || "Cirkle User"} />
+      <InstitutionRegister open={institutionRegisterOpen} onClose={() => setInstitutionRegisterOpen(false)} />
       <CirkleCommit open={commitOpen} onClose={() => setCommitOpen(false)} />
       <CirkleSentinel open={sentinelOpen} onClose={() => setSentinelOpen(false)} />
       <CirkleOracle open={oracleOpen} onClose={() => setOracleOpen(false)} />

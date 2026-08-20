@@ -5,7 +5,7 @@
  * CIRKLE Platform Admin Panel
  * ============================================================================
  * A single fullscreen overlay that provides complete administration for the
- * entire CIRKLE super app — 12 sections covering Operations / Intelligence /
+ * entire CIRKLE super app — 13 sections covering Operations / Intelligence /
  * Infrastructure. Renders the registry defined in `src/lib/admin-tabs.ts`.
  *
  * BUILDING PHASE — NO AUTH. A prominent amber "DEV MODE — NO AUTH" banner is
@@ -37,7 +37,7 @@ import {
   ChevronRight, Cpu as CpuIcon, Zap, Globe, ArrowUpRight, ArrowDownRight,
   TriangleAlert, Ban, Trash2, ShieldAlert, Server as ServerIcon, GitCommit,
   ListChecks, Hash, Eye, EyeOff, Layers, FolderTree, Gauge, Code2,
-  CircleCheck, CircleAlert, Info, Bug, type LucideIcon,
+  CircleCheck, CircleAlert, Info, Bug, ToggleRight, type LucideIcon,
 } from "lucide-react";
 
 import { OverlayShell } from "@/components/ui/overlay-shell";
@@ -45,6 +45,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
 import {
   ADMIN_SECTIONS, ADMIN_SECTION_GROUPS, type AdminSectionId,
 } from "@/lib/admin-tabs";
@@ -2295,6 +2297,357 @@ function ErrorsSection() {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+//  Section: Feature Toggles (admin-controlled platform feature switches)
+// ────────────────────────────────────────────────────────────────────────────
+
+interface AdminFeatureItem {
+  id: string;
+  label: string;
+  description: string;
+  category: "tab" | "capability" | "overlay";
+  defaultEnabled: boolean;
+  enabled: boolean;
+  updatedAt?: string | null;
+}
+
+interface AdminFeaturesResponse {
+  total: number;
+  enabledCount: number;
+  disabledCount: number;
+  features: AdminFeatureItem[];
+  byCategory: {
+    tab: AdminFeatureItem[];
+    capability: AdminFeatureItem[];
+    overlay: AdminFeatureItem[];
+  };
+  coreFeatureIds: string[];
+}
+
+const FEATURE_CATEGORY_META: Record<
+  "tab" | "capability" | "overlay",
+  { label: string; icon: LucideIcon; color: string }
+> = {
+  tab:        { label: "Tabs",            icon: LayoutDashboard, color: "bg-emerald-400/70" },
+  capability: { label: "Capabilities",    icon: CpuIcon,         color: "bg-violet-400/70"  },
+  overlay:    { label: "Feature Overlays", icon: Layers,         color: "bg-amber-400/70"   },
+};
+
+function FeatureToggleRow({
+  feature,
+  onToggle,
+  pending,
+}: {
+  feature: AdminFeatureItem;
+  onToggle: (id: string, enabled: boolean) => void;
+  pending: boolean;
+}) {
+  const isCore = feature.defaultEnabled;
+  const labelId = `feat-${feature.id}-label`;
+  return (
+    <div
+      className="rounded-lg bg-white/5 border border-white/10 p-3 hover:bg-white/10 transition-colors"
+      aria-labelledby={labelId}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span id={labelId} className="text-xs font-medium text-white truncate">
+              {feature.label}
+            </span>
+            {isCore && (
+              <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-500/30 text-[9px] uppercase">
+                Core
+              </Badge>
+            )}
+          </div>
+          <p
+            className="text-[10px] text-white/50 mt-0.5 truncate"
+            title={feature.description}
+          >
+            {feature.description}
+          </p>
+          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+            <span className="text-[9px] font-mono text-white/40 truncate">
+              {feature.id}
+            </span>
+            {feature.updatedAt && (
+              <span className="text-[9px] text-white/40 flex items-center gap-0.5">
+                <Clock className="w-2.5 h-2.5" /> {timeAgo(feature.updatedAt)}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1 shrink-0">
+          {pending && (
+            <Loader2 className="w-3 h-3 text-white/60 animate-spin" aria-hidden="true" />
+          )}
+          <Switch
+            checked={feature.enabled}
+            disabled={pending}
+            onCheckedChange={(checked) => onToggle(feature.id, checked)}
+            role="switch"
+            aria-checked={feature.enabled}
+            aria-label={`Toggle ${feature.label} — ${feature.enabled ? "on" : "off"}`}
+            className="data-[state=checked]:bg-emerald-500/80 data-[state=unchecked]:bg-white/15"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FeaturesSection() {
+  const { data: raw, loading, error, refresh } = useAdminData<AdminFeaturesResponse>("/api/admin/features");
+  const [search, setSearch] = useState("");
+  const [catFilter, setCatFilter] = useState<"all" | "tab" | "capability" | "overlay">("all");
+  // Local override map: featureId -> enabled. Lets us apply optimistic updates
+  // and reconcile with server state on next refresh.
+  const [localOverrides, setLocalOverrides] = useState<Record<string, boolean>>({});
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
+
+  // Reconcile: when server data refreshes, drop overrides that match the server
+  // state (the server has caught up). Stale overrides remain so the optimistic
+  // flip is preserved if a PUT failed silently.
+  const prevRawRef = useRef<AdminFeaturesResponse | null>(null);
+  if (raw !== prevRawRef.current) {
+    prevRawRef.current = raw;
+    if (raw) {
+      const stale: Record<string, boolean> = {};
+      for (const [id, enabled] of Object.entries(localOverrides)) {
+        const serverFeat = raw.features.find((f) => f.id === id);
+        if (!serverFeat || serverFeat.enabled !== enabled) {
+          stale[id] = enabled;
+        }
+      }
+      if (Object.keys(stale).length !== Object.keys(localOverrides).length) {
+        setLocalOverrides(stale);
+      }
+    }
+  }
+
+  // Merge server data with optimistic local overrides.
+  const features = useMemo<AdminFeatureItem[]>(() => {
+    if (!raw?.features) return [];
+    return raw.features.map((f) =>
+      localOverrides[f.id] !== undefined
+        ? { ...f, enabled: localOverrides[f.id] }
+        : f,
+    );
+  }, [raw, localOverrides]);
+
+  const enabledCount = features.filter((f) => f.enabled).length;
+  const disabledCount = features.length - enabledCount;
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return features.filter((f) => {
+      if (catFilter !== "all" && f.category !== catFilter) return false;
+      if (!q) return true;
+      return (
+        f.label.toLowerCase().includes(q) ||
+        f.description.toLowerCase().includes(q) ||
+        f.id.toLowerCase().includes(q)
+      );
+    });
+  }, [features, search, catFilter]);
+
+  const grouped = useMemo(() => {
+    return {
+      tab: filtered.filter((f) => f.category === "tab"),
+      capability: filtered.filter((f) => f.category === "capability"),
+      overlay: filtered.filter((f) => f.category === "overlay"),
+    };
+  }, [filtered]);
+
+  const handleToggle = useCallback(
+    async (id: string, enabled: boolean) => {
+      // Optimistic update
+      setLocalOverrides((prev) => ({ ...prev, [id]: enabled }));
+      setPendingIds((prev) => {
+        const next = new Set(prev);
+        next.add(id);
+        return next;
+      });
+
+      try {
+        const res = await fetch("/api/admin/features", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, enabled }),
+        });
+        if (!res.ok) {
+          const txt = await res.text().catch(() => "");
+          throw new Error(`HTTP ${res.status}${txt ? ` — ${txt.slice(0, 120)}` : ""}`);
+        }
+        const feat = features.find((f) => f.id === id);
+        toast.success(`${feat?.label ?? id} ${enabled ? "enabled" : "disabled"}`);
+      } catch (err: unknown) {
+        // Revert optimistic update
+        setLocalOverrides((prev) => {
+          const next = { ...prev };
+          // Restore the previous server state (or remove override)
+          const serverFeat = raw?.features.find((f) => f.id === id);
+          if (serverFeat && serverFeat.enabled === enabled) {
+            // server already matches; nothing to revert
+          } else if (serverFeat) {
+            next[id] = serverFeat.enabled;
+          } else {
+            delete next[id];
+          }
+          return next;
+        });
+        const msg = (err as { message?: string })?.message || "Failed to toggle";
+        toast.error(`Failed to toggle: ${msg}`);
+      } finally {
+        setPendingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }
+    },
+    [features, raw],
+  );
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      className="space-y-4"
+    >
+      <SectionHeader
+        title="Feature Toggles"
+        description="Admin-controlled platform feature on/off switches"
+      />
+
+      {loading && !raw ? (
+        <LoadingSkeleton rows={10} />
+      ) : error ? (
+        <ErrorCard message={error} onRetry={refresh} />
+      ) : !raw ? (
+        <EmptyState message="No feature data available." />
+      ) : (
+        <>
+          {/* Summary stat cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <StatCard
+              label="Total Features"
+              value={features.length}
+              icon={ToggleRight}
+              accent="default"
+              hint={`${raw.coreFeatureIds.length} core defaults`}
+            />
+            <StatCard
+              label="Enabled"
+              value={enabledCount}
+              icon={CheckCircle2}
+              accent="green"
+              hint={`${Math.round((enabledCount / Math.max(1, features.length)) * 100)}% of all features`}
+            />
+            <StatCard
+              label="Disabled"
+              value={disabledCount}
+              icon={XCircle}
+              accent="red"
+              hint={`${Math.round((disabledCount / Math.max(1, features.length)) * 100)}% of all features`}
+            />
+          </div>
+
+          {/* Core features info banner */}
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 flex items-start gap-2.5">
+            <Info className="w-4 h-4 text-amber-300 shrink-0 mt-0.5" />
+            <div className="text-xs text-amber-100/90 leading-relaxed">
+              <span className="font-medium text-amber-200">
+                {raw.coreFeatureIds.length} core features are always on by default:
+              </span>{" "}
+              Wasl, Lamahat, Mashahd, Midan, Posting, Citizen Shield, Emergency, Commit.
+              All other features are OFF until you enable them.
+            </div>
+          </div>
+
+          {/* Search + filter */}
+          <AdminCard
+            title="Filter Features"
+            icon={Search}
+            action={
+              <div className="flex items-center gap-2 flex-wrap">
+                <select
+                  value={catFilter}
+                  onChange={(e) =>
+                    setCatFilter(e.target.value as typeof catFilter)
+                  }
+                  className="bg-white/5 border border-white/10 rounded-md h-8 px-2 text-xs text-white"
+                  aria-label="Filter by category"
+                >
+                  <option value="all">All categories</option>
+                  <option value="tab">Tabs</option>
+                  <option value="capability">Capabilities</option>
+                  <option value="overlay">Overlays</option>
+                </select>
+                <div className="relative">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/40" />
+                  <Input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search features…"
+                    className="pl-7 h-8 w-44 bg-white/5 border-white/10 text-white text-xs placeholder:text-white/40"
+                    aria-label="Search features"
+                  />
+                </div>
+              </div>
+            }
+          >
+            <div className="text-[11px] text-white/50">
+              Showing <span className="text-white/80 font-medium">{filtered.length}</span> of{" "}
+              {features.length} features
+            </div>
+          </AdminCard>
+
+          {/* Category cards */}
+          {(["tab", "capability", "overlay"] as const).map((cat) => {
+            const meta = FEATURE_CATEGORY_META[cat];
+            const items = grouped[cat];
+            if (catFilter !== "all" && catFilter !== cat) return null;
+            if (items.length === 0) return null;
+            const enabledInCat = items.filter((f) => f.enabled).length;
+            const CatIcon = meta.icon;
+            return (
+              <AdminCard
+                key={cat}
+                title={`${meta.label} (${enabledInCat}/${items.length} on)`}
+                icon={CatIcon}
+                action={
+                  <Badge className="bg-white/5 text-white/60 border-white/10 text-[9px] uppercase">
+                    {items.length} {items.length === 1 ? "item" : "items"}
+                  </Badge>
+                }
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {items.map((f) => (
+                    <FeatureToggleRow
+                      key={f.id}
+                      feature={f}
+                      onToggle={handleToggle}
+                      pending={pendingIds.has(f.id)}
+                    />
+                  ))}
+                </div>
+              </AdminCard>
+            );
+          })}
+
+          {filtered.length === 0 && (
+            <EmptyState message="No features match these filters." />
+          )}
+        </>
+      )}
+    </motion.div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 //  Section 12: System & Database
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -2607,6 +2960,7 @@ function SectionRouter({ id }: { id: AdminSectionId }) {
     case "overlays": return <OverlaysSection />;
     case "api":      return <ApiRoutesSection />;
     case "errors":   return <ErrorsSection />;
+    case "features": return <FeaturesSection />;
     case "system":   return <SystemSection />;
     default:         return <EmptyState message="Unknown section" />;
   }

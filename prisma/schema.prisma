@@ -26,6 +26,7 @@ model User {
   posts        Post[]
   messages     Message[]
   transactions Transaction[]
+  institutions Institution[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
@@ -2046,4 +2047,184 @@ model PhotoCollection {
   @@index([ownerLabel, kind])
   @@index([ownerLabel, visibility])
   @@index([kind, visibility])
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Platform Feature Toggles — admin-controlled feature on/off switches.
+// Default: all OFF except the 8 core features (wasl, lamahat, mashahd, midan,
+// posting, citizen_shield, emergency, commit). Admin can toggle any feature
+// on from the Admin Panel → Feature Toggles section.
+// ───────────────────────────────────────────────────────────────────────────
+model PlatformFeatureToggle {
+  id          String   @id
+  label       String
+  description String
+  category    String   // "tab" | "overlay" | "capability"
+  enabled     Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+
+  @@index([category, enabled])
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Institution Accounts — for Wasl (chat). An institution is registered by a
+// founder (personal User) after their own personal account is created.
+// Registration requires country-specific + company-type-specific documents.
+// ───────────────────────────────────────────────────────────────────────────
+model Institution {
+  id              String   @id @default(cuid())
+  /// The personal User who founded this institution. Must exist first.
+  founderId       String
+  founder         User     @relation(fields: [founderId], references: [id], onDelete: Cascade)
+  /// Institution display name (e.g. "Al-Noor Trading Co.")
+  name            String
+  /// Institution @handle (e.g. "alnoor-trading")
+  handle          String   @unique
+  /// ISO-2 country code where the institution is registered (e.g. "EG", "SA")
+  country         String
+  /// Company type (e.g. "llc", "sole_proprietorship", "corporation", "partnership",
+  /// "nonprofit", "government", "startup"). Determines required documents.
+  companyType     String
+  /// Industry (e.g. "trading", "manufacturing", "services", "tech", "retail")
+  industry        String   @default("")
+  /// JSON array of registered email addresses (e.g. ["info@alnoor.com", "sales@alnoor.com"])
+  /// Used for auto-detecting sender/receiver emails in institution commits.
+  emails          String   @default("[]")
+  /// JSON array of registered phone numbers
+  phones          String   @default("[]")
+  /// JSON array of registered addresses (HQ + branches)
+  addresses       String   @default("[]")
+  /// JSON array of document records: { type, fileName, fileHash, uploadedAt, verified }
+  /// Required documents vary by country + companyType (see InstitutionDocRequirements)
+  documents       String   @default("[]")
+  /// Verification status: pending | under_review | verified | rejected
+  verificationStatus String @default("pending")
+  /// AI-extracted registration number (e.g. commercial registration number)
+  registrationNumber String?
+  /// Tax ID (e.g. VAT number, EIN, etc.)
+  taxId           String?
+  avatarColor     String   @default("steel")
+  avatarInitials  String   @default("IN")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([founderId])
+  @@index([country, companyType])
+  @@index([handle])
+  @@index([verificationStatus])
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Institution Document Requirements — per country + company type.
+// Defines which documents are required to register an institution.
+// Seeded by the institution-registration lib.
+// ───────────────────────────────────────────────────────────────────────────
+model InstitutionDocRequirement {
+  id            String   @id @default(cuid())
+  /// ISO-2 country code
+  country       String
+  /// Company type (llc, sole_proprietorship, corporation, partnership, etc.)
+  companyType   String
+  /// JSON array of required document specs:
+  /// [{ key, labelEn, labelAr, description, acceptedFormats, maxSizeMb }]
+  requiredDocs  String   @default("[]")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([country, companyType])
+  @@index([country])
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// SMTP Server Settings — for sending emails from the platform (commit
+// confirmations, institution emails, notifications). Configured by admin.
+// ───────────────────────────────────────────────────────────────────────────
+model SmtpSettings {
+  id              String   @id @default("default")
+  /// SMTP host (e.g. "smtp.gmail.com", "smtp.sendgrid.net", "smtp.mailgun.org")
+  host            String
+  /// SMTP port (587 for STARTTLS, 465 for SSL, 25 for plain)
+  port            Int      @default(587)
+  /// Username for SMTP auth
+  username        String
+  /// Password / API key (stored encrypted at rest in production; plaintext in dev)
+  password        String
+  /// From email address (e.g. "noreply@cirkle.app")
+  fromEmail       String
+  /// From display name (e.g. "Cirkle")
+  fromName        String   @default("Cirkle")
+  /// Encryption method: "starttls" | "ssl" | "none"
+  encryption      String   @default("starttls")
+  /// Whether SMTP is enabled (admin toggle)
+  enabled         Boolean  @default(false)
+  /// Test email sent timestamp (for health check)
+  lastTestSentAt  DateTime?
+  lastTestStatus  String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Email Log — audit trail of all emails sent via the platform.
+// ───────────────────────────────────────────────────────────────────────────
+model EmailLog {
+  id              String   @id @default(cuid())
+  /// Email type: "commit_confirmation" | "institution_invite" | "notification" | "test"
+  type            String
+  /// Recipient email
+  toEmail         String
+  /// Recipient name
+  toName          String?
+  /// Sender email (from SmtpSettings)
+  fromEmail       String
+  /// Subject
+  subject         String
+  /// AI-generated formal body (HTML)
+  bodyHtml        String
+  /// Plain-text fallback
+  bodyText        String?
+  /// Status: "sent" | "failed" | "queued"
+  status          String   @default("queued")
+  /// Error message if failed
+  error           String?
+  /// Related entity (e.g. commit id, institution id)
+  relatedId       String?
+  /// SMTP response message
+  smtpResponse    String?
+  sentAt          DateTime?
+  createdAt       DateTime @default(now())
+
+  @@index([type, status])
+  @@index([toEmail])
+  @@index([createdAt])
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Chat Topic Summary — AI-generated topic-based chat summaries for Wasl.
+// Groups messages by detected topic and summarizes. Scope: today | all.
+// ───────────────────────────────────────────────────────────────────────────
+model ChatTopicSummary {
+  id              String   @id @default(cuid())
+  conversationId  String
+  /// Detected topic (e.g. "Project deadline", "Pricing discussion", "Weekend plans")
+  topic           String
+  /// "today" | "all" — the scope of messages summarized
+  scope           String
+  /// AI-generated summary
+  summary         String
+  /// Key points (JSON array of strings)
+  keyPoints       String   @default("[]")
+  /// Message count included in this summary
+  messageCount    Int
+  /// First message timestamp in the summary range
+  rangeStart      DateTime
+  /// Last message timestamp in the summary range
+  rangeEnd        DateTime
+  /// AI provider used
+  provider        String?
+  createdAt       DateTime @default(now())
+
+  @@index([conversationId, scope])
+  @@index([conversationId, topic])
 }

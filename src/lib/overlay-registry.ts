@@ -573,6 +573,15 @@ export const OVERLAY_REGISTRY: OverlayEntry[] = [
     event: "circle:contact-qr",
     keywords: ["qr", "share", "code", "add"],
   },
+  {
+    id: "institution-register",
+    name: "Register Institution",
+    description: "Register a company, NGO, or government entity on Cirkle. تسجيل مؤسسة",
+    emoji: "🏢",
+    category: "social",
+    event: "circle:institution-register",
+    keywords: ["institution", "company", "organization", "register", "business", "llc", "nonprofit"],
+  },
 
   // ── Cirkle-* AI overlays (7) ─────────────────────────────────────────
   {

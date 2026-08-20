@@ -1,23 +1,24 @@
 /**
  * Admin Panel Section Registry
  * ============================================================================
- * Single source of truth for the 12 sections of the CIRKLE Platform Admin
+ * Single source of truth for the 13 sections of the CIRKLE Platform Admin
  * Panel. Each section has an id, label (EN + AR), icon, description, and the
  * data source(s) it pulls from.
  *
  * Sections:
- *   1. overview     — top-level KPIs + system health
- *   2. users        — User table management
- *   3. content      — Post moderation + flagged content
- *   4. circles      — CircleGroup + members + join requests
- *   5. ai           — Brain AI providers + knowledge graph
- *   6. aike         — Phase 7.5 Autonomous Intelligence status
- *   7. news         — News Orchestrator 5-source pipeline
- *   8. payments     — Transaction monitoring + fraud
- *   9. overlays     — 71 overlays + feature flags
- *  10. api          — 237 API routes + rate limits
- *  11. errors       — Error monitoring history + stats
- *  12. system       — Turso DB + env + git + backups
+ *   1.  overview     — top-level KPIs + system health
+ *   2.  users        — User table management
+ *   3.  content      — Post moderation + flagged content
+ *   4.  circles      — CircleGroup + members + join requests
+ *   5.  ai           — Brain AI providers + knowledge graph
+ *   6.  aike         — Phase 7.5 Autonomous Intelligence status
+ *   7.  news         — News Orchestrator 5-source pipeline
+ *   8.  payments     — Transaction monitoring + fraud
+ *   9.  overlays     — 71 overlays + feature flags
+ *  10.  api          — 237 API routes + rate limits
+ *  11.  errors       — Error monitoring history + stats
+ *  12.  features     — 46 admin-controlled platform feature on/off toggles
+ *  13.  system       — Turso DB + env + git + backups
  *
  * NOTE: The admin panel is in BUILDING PHASE — no auth gate. A visible
  * "DEV MODE — NO AUTH" banner is shown. Will be replaced with a hidden
@@ -37,6 +38,7 @@ import {
   Network,
   AlertTriangle,
   ServerCog,
+  ToggleRight,
   type LucideIcon,
 } from "lucide-react";
 
@@ -52,6 +54,7 @@ export type AdminSectionId =
   | "overlays"
   | "api"
   | "errors"
+  | "features"
   | "system";
 
 export interface AdminSection {
@@ -176,6 +179,16 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     description: "Error history, stats, captured messages",
     descriptionAr: "سجل الأخطاء، الإحصائيات، الرسائل المسجلة",
     endpoint: "/api/monitoring/errors",
+    group: "infrastructure",
+  },
+  {
+    id: "features",
+    label: "Feature Toggles",
+    labelAr: "مفاتيح الميزات",
+    icon: ToggleRight,
+    description: "Admin-controlled platform feature on/off switches",
+    descriptionAr: "مفاتيح تشغيل/إيقاف الميزات التي يتحكم بها المدير",
+    endpoint: "/api/admin/features",
     group: "infrastructure",
   },
   {

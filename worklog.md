@@ -8676,3 +8676,141 @@ Stage Summary:
 - Admin entry: Profile → Quick Actions → "Admin" button (amber, no password) → dispatches `circle:admin-panel` event
 - All 3 systems in sync: GitHub `8abb9e6`, Vercel auto-deploying, Turso 97 tables
 - `.env` restored + locked (chmod 444)
+
+---
+Task ID: ADMIN-FEATURE-TOGGLES
+Agent: full-stack-developer
+Task: Add Feature Toggles section to admin panel
+
+Work Log:
+- Read `/home/z/my-project/worklog.md` (last ~100 lines) — confirmed Task 1 (brand foundation), Task 3 (socket.io mini-service on port 3003), Task 2 (18 API routes), and the admin panel foundation task (12 sections, 2982 lines) were all in place.
+- Read `/home/z/my-project/src/lib/admin-tabs.ts` — confirmed the registry pattern: 12 sections in `ADMIN_SECTIONS[]`, `ADMIN_SECTION_COUNT` derived from `ADMIN_SECTIONS.length`, groups = operations/intelligence/infrastructure, ids in a string-literal union `AdminSectionId`.
+- Read `/home/z/my-project/src/lib/platform-features.ts` — confirmed the 46 platform features (8 tabs, 9 capabilities, 29 overlays) and the `defaultEnabled` flag on the 8 core features (Wasl, Midan, Lamahat, Mashahd, Profile, Posting, E2EE, Citizen Shield, Emergency, Commit).
+- Read `/home/z/my-project/src/app/api/admin/features/route.ts` — confirmed `GET` returns `{ total, enabledCount, disabledCount, features[], byCategory, coreFeatureIds }` and `PUT` body `{ id, enabled }` returns `{ id, enabled, label, updatedAt }`.
+- Read `/home/z/my-project/src/components/overlays/admin-panel.tsx` (3337 lines after my edits) — studied the `useAdminData<T>` hook pattern (derived-state loading flag, AbortController 8s timeout, optional autoRefreshMs), `AdminCard` (title + icon + action + children), `StatCard` (label/value/icon/hint/accent), `LoadingSkeleton`, `ErrorCard`, `EmptyState`, `SectionHeader`, and the `SectionRouter` switch that renders the active section by id.
+- Verified `@/components/ui/switch` exists (Radix `SwitchPrimitive.Root` with `checked`, `onCheckedChange`, `disabled` props) and `sonner` is installed (`toast.success` / `toast.error` already used in `src/screens/pay-screen.tsx`).
+- Edited `src/lib/admin-tabs.ts`:
+  - Added `ToggleRight` to the `lucide-react` imports.
+  - Added `"features"` to the `AdminSectionId` union type.
+  - Registered a new section in `ADMIN_SECTIONS` between `errors` and `system`: `{ id: "features", label: "Feature Toggles", labelAr: "مفاتيح الميزات", icon: ToggleRight, description: "Admin-controlled platform feature on/off switches", descriptionAr: "مفاتيح تشغيل/إيقاف الميزات التي يتحكم بها المدير", endpoint: "/api/admin/features", group: "infrastructure" }`.
+  - Updated the file header comment from "12 sections" → "13 sections" with the new section added at position 12.
+  - `ADMIN_SECTION_COUNT` automatically becomes 13 (derived from array length).
+- Edited `src/components/overlays/admin-panel.tsx`:
+  - Added `ToggleRight` to the `lucide-react` import block and `Switch` from `@/components/ui/switch` + `toast` from `sonner` to the local imports.
+  - Added a new `FeaturesSection` component (with helper `FeatureToggleRow` and `FEATURE_CATEGORY_META` lookup) right before `SystemSection`. The section:
+    * Fetches `/api/admin/features` via the existing `useAdminData<AdminFeaturesResponse>` hook.
+    * Renders 3 summary `StatCard`s: Total Features (default accent), Enabled (green accent, with %-of-total hint), Disabled (red accent, with %-of-total hint).
+    * Renders an amber info banner listing the 8 always-on core features.
+    * Renders a category-filter `<select>` (All/Tabs/Capabilities/Overlays) + a search `<Input>` that filters by label/description/id.
+    * Groups features by category into 3 `AdminCard`s (Tabs, Capabilities, Feature Overlays), each showing `${enabledInCat}/${items.length} on` in the title.
+    * Each feature row shows: label, "Core" badge if `defaultEnabled`, truncated description (1-line, full text in `title` attr), feature id (mono), `updatedAt` time-ago (via existing `timeAgo` helper), and a `Switch` toggle.
+    * On flip: optimistic update via local `localOverrides` map + `pendingIds` set → PUT `/api/admin/features` with `{ id, enabled }` → on success `toast.success("${label} enabled/disabled")` → on error revert + `toast.error("Failed to toggle: ...")`.
+    * Loading state on the switch (spinner shown next to the Switch via `Loader2` icon, switch `disabled` while pending).
+    * Reconciliation: when server data refreshes, stale overrides (where server no longer matches) are kept; matching ones are dropped, so the optimistic flip is preserved if a PUT silently failed.
+    * Responsive grid: 1 column on mobile, 2 on `sm:`, 3 on `lg:` for the feature rows.
+    * Accessibility: each Switch gets `role="switch"`, `aria-checked={feature.enabled}`, `aria-label="Toggle ${label} — on|off"`; each row container is `aria-labelledby` pointing at the label span id.
+  - Added `case "features": return <FeaturesSection />;` to the `SectionRouter` switch (between `errors` and `system`).
+  - Updated the file header comment from "12 sections" → "13 sections".
+  - Both the desktop `Sidebar` and mobile `MobileIconStrip` iterate over `ADMIN_SECTIONS` directly, so the new "Feature Toggles" entry appears in both automatically with the `ToggleRight` icon.
+- Ran `bun run lint` — clean (0 errors, 0 warnings, no output beyond `$ eslint .`).
+- Verified via `dev.log` that `PUT /api/admin/features` returns 200 (the route was already exercised by another caller during the session).
+
+Stage Summary:
+- Files modified (2):
+  - `src/lib/admin-tabs.ts` — added `ToggleRight` import, `"features"` to `AdminSectionId`, the new section entry (13th), updated header comment.
+  - `src/components/overlays/admin-panel.tsx` — added `ToggleRight` (lucide) + `Switch` (ui) + `toast` (sonner) imports, added `FeaturesSection` + `FeatureToggleRow` + `FEATURE_CATEGORY_META` + `AdminFeatureItem` / `AdminFeaturesResponse` interfaces right before `SystemSection`, added the router case, updated header comment.
+- Section visibility: the new "Feature Toggles" section is registered with id `"features"` and will appear in the admin panel sidebar (desktop + mobile icon strip) under the "Infrastructure" group, between "Errors & Monitoring" and "System & Database".
+- Lint: `bun run lint` passes with 0 errors, 0 warnings.
+- UX: 3 colored summary stat cards, amber core-features banner, search + category filter, 3 grouped AdminCards, optimistic switch toggles with toast feedback, last-updated time-ago on each row, fully responsive (1/2/3 columns), ARIA-complete switches.
+
+---
+Task ID: INSTITUTION-REGISTRATION
+Agent: full-stack-developer
+Task: Build institution registration overlay with 4-step wizard
+
+Work Log:
+- Read all mandatory files: `worklog.md` (last 100 lines), `src/lib/institution-docs.ts` (doc matrix), `src/app/api/institutions/register/route.ts` (registration POST), `src/app/api/institutions/documents-requirements/route.ts` (GET docs by country+companyType), `src/components/overlays/circle-create.tsx` (OverlayShell + multi-step pattern), `src/lib/auth-store.ts` (founder = current logged-in `useAuth().user`). Also studied `OverlayShell`, the registry, `page.tsx`'s event-listener wiring pattern, and `wasl-screen.tsx`'s header/dropdown area.
+- Created `src/components/overlays/institution-register.tsx`:
+  - `@ts-nocheck` + `"use client"` directive as required.
+  - Exports `InstitutionRegister({ open, onClose })` — wraps `OverlayShell` with `variant="fullscreen"` and `ariaLabel="Institution registration"`.
+  - 4-step wizard driven by a `step` state (0–3) + a `direction` (1/-1) for Framer Motion slide transitions.
+  - Step indicator at the top: 4 numbered dots (1-4) — active highlighted in emerald, done in emerald/20 with a CheckCircle2, upcoming in white/5. Step titles in EN.
+  - **Step 0 — Founder Verification**: Pulls `user` + `hydrated` from `useAuth()`. If `hydrated` is false → spinner. If `!user` → "No personal account found" card with a Close button (registration blocked). If `user` → shows the founder's avatar (mapped color from `avatarColor`), display name, `@username@cirkle` handle, and a Cirkle-Verified badge if `user.verified`. A "Continue" button advances (Enter key also advances through `onKeyDown`).
+  - **Step 1 — Institution Details**: name (required, ≥2 chars), `@handle` (required, auto-suggested from name via `suggestHandle()` — strips diacritics, lowercases, replaces spaces with `_`; user can override; validated by `/^[a-z0-9_]{3,30}$/`), country (Select of all COUNTRIES, defaults to founder's `user.country` or `EG`), company type (Select of COMPANY_TYPES), industry (optional), registered emails (multi-input with add/remove — each row has an email Input + a Trash2 remove button; invalid emails get a rose border; "Add email" pill button), registration number (optional), Tax ID (optional). "Continue" disabled until `name + valid handle + country + companyType` are filled.
+  - **Step 2 — Document Upload**: Calls `GET /api/institutions/documents-requirements?country={cc}&companyType={ct}` when step 2 is entered AND whenever `country`/`companyType` change while already on step 2 (via `useEffect`). Shows a spinner while loading, an error card with Retry button on failure, or a list of `DocumentCard` components. Each card shows the doc label (English + Arabic), description, accepted formats (uppercase joined with `, `), max size, and a styled "Choose file" `<label>` pointing at a hidden `<input type=file>` (sr-only). On file pick, records `{ type, fileName, fileHash }` where `fileHash = mockFileHash(fileName)` (deterministic FNV-1a-like 32-bit hash). Selected files show a green checkmark + truncated filename. Progress indicator: `{uploadedCount} of {docs.length} uploaded`. "Continue" disabled until every required doc has a file.
+  - **Step 3 — Review & Submit**: Summary grid (name, handle, country with flag, company type EN+AR, industry, emails as chips, registration #, tax ID, list of uploaded docs with filenames). A native checkbox "I confirm that all information is accurate and I am authorized to register this institution." (required). "Register Institution" button POSTs to `/api/institutions/register` with `{ founderHandle, name, handle, country, companyType, industry, emails, registrationNumber, taxId, documents: requiredDocs.map(d => ({type, fileName, fileHash})) }`. While submitting: button shows a Loader2 spinner + "Registering…". On success: switches to a `SuccessScreen` showing the new institution's `@handle@cirkle` + verification status (`pending`) + a Done button. On error: shows the API error message; if `data.missingDocs` is present, renders a bulleted list of the missing documents (label + Arabic + description) so the user can fix them on Step 2.
+  - **SuccessScreen**: Glass card with a green CheckCircle2 icon, institution name, `@handle@cirkle` in monospace emerald, and an amber "Verification: pending" pill (with a tiny spinning Loader2 to convey "in progress"). A Done button calls `onClose`.
+  - Reset-on-open pattern (mirrors `circle-create.tsx`): a `prevOpen` state mirrors `open`; when `open` flips `false → true`, every wizard field is reset to defaults (founder's country seeded as initial country). No setState-in-effect.
+  - Keyboard: Enter advances when the current step is valid (except on Step 3 where Enter would conflict with the Submit button). OverlayShell already owns Esc-to-close, focus trap, body scroll lock, click-outside.
+  - Accessibility: `ariaLabel="Institution registration"` on the shell; every Input has a `<Label>`; file inputs have `aria-label="Upload {doc.labelEn}"`; the close button has `aria-label`; the Wasl entry button has `aria-label="Register an institution — تسجيل مؤسسة"`.
+  - Styling: glass cards (`glass backdrop-blur-xl border border-white/10 rounded-2xl p-4 sm:p-6`), emerald accent (`bg-emerald-500 hover:bg-emerald-600 text-white`) for primary actions, max-w-2xl content centered, full width on mobile, responsive grid (`grid-cols-1 sm:grid-cols-2`).
+  - Reusable building blocks exported as internal helpers: `StepShell` (Framer Motion slide wrapper), `Card`, `Field` (label + icon + hint), `Row` (summary row), `StepFooter` (Back/Continue buttons), `DocumentCard`, `SuccessScreen`.
+- Registered the overlay in `src/lib/overlay-registry.ts`: id `"institution-register"`, name "Register Institution", description with Arabic `تسجيل مؤسسة`, emoji 🏢, category `"social"`, event `"circle:institution-register"`, keywords `["institution","company","organization","register","business","llc","nonprofit"]`. Placed right after the `contact-qr` entry.
+- Wired the overlay into `src/app/page.tsx`:
+  - Added `const InstitutionRegister = dynamic(() => import("@/components/overlays/institution-register").then(m => ({ default: m.InstitutionRegister })), { ssr: false });` next to `ContactQR`.
+  - Added `const [institutionRegisterOpen, setInstitutionRegisterOpen] = useState(false);` next to `contactQrOpen`.
+  - Added `const onInstitutionRegister = () => setInstitutionRegisterOpen(true);` + `window.addEventListener("circle:institution-register", onInstitutionRegister);` in the big overlay-wiring `useEffect` (and the matching `removeEventListener` in the cleanup).
+  - Added `setInstitutionRegisterOpen(false)` to the Escape-key handler.
+  - Rendered `<InstitutionRegister open={institutionRegisterOpen} onClose={() => setInstitutionRegisterOpen(false)} />` next to `<ContactQR />`.
+- Added the Wasl entry point in `src/screens/wasl-screen.tsx`:
+  - Imported `Building2` from `lucide-react` (added to the existing icon import list).
+  - Added a `<DropdownMenuItem>` "Register Institution" (with `Building2` icon) inside the existing `+` Plus dropdown menu (between "Create channel" and "Scan QR code", separated by `DropdownMenuSeparator` on both sides) that dispatches `window.dispatchEvent(new CustomEvent("circle:institution-register"))`.
+  - Added a prominent visible button just below the Smart Folders bar (above the conversations list) — full-width glass card with emerald `Building2` icon, "Register Institution" title, "تسجيل مؤسسة · Companies, NGOs & government entities" subtitle, and a `ChevronRight` affordance. Hover state highlights the border in emerald and shifts the icon to scale 1.05.
+- Verified the docs API endpoint works for SA/LLC (5 docs returned) and EG/LLC (5 docs). Confirmed `GET /` returns HTTP 200 (page compiles & renders without runtime errors in the standalone build).
+- Lint: `bun run lint` initially surfaced 1 warning — an unused `eslint-disable-next-line react-hooks/exhaustive-deps` directive (the deps array was actually complete after I added `fetchDocs`). Removed the disable comment; final lint pass is clean — 0 errors, 0 warnings.
+
+Stage Summary:
+- Files created:
+  - `src/components/overlays/institution-register.tsx` (~770 lines) — full-screen 4-step registration wizard.
+- Files modified:
+  - `src/lib/overlay-registry.ts` — added `institution-register` entry (🏢 social).
+  - `src/app/page.tsx` — dynamic import + useState + event listener + render + Escape-handler reset.
+  - `src/screens/wasl-screen.tsx` — added `Building2` icon import + "Register Institution" dropdown item + a prominent visible entry button under the Smart Folders bar.
+- Event bus: `window.dispatchEvent(new CustomEvent("circle:institution-register"))` opens the overlay from anywhere in the app (Wasl screen + OverlayBrowser + CommandPalette + any future caller).
+- API contract: posts to `POST /api/institutions/register` with the full payload described in the route's header comment; correctly handles the `missingDocs` error shape returned by the API (renders the list of missing documents on Step 3).
+- Accessibility: shell carries `ariaLabel="Institution registration"` + `role="dialog"` + `aria-modal="true"` (via OverlayShell); every form input has a `<Label>`; file inputs have descriptive `aria-label`s; the Wasl entry button has `aria-label="Register an institution — تسجيل مؤسسة"`. Keyboard navigation: Tab through fields, Enter advances, Esc closes (OverlayShell).
+- Lint: `bun run lint` passes clean (0 errors, 0 warnings).
+- No issues encountered. The overlay is reachable from the Wasl screen (two entry points), the OverlayBrowser, and the CommandPalette (via the registry entry).
+
+---
+Task ID: CHAT-SUMMARIZE-COMMIT
+Agent: full-stack-developer
+Task: Add AI chat summarization + commit-in-chat with email to Wasl
+
+Work Log:
+- Read mandatory sources before starting: worklog tail (v16.0 production-stable baseline); `src/screens/wasl-screen.tsx` (3510 lines, ChatView with header + messages + Composer); `src/app/api/chats/summarize/route.ts` (POST { conversationId, scope } → topics[]); `src/app/api/commit/detect/route.ts` (POST { text, senderName?, recipientName? } → CommitDetection); `src/app/api/commit/send-email/route.ts` (POST full payload → { success, messageId? }); `src/components/overlays/cirkle-commit.tsx` first 100 lines (Commit overlay opens via `circle:commit` event); `src/lib/commit-detection.ts` + `src/lib/chat-summarization.ts` for exact response shapes + provider field; `src/app/api/institutions/route.ts` for `?founderHandle=…` filter.
+- Created `src/components/overlays/chat-summary.tsx` (~390 lines) — `ChatSummarySheet`:
+  • `Sheet` side="right" w-full sm:max-w-lg, `role="dialog"`, `aria-label="AI chat summary"`.
+  • Bilingual title "AI Chat Summary / ملخص المحادثة بالذكاء الاصطناعي".
+  • Scope toggle: 2-button segmented control (`role="tablist"` + each `role="tab"` with `aria-selected`). Default "today".
+  • Fetches `POST /api/chats/summarize` with `{ conversationId, scope }`. 8s AbortController timeout. `fetchSeqRef` guards against stale responses. Refetches on open + scope change + manual refresh.
+  • Loading: `Loader2` spinner + "Analyzing {N} messages…".
+  • Empty: "No messages to summarize for this period."
+  • Error: "Failed to generate summary. Please try again." + Retry button.
+  • Result: list of `TopicCard`s — topic name (bold), summary text, key points (bullets), Badge for message count + time range ("5 messages · 10:30 AM – 11:15 AM"). Refresh button + generatedAt timestamp + provider footer "Generated by Cirkle Brain AI · {provider}".
+- Created `src/components/overlays/chat-commit.tsx` (~530 lines) — `ChatCommitSheet`:
+  • `Sheet` side="right" w-full sm:max-w-lg, `role="dialog"`, `aria-label="Create commit"`. Header "Create Commit" with Gavel icon.
+  • Source preview: last 12 messages (or long-pressed selected message) as the text to commit.
+  • Step 1 — AI Auto-Detection: `POST /api/commit/detect` with `{ text, senderName, recipientName }`. 8s timeout + AbortController + stale-guard. Loading: "AI is analyzing the conversation…". Result: type badge (Price=green / Commodity=amber / Agreement=blue / All=purple) + confidence % + rationale + extracted fields grid (Amount, Commodity, Quantity, Deadline) + parties (badges) + key terms (bullets). Editable Commit Title (auto-filled from first 6 words) + Commit Description (auto-filled with original text, max 800 chars).
+  • Step 2 — Email Confirmation: `Switch` toggle "Send formal confirmation email" (off by default). If checked: render sender + recipient email fields. Sender email: if the user has registered institutions (fetched via `/api/institutions?founderHandle=…`), render a `<select>` dropdown of all institution emails (+ personal email). Otherwise a free-text `<Input type="email">`. Recipient email: free-text `<Input type="email">`. When sender email belongs to one of the user's institutions, set `isFromInstitution=true` + show "Institution" badge next to the sender label.
+  • Step 3 — Send: validates commitTitle non-empty + (if email checked) recipientEmail + senderEmail non-empty. If email checked: `POST /api/commit/send-email` with full payload (commitTitle, commitDescription, commitType=detection.type, parties, amount, currency, deadline, conditions=keyTerms, isFromInstitution, senderEmail, receiverEmail). Success: `toast.success("Commit created!", { description: "Email sent to {address}", action: { label: "View", onClick: dispatch `circle:cirkle-commit` } })`. If email not checked: `toast.success("Commit created!", { description: title, action: { label: "View", onClick: dispatch } })`. Always dispatches `window.dispatchEvent(new CustomEvent("circle:cirkle-commit"))` to optionally open the Commit overlay. Success state with CheckCircle2 + "Open Commit overlay" button. Reset state on close (deferred 300ms).
+- Modified `src/screens/wasl-screen.tsx` (+~110 lines):
+  • Added imports: `Gavel`, `FileText`, `Loader2`, `Mail` from lucide; `ChatSummarySheet` + `ChatCommitSheet` from the new overlay files.
+  • Added state in `ChatView`: `summaryOpen`, `commitOpen`, `commitSelectedMessage`, plus derived `hasMessages = messages.length > 0`.
+  • Summarize button in ChatView header (before search toggle): icon button (`Sparkles`), `aria-label="Summarize conversation with AI"`, `disabled={!hasMessages}` with `title="No messages yet"` tooltip.
+  • Commit button in Composer (between emoji and send/mic): icon button (`Gavel`), `aria-label="Create commit from this conversation"`, `bg-secondary/15 text-secondary`, `disabled={commitDisabled}` with `title="No messages yet"` tooltip. Added `onCommit?` + `commitDisabled?` props to `Composer` + `ComposerProps`.
+  • Added `onCommit?` prop to `MessageActionsSheet` — renders a "Commit" action item in the long-press grid (`Gavel` icon, secondary color). Wired via `setCommitSelectedMessage(m); setCommitOpen(true); setActionTarget(null);`.
+  • Rendered `<ChatSummarySheet>` + `<ChatCommitSheet>` at the end of `ChatView`'s JSX, with props derived from conversation + messages + current user (via `getMe()` + `useAuth.getState().user?.email`). No existing Wasl functionality removed; purely additive.
+- Modified `src/app/page.tsx` (+2 lines): registered `circle:cirkle-commit` event listener (both add + remove) that calls the same `onCommit` handler as `circle:commit`. This makes the dispatch from `chat-commit.tsx` actually open the existing CirkleCommit overlay (which was already wired to listen for `circle:commit`).
+- Verified: `bun run lint` → 0 errors, 0 warnings (exit 0). `GET /` → HTTP 200 (page renders without runtime errors). `POST /api/chats/summarize` → reachable (returns proper PrismaClientValidationError for nonexistent conversation). `POST /api/commit/detect` with `"I will sell you 100 tons of wheat for $5000 by Friday"` → returns `{ type: "all", detectedTypes: ["price", "commodity", "agreement"], confidence: 0.4 }` (fallback regex path; on production with API keys, it'd return the full AI response).
+- Agent-ctx work record: `/home/z/my-project/agent-ctx/CHAT-SUMMARIZE-COMMIT-full-stack-developer.md`.
+
+Stage Summary:
+- Files created (2): `src/components/overlays/chat-summary.tsx` (~390 lines), `src/components/overlays/chat-commit.tsx` (~530 lines).
+- Files modified (2): `src/screens/wasl-screen.tsx` (+~110 lines), `src/app/page.tsx` (+2 lines).
+- Feature 1 (AI Chat Summarization): Summarize button in Wasl conversation header → Sheet with scope toggle (Today/All), topic cards (topic name, summary, key points, message count + time range), loading/error/empty states, refresh button, Cirkle Brain AI provider footer.
+- Feature 2 (Commit-in-Chat with AI auto-detection + email): Commit button in Wasl composer → Sheet with 3-step flow (AI detect → editable commit fields + optional email confirmation → send). Type badge + confidence + rationale + extracted fields (Amount/Commodity/Quantity/Deadline/Parties/KeyTerms). Email confirmation with sender dropdown (auto-populated from registered institutions) + recipient input. Sends via `/api/commit/send-email` + dispatches `circle:cirkle-commit` event to optionally open the Commit overlay.
+- Both sheets mobile-responsive (`w-full sm:max-w-lg`), accessible (`role="dialog"`, `aria-label`, `role="tablist"`/`role="tab"` for scope toggle), with loading + error + empty states everywhere. All API calls use relative paths + 8s AbortController timeout + `cache: "no-store"`.
+- Constraints respected: no existing Wasl functionality removed (search, starred, more menu, send, voice, emoji, attachments, quick actions toolbar all preserved). Summarize + Commit buttons only appear when a conversation is open. Both disabled with "No messages yet" tooltip when conversation has 0 messages.
+- Lint: `bun run lint` → 0 errors, 0 warnings.
+- No issues encountered. Both APIs verified reachable + returning correct shapes.

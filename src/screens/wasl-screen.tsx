@@ -8,8 +8,11 @@ import {
   Users, BadgeCheck, Radio, ArrowLeft, Check, CheckCheck, Clock, Reply, Edit3,
   Trash2, Forward, Star, Pin, Copy, Smile, MoreVertical, X, Play, Pause, Timer,
   Shield, Crown, Ban, MicOff, ChevronRight, Archive, Bell, BellOff, ScanLine,
-  StopCircle, AlertCircle, ShieldCheck, Briefcase,
+  StopCircle, AlertCircle, ShieldCheck, Briefcase, Building2, Gavel, FileText,
+  Loader2, Mail,
 } from "lucide-react";
+import { ChatSummarySheet } from "@/components/overlays/chat-summary";
+import { ChatCommitSheet } from "@/components/overlays/chat-commit";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
@@ -362,6 +365,10 @@ export function WaslScreen() {
                 <Radio className="w-4 h-4 me-2" /> Create channel
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent("circle:institution-register"))}>
+                <Building2 className="w-4 h-4 me-2" /> Register Institution
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent("circle:contact-qr"))}>
                 <ScanLine className="w-4 h-4 me-2" /> Scan QR code
               </DropdownMenuItem>
@@ -413,6 +420,26 @@ export function WaslScreen() {
               {f}
             </button>
           ))}
+        </div>
+
+        {/* Register Institution — primary entry point from Wasl */}
+        <div className="px-5 mt-4">
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent("circle:institution-register"))}
+            className="w-full group flex items-center gap-3 rounded-xl glass border border-white/10 hover:border-emerald-500/40 hover:bg-emerald-500/5 px-4 py-3 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40"
+            aria-label="Register an institution — تسجيل مؤسسة"
+          >
+            <span className="w-9 h-9 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+              <Building2 className="w-5 h-5" />
+            </span>
+            <span className="flex-1 text-left min-w-0">
+              <span className="block text-sm font-medium">Register Institution</span>
+              <span className="block text-xs text-muted-foreground truncate">
+                تسجيل مؤسسة · Companies, NGOs & government entities
+              </span>
+            </span>
+            <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-emerald-400 transition shrink-0" />
+          </button>
         </div>
 
         {searching ? (
@@ -947,6 +974,13 @@ function ChatView({ conversation, socket, onBack }: ChatViewProps) {
   const [ttlSeconds, setTtlSeconds] = useState<number | null>(null);
   const [presence, setPresence] = useState<Conversation["presence"]>(conversation.presence ?? "offline");
   const [screenshotConsent, setScreenshotConsent] = useState<null | { onAllow: () => void; onDeny: () => void }>(null);
+
+  // ── AI chat summary + commit-in-chat sheets ──
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [commitOpen, setCommitOpen] = useState(false);
+  const [commitSelectedMessage, setCommitSelectedMessage] = useState<WaslMessage | null>(null);
+
+  const hasMessages = messages.length > 0;
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastTypingEmit = useRef<number>(0);
@@ -1782,6 +1816,19 @@ function ChatView({ conversation, socket, onBack }: ChatViewProps) {
           </div>
         </div>
 
+        {/* AI Summarize — opens the AI chat summary sheet */}
+        <button
+          onClick={() => setSummaryOpen(true)}
+          disabled={!hasMessages}
+          title={hasMessages ? undefined : "No messages yet"}
+          className={`w-9 h-9 rounded-full hover:bg-muted/60 flex items-center justify-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40 disabled:cursor-not-allowed ${
+            summaryOpen ? "bg-secondary/20 text-secondary" : "text-secondary"
+          }`}
+          aria-label="Summarize conversation with AI"
+        >
+          <Sparkles className="w-4 h-4" aria-hidden />
+        </button>
+
         {/* In-chat search toggle */}
         <button
           onClick={() => {
@@ -2094,6 +2141,11 @@ function ChatView({ conversation, socket, onBack }: ChatViewProps) {
             ? TTL_PRESETS.find((p) => p.seconds === ttlSeconds)?.label ?? null
             : null
         }
+        onCommit={() => {
+          setCommitSelectedMessage(null);
+          setCommitOpen(true);
+        }}
+        commitDisabled={!hasMessages}
       />
 
       {/* Action sheet (long-press / right-click) */}
@@ -2144,6 +2196,11 @@ function ChatView({ conversation, socket, onBack }: ChatViewProps) {
         onCopy={(m) => {
           navigator.clipboard?.writeText(m.body);
           toast.success("Copied to clipboard");
+          setActionTarget(null);
+        }}
+        onCommit={(m) => {
+          setCommitSelectedMessage(m);
+          setCommitOpen(true);
           setActionTarget(null);
         }}
       />
@@ -2220,6 +2277,44 @@ function ChatView({ conversation, socket, onBack }: ChatViewProps) {
           if (!forwardTarget) return;
           forwardMutation.mutate({ targetId, msg: forwardTarget });
         }}
+      />
+
+      {/* AI Chat Summary sheet */}
+      <ChatSummarySheet
+        open={summaryOpen}
+        onOpenChange={setSummaryOpen}
+        conversationId={conversation.id}
+        conversationName={conversation.name}
+        totalMessagesHint={messages.length}
+      />
+
+      {/* Commit-in-chat sheet (AI auto-detect + email) */}
+      <ChatCommitSheet
+        open={commitOpen}
+        onOpenChange={setCommitOpen}
+        conversationName={conversation.name}
+        conversationType={conversation.type}
+        messages={messages.map((m) => ({
+          id: m.id,
+          body: m.body,
+          senderName: m.senderName,
+          senderId: m.senderId,
+          timestamp: m.timestamp,
+        }))}
+        selectedMessage={
+          commitSelectedMessage
+            ? {
+                id: commitSelectedMessage.id,
+                body: commitSelectedMessage.body,
+                senderName: commitSelectedMessage.senderName,
+                senderId: commitSelectedMessage.senderId,
+                timestamp: commitSelectedMessage.timestamp,
+              }
+            : null
+        }
+        meName={getMe().displayName}
+        meCircleId={`@${getMe().id}:circle.app`}
+        meEmail={useAuth.getState().user?.email}
       />
     </div>
   );
@@ -2657,6 +2752,10 @@ interface ComposerProps {
   disabled?: boolean;
   isEditing: boolean;
   ttlLabel: string | null;
+  /** Open the commit-in-chat sheet (AI auto-detect + email). */
+  onCommit?: () => void;
+  /** Disable the commit button (e.g. no messages yet). */
+  commitDisabled?: boolean;
 }
 
 function Composer({
@@ -2667,6 +2766,8 @@ function Composer({
   disabled,
   isEditing,
   ttlLabel,
+  onCommit,
+  commitDisabled,
 }: ComposerProps) {
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -2905,6 +3006,17 @@ function Composer({
         >
           <Smile className="w-4 h-4" />
         </button>
+        {onCommit && (
+          <button
+            onClick={onCommit}
+            disabled={commitDisabled}
+            title={commitDisabled ? "No messages yet" : undefined}
+            className="w-9 h-9 rounded-full bg-secondary/15 text-secondary hover:bg-secondary/25 flex items-center justify-center transition disabled:opacity-40 disabled:cursor-not-allowed"
+            aria-label="Create commit from this conversation"
+          >
+            <Gavel className="w-4 h-4" />
+          </button>
+        )}
         {value.trim() || flying ? (
           <motion.button
             onClick={triggerSend}
@@ -2965,6 +3077,8 @@ interface MessageActionsSheetProps {
   onStar: (m: WaslMessage) => void;
   onPin: (m: WaslMessage) => void;
   onCopy: (m: WaslMessage) => void;
+  /** Commit this specific message via the chat-commit AI flow. */
+  onCommit?: (m: WaslMessage) => void;
 }
 
 function MessageActionsSheet({
@@ -2981,6 +3095,7 @@ function MessageActionsSheet({
   onStar,
   onPin,
   onCopy,
+  onCommit,
 }: MessageActionsSheetProps) {
   if (!message) return null;
 
@@ -3027,6 +3142,13 @@ function MessageActionsSheet({
             onClick={() => onPin(message)}
           />
           <ActionItem icon={<Copy className="w-4 h-4" />} label="Copy" onClick={() => onCopy(message)} />
+          {onCommit && (
+            <ActionItem
+              icon={<Gavel className="w-4 h-4 text-secondary" />}
+              label={<span className="text-secondary">Commit</span>}
+              onClick={() => onCommit(message)}
+            />
+          )}
           {isOwner(message) && (
             <ActionItem
               icon={<Trash2 className="w-4 h-4 text-accent" />}
