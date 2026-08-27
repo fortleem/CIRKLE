@@ -1,0 +1,2356 @@
+# MASTER ARCHITECTURAL AMENDMENT PROMPT
+
+## CIRCLE — UNIVERSAL CITIZEN PLATFORM + FEDERATED SOVEREIGN GOVERNMENT ARCHITECTURE
+
+You are a state-of-the-art government architecture, sovereign digital infrastructure, cybersecurity, systems integration, product-structuring, and public-sector transformation specialist.
+
+You must now perform a **deep architectural amendment and integration pass** on the existing Circle blueprint.
+
+This prompt is specifically for the major architectural requirements that were identified after the previous ACA amendments and were **not yet sufficiently incorporated as explicit architecture**.
+
+Do not merely append these requirements.
+
+You must integrate them into the existing Circle blueprint in the correct architectural locations, preserve the existing Circle vision, remove contradictions, avoid duplication, and create a coherent production-ready structure.
+
+---
+
+# PART I — THE MOST IMPORTANT ARCHITECTURAL PRINCIPLE
+
+## CIRCLE MUST REMAIN TWO DISTINCT WORLDS
+
+Circle's original vision is a universal, privacy-first, offline-first citizen platform.
+
+Government institutions are sovereign authorities with their own systems, authority, data, workflows and responsibilities.
+
+Do NOT merge these concepts.
+
+The final architecture must explicitly establish:
+
+# CIRCLE UNIVERSAL CITIZEN LAYER
+
+and
+
+# SOVEREIGN GOVERNMENT INSTITUTIONAL LAYER
+
+connected by:
+
+# CIRCLE FEDERATED GOVERNMENT FABRIC
+
+---
+
+# PART II — CIRCLE UNIVERSAL CITIZEN VISION MUST REMAIN INTACT
+
+Preserve Circle as the universal citizen-facing platform.
+
+This includes, where already present in the blueprint:
+
+* Wasl
+* Mashahd
+* Lamahat
+* Midan
+* Groups / The Circle
+* Official Channels
+* Creator Channels
+* Professional Network
+* Educational / Institutional Workspaces
+* Local Mesh
+* Circle Verify
+* Circle ID
+* Mail
+* Rihla
+* Maps
+* Universal Translation
+* Circle Payments
+* AI
+* Backup / Recovery
+* Privacy
+* Citizen Shield
+* other existing citizen features
+
+Do not transform Circle into a government application.
+
+Do not make government institutions the center of Circle's public identity.
+
+Do not require a citizen to know how government is organized.
+
+---
+
+# PART III — GOVERNMENT MUST NOT BECOME ONE CENTRALIZED CIRCLE BACK OFFICE
+
+Create an explicit constitutional architectural rule:
+
+> Circle does not become the government.
+
+Circle does not replace:
+
+* ministries
+* authorities
+* police
+* ambulance
+* fire/civil protection
+* traffic
+* courts
+* tax authorities
+* customs authorities
+* regulators
+* government financial systems
+* government identity systems
+* government PKI
+* government systems of record.
+
+Circle instead provides:
+
+* citizen access
+* routing
+* federation
+* interoperability
+* controlled information exchange
+* orchestration
+* evidence handoff
+* institutional intelligence where contracted
+* analytics
+* workflow augmentation.
+
+---
+
+# PART IV — EACH GOVERNMENT INSTITUTION MUST BE SOVEREIGN
+
+Create the concept:
+
+# SOVEREIGN INSTITUTIONAL WORKSPACE
+
+Every government institution is a separate security and operational domain.
+
+Examples:
+
+* Circle ACA
+* Circle Police
+* Circle Ambulance / EMS
+* Circle Civil Protection / Fire
+* Circle Traffic
+* Circle Health
+* Circle Local Government
+* Circle Regulatory Institution
+* Circle Financial Oversight
+* other government institutions
+
+These are examples of institutional deployments and must not be assumed to exist merely because the architecture supports them.
+
+Each institution receives its own:
+
+* login
+* identity domain
+* users
+* roles
+* permissions
+* clearance
+* institutional policies
+* data plane
+* cases
+* workflows
+* evidence
+* documents
+* audit logs
+* system integrations
+* dashboards
+* AI policies
+* administrative controls
+* institutional branding/configuration.
+
+---
+
+# PART V — ACA MUST BE COMPLETELY CONFIDENTIAL AND INVISIBLE TO NORMAL USERS
+
+This must be a hard architectural requirement.
+
+ACA must NOT appear in:
+
+* ordinary Circle navigation
+* public menus
+* normal user dashboards
+* public search
+* regular user profiles
+* public service lists as an internal destination
+* ordinary Circle settings
+* consumer workspace lists.
+
+ACA must have:
+
+# SEPARATE LOGIN
+
+# SEPARATE DASHBOARD
+
+# SEPARATE NAVIGATION
+
+# SEPARATE SCREENS
+
+# SEPARATE DATA PLANE
+
+# SEPARATE SECURITY POLICY
+
+# SEPARATE IDENTITY PROVISIONING
+
+# SEPARATE INSTITUTIONAL AUDIT
+
+ACA agents are created/provisioned by ACA.
+
+A normal Circle citizen does not become an ACA user merely by having a Circle account.
+
+A regular Circle account cannot discover ACA's internal environment.
+
+---
+
+# PART VI — ACA IDENTITY MODEL
+
+Implement:
+
+# ACA-ISSUED INSTITUTIONAL IDENTITY
+
+ACA controls:
+
+* agent creation
+* activation
+* role
+* department
+* clearance
+* assignment
+* device binding
+* revocation
+* temporary privileges.
+
+Support, where authorized:
+
+* MFA
+* government PKI
+* certificates
+* hardware security keys
+* trusted devices
+* institutional digital signatures.
+
+Do not create a parallel unofficial national identity authority.
+
+Leverage official Egyptian identity/PKI systems where authorized.
+
+---
+
+# PART VII — POLICE MUST BE SEPARATE FROM ACA
+
+Police must have its own sovereign environment.
+
+Police owns its own:
+
+* incidents
+* dispatch
+* cases
+* evidence
+* body cameras
+* investigations
+* personnel
+* workflows
+* intelligence
+* audit.
+
+ACA does not automatically see Police information.
+
+Police does not automatically see ACA information.
+
+Cross-boundary access occurs only through:
+
+# AUTHORIZED INTER-AGENCY EXCHANGE
+
+---
+
+# PART VIII — AMBULANCE / EMS MUST BE SEPARATE
+
+EMS owns:
+
+* emergency incidents
+* dispatch
+* units
+* medical operational data
+* patient information where applicable
+* hospital handoffs
+* EMS workflows
+* fleet
+* audit.
+
+Circle may provide citizen access and routing.
+
+Circle must not become the medical system of record merely because Citizen Shield initiated the interaction.
+
+---
+
+# PART IX — FIRE / CIVIL PROTECTION MUST BE SEPARATE
+
+Provide architecture for:
+
+* emergency dispatch
+* fire incidents
+* rescue
+* hazardous-material incidents
+* operational evidence
+* field operations
+* inspections
+* reporting.
+
+Remain a separate institutional domain.
+
+---
+
+# PART X — TRAFFIC MUST BE SEPARATE
+
+Provide a separate institutional model for:
+
+* accidents
+* traffic incidents
+* enforcement
+* field operations
+* evidence
+* reports
+* traffic units.
+
+---
+
+# PART XI — OTHER GOVERNMENT SERVICES MUST REMAIN SEPARATE
+
+Examples:
+
+* electricity
+* water
+* gas
+* telecom
+* health
+* education
+* transport
+* local government
+* consumer protection
+* regulators
+* licensing
+* permits
+* environmental services.
+
+Each remains the authority/system of record for its own function.
+
+Circle connects citizens to them.
+
+---
+
+# PART XII — ONE FRONT DOOR, MANY SOVEREIGN BACK OFFICES
+
+Create this architectural principle:
+
+# ONE CIVIC FRONT DOOR
+
+# MANY SOVEREIGN INSTITUTIONS
+
+# ONE CONTROLLED FEDERATION FABRIC
+
+Citizen experience:
+
+> "I need help."
+
+Circle determines the appropriate path.
+
+Government experience:
+
+> Each institution receives only what belongs to its domain.
+
+---
+
+# PART XIII — CIRCLE FEDERATED GOVERNMENT FABRIC
+
+Create:
+
+# CIRCLE FEDERATION & GOVERNMENT INTEGRATION FABRIC
+
+Its responsibilities:
+
+* routing
+* interoperability
+* service discovery
+* authentication federation
+* controlled information exchange
+* referral
+* evidence transfer
+* event exchange
+* data translation
+* provenance
+* cross-system correlation where authorized.
+
+It must NOT become a centralized master government database.
+
+---
+
+# PART XIV — FOUR/FIVE LEVEL GOVERNMENT INTEGRATION MODEL
+
+Each institution/system should be able to integrate progressively.
+
+## Level 0 — DIRECTORY
+
+Citizen receives official:
+
+* telephone
+* website
+* office
+* address
+* channel
+* hours
+* service information.
+
+No system exchange.
+
+## Level 1 — REFERRAL
+
+Circle collects information and securely routes it to the institution.
+
+The institution creates/owns the official case.
+
+## Level 2 — TRANSACTION INTEGRATION
+
+Circle exchanges structured information with the institution's system.
+
+## Level 3 — INSTITUTIONAL INTELLIGENCE
+
+Circle provides:
+
+* analytics
+* evidence
+* workflow
+* intelligence
+* graph
+* timeline
+* predictive assistance.
+
+## Level 4 — FEDERATED INTELLIGENCE
+
+Authorized institutions can perform controlled federated queries across other institutional systems without unrestricted data centralization.
+
+Do not require every institution to reach Level 4.
+
+---
+
+# PART XV — SYSTEM OF RECORD PRINCIPLE
+
+For every integration define:
+
+# WHO OWNS THE ORIGINAL RECORD?
+
+Examples:
+
+Tax invoice → official tax system.
+
+Customs declaration → official customs environment.
+
+Police incident → Police.
+
+EMS incident → EMS.
+
+ACA investigation → ACA.
+
+Circle stores/references only what is legitimately required.
+
+Circle must never silently become a competing authoritative record.
+
+---
+
+# PART XVI — ZERO-COPY / FEDERATED DATA ARCHITECTURE
+
+Prefer:
+
+authorized query
+→ source system
+→ minimum necessary result
+→ Circle analytical context
+
+instead of:
+
+source system
+→ entire database copied into Circle.
+
+Use controlled copies only where operationally justified and authorized.
+
+---
+
+# PART XVII — INSTITUTIONAL AUTHORITY MATRIX
+
+Every connector must explicitly specify:
+
+* institution
+* source system
+* data
+* purpose
+* legal/administrative basis
+* authorized actors
+* read
+* write
+* request
+* retain
+* export
+* audit
+* retention
+* confidentiality
+* geographic/jurisdiction scope.
+
+No integration becomes active without a defined authority matrix.
+
+---
+
+# PART XVIII — NO CROSS-INSTITUTION PRIVILEGE INHERITANCE
+
+This must be hard-coded.
+
+ACA permission does not grant:
+
+* Police access
+* EMS access
+* Health access
+* Tax access
+* Customs access
+* Ministry access.
+
+Police permission does not grant:
+
+* ACA access
+* Tax access
+* Health access.
+
+Every institutional boundary is independent.
+
+---
+
+# PART XIX — INSTITUTIONAL IDENTITY = INSTITUTION + ROLE + CLEARANCE + ASSIGNMENT
+
+Do not treat "government employee" as a universal permission class.
+
+Use:
+
+Institution
++
+Department
++
+Role
++
+Clearance
++
+Assignment
++
+Device
++
+Purpose
++
+Policy
+
+to determine access.
+
+---
+
+# PART XX — PUBLIC CITIZEN SHIELD
+
+Citizen Shield remains the public-facing civic interface.
+
+It should provide:
+
+* reporting
+* evidence capture
+* emergency assistance
+* service discovery
+* government routing
+* tracking
+* notifications
+* receipts
+* accessibility
+* translation
+* offline functionality.
+
+Citizens should NOT be forced to identify the responsible agency themselves.
+
+---
+
+# PART XXI — SMART CITIZEN ROUTING
+
+Citizen submits:
+
+> "I need help."
+
+Circle determines whether it is:
+
+# EMERGENCY
+
+# GOVERNMENT SERVICE
+
+# POTENTIAL INTEGRITY CONCERN
+
+Then route accordingly.
+
+---
+
+# PART XXII — EMERGENCY PATH MUST NOT BE THE ACA PATH
+
+A police emergency goes to Police.
+
+An ambulance emergency goes to EMS.
+
+A fire goes to Civil Protection.
+
+Traffic emergency goes to appropriate traffic/emergency authority.
+
+Do not automatically send emergency events to ACA.
+
+Only later, where authorized and appropriate, can recurring/systemic patterns become an ACA signal.
+
+---
+
+# PART XXIII — NATIONAL EMERGENCY INTEGRATION
+
+Where authorized, design adapters for Egypt's existing emergency architecture rather than creating a competing national emergency dispatch system.
+
+Support integration with appropriate:
+
+* emergency services
+* police
+* ambulance
+* fire/civil protection
+* traffic
+* public-safety infrastructure.
+
+If direct system/API integration is unavailable:
+
+support approved fallback mechanisms.
+
+Never claim an API exists without verification.
+
+---
+
+# PART XXIV — EMERGENCY FALLBACK HIERARCHY
+
+If electronic integration fails:
+
+1. approved digital government channel
+2. approved alternative digital mechanism
+3. approved SMS/data method where available
+4. official telephone fallback
+5. offline queue/record where appropriate
+
+The platform must clearly indicate whether delivery was:
+
+* transmitted
+* acknowledged
+* status unavailable
+* failed
+* fallback used.
+
+Never fabricate successful dispatch.
+
+---
+
+# PART XXV — EMERGENCY PACKET
+
+Where authorized, include:
+
+* incident type
+* location
+* GPS accuracy
+* address
+* route/access information
+* number of persons affected
+* hazards
+* citizen description
+* media
+* callback information.
+
+Only send the minimum information necessary.
+
+---
+
+# PART XXVI — EMERGENCY STATUS
+
+Only display statuses actually returned by the authoritative responder.
+
+Possible examples:
+
+* submitted
+* received
+* acknowledged
+* dispatched
+* en route
+* on scene
+* resolved
+
+But do not invent these statuses when the receiving authority does not return them.
+
+---
+
+# PART XXVII — SILENT EMERGENCY
+
+Where legally/technically supported:
+
+Allow a citizen to transmit structured emergency information without requiring a voice conversation.
+
+Do not guarantee silent emergency functionality unless the receiving authority technically supports it.
+
+---
+
+# PART XXVIII — CITIZEN SAFETY
+
+Circle must never encourage users to endanger themselves to gather evidence.
+
+Before recording dangerous events:
+
+show appropriate safety guidance.
+
+Provide:
+
+# SAFE-EVIDENCE MODE
+
+for reporting from a safe distance.
+
+---
+
+# PART XXIX — SERVICE ROUTING
+
+Create:
+
+# CIRCLE SERVICE AUTHORITY GRAPH
+
+mapping:
+
+Problem
+→ Service
+→ Institution
+→ Department
+→ Official Channel
+→ SLA
+→ Escalation
+
+This is a citizen convenience layer, not a government replacement system.
+
+---
+
+# PART XXX — MULTI-AGENCY REFERRAL
+
+A citizen should not have to repeat the same story when multiple legitimate authorities need the same information.
+
+Circle can create controlled referrals:
+
+Citizen
+→ Authority A
+→ Authority B
+
+while:
+
+* each authority retains its own record
+* each receives only authorized information
+* each maintains its own workflow.
+
+---
+
+# PART XXXI — NO SHARED GOVERNMENT CASE BY DEFAULT
+
+Do NOT make:
+
+> one Circle case visible to every government institution.
+
+Instead:
+
+Citizen submission
+→ separate referral records
+→ institution-specific cases.
+
+Link the referrals through a neutral correlation/reference ID when appropriate.
+
+---
+
+# PART XXXII — INSTITUTIONAL CASE SEPARATION
+
+A Police case and an ACA case may be related but remain:
+
+# TWO DIFFERENT CASES
+
+with controlled relationship:
+
+Police Case P-001
+↔ Authorized Referral
+↔ ACA Case A-001
+
+---
+
+# PART XXXIII — INTER-AGENCY EXCHANGE FABRIC
+
+Build:
+
+# CONTROLLED INTER-AGENCY EXCHANGE
+
+Capabilities:
+
+* referral
+* information request
+* evidence request
+* evidence response
+* case reference
+* status notification
+* official document transfer
+* secure message
+* deadline
+* acknowledgement.
+
+---
+
+# PART XXXIV — INFORMATION REQUEST OBJECT
+
+Every request should include:
+
+* requesting institution
+* receiving institution
+* case
+* purpose
+* requested records
+* legal/administrative authority
+* deadline
+* confidentiality
+* retention
+* export restriction
+* response.
+
+---
+
+# PART XXXV — INTER-AGENCY EVIDENCE REUSE
+
+A legally obtained record may be referenced by another authorized case without uncontrolled copying.
+
+Use:
+
+# REFERENCE + AUTHORIZATION
+
+rather than unrestricted duplicate copies.
+
+---
+
+# PART XXXVI — GOVERNMENT REFERRAL FAILURE
+
+If destination is unavailable:
+
+Circle must:
+
+* notify the citizen where appropriate
+* preserve the submission
+* identify fallback official channel
+* record delivery failure
+* allow retry
+* maintain provenance.
+
+Never silently drop a report.
+
+---
+
+# PART XXXVII — CITIZEN SHIELD → ACA SIGNAL
+
+This is a critical distinction.
+
+Do not send every citizen report to ACA.
+
+Create:
+
+# ACA SIGNAL
+
+A structured intelligence object containing only appropriate information such as:
+
+* pattern
+* source count
+* service
+* geography
+* timeframe
+* evidence availability
+* repeated failures
+* potential integrity indicators
+* reason for referral.
+
+ACA decides whether to create a formal case.
+
+---
+
+# PART XXXVIII — ACA SIGNAL ≠ ACA CASE
+
+Hard requirement:
+
+# SIGNAL
+
+means:
+
+> possible issue requiring review.
+
+# CASE
+
+means:
+
+> formal ACA institutional matter created under ACA process.
+
+AI must not autonomously convert every signal into a formal case.
+
+---
+
+# PART XXXIX — SYSTEMIC SIGNAL DETECTION
+
+Citizen reports from different government services can be clustered for systemic issues.
+
+Example:
+
+Repeated failures at one government facility.
+
+Circle detects:
+
+> possible systemic administrative issue.
+
+ACA may receive the signal if it meets configured criteria.
+
+---
+
+# PART XL — EMERGENCY/SERVICE/INTEGRITY SEPARATION
+
+Create three distinct public pathways:
+
+# HELP
+
+Emergency / immediate danger
+
+# SERVICE
+
+Government service or operational issue
+
+# INTEGRITY
+
+Potential administrative/oversight concern
+
+They are connected by Circle but have distinct institutional destinations.
+
+---
+
+# PART XLI — SHARED CITIZEN UX, SEPARATE INSTITUTIONAL BACK OFFICE
+
+The citizen should experience:
+
+# ONE SIMPLE CIRCLE
+
+The government should experience:
+
+# MANY SOVEREIGN SYSTEMS
+
+This is a central Circle differentiator.
+
+---
+
+# PART XLII — GOVERNMENT INTEGRATION SHOULD BE ADAPTER-BASED
+
+Create reusable adapters for:
+
+* REST
+* SOAP
+* SFTP
+* signed XML
+* signed JSON
+* batch files
+* database views
+* webhooks
+* event streams
+* secure file exchange
+* manual secure evidence intake.
+
+---
+
+# PART XLIII — EXISTING EGYPTIAN SYSTEMS ARE NOT TO BE REPLACED
+
+The blueprint must explicitly state:
+
+# NO REPLACEMENT PRINCIPLE
+
+Circle must integrate with existing Egyptian government infrastructure rather than competing with it.
+
+Examples include existing systems for:
+
+* e-invoicing
+* e-receipts
+* customs/foreign trade
+* government digital signatures
+* emergency/public safety
+* government complaints
+* institutional databases
+* court systems
+* law-enforcement systems.
+
+---
+
+# PART XLIV — ETA / E-INVOICE EXAMPLE
+
+Circle must NOT become the official Egyptian e-invoice system.
+
+Correct:
+
+ETA
+→ official e-invoice
+→ authorized integration
+→ Circle
+→ verification/linkage/analytics
+→ authorized institutional use.
+
+Circle can provide:
+
+* reference verification
+* evidence linkage
+* document provenance
+* contract correlation
+* payment correlation
+* investigation analytics.
+
+---
+
+# PART XLV — NAFEZA EXAMPLE
+
+Circle does NOT replace NAFEZA.
+
+Correct:
+
+NAFEZA
+→ official customs/trade information
+→ authorized connector
+→ Circle
+→ correlation/intelligence/evidence
+→ authorized institution.
+
+---
+
+# PART XLVI — DIGITAL SIGNATURE / PKI
+
+Circle should integrate with official Egyptian government trust infrastructure where authorized.
+
+Do not create a competing government PKI.
+
+Support:
+
+* certificate validation
+* signatures
+* institutional seals
+* official document verification
+* signed referrals.
+
+---
+
+# PART XLVII — GOVERNMENT SYSTEM OF RECORD REGISTRY
+
+Build:
+
+# SYSTEM OF RECORD REGISTRY
+
+For every connected system record:
+
+* institution
+* system
+* domain
+* authoritative objects
+* data owner
+* availability
+* integration type
+* last verification
+* schema version.
+
+---
+
+# PART XLVIII — DATA FRESHNESS
+
+External information should display:
+
+# LAST VERIFIED
+
+where relevant.
+
+---
+
+# PART XLIX — DATA CONFLICT
+
+If System A and System B disagree:
+
+Do NOT silently resolve.
+
+Display:
+
+# DATA CONFLICT
+
+showing:
+
+* source A
+* source B
+* timestamps
+* provenance
+* discrepancy.
+
+---
+
+# PART L — SCHEMA CHANGE SENTINEL
+
+If an external system changes:
+
+* schema
+* field
+* authentication
+* version
+* endpoint
+
+Circle must detect it.
+
+Do not silently accept malformed data.
+
+---
+
+# PART LI — INTEGRATION HEALTH
+
+Create:
+
+# GOVERNMENT INTEGRATION CONTROL TOWER
+
+Display:
+
+* connected systems
+* healthy
+* degraded
+* unavailable
+* authentication errors
+* schema changes
+* failed synchronization
+* pending authorization
+* overdue information requests.
+
+---
+
+# PART LII — INTEGRATION SANDBOX
+
+Every new connector should be testable in isolation before production.
+
+Test:
+
+* authentication
+* schema
+* data mapping
+* authorization
+* provenance
+* error handling
+* security
+* performance
+* recovery.
+
+---
+
+# PART LIII — CONNECTOR CERTIFICATION
+
+A connector cannot be promoted to production until it passes:
+
+* security
+* data quality
+* provenance
+* schema
+* failure
+* recovery
+* audit tests.
+
+---
+
+# PART LIV — AUTOMATED INTEGRATION DISCOVERY
+
+When Circle detects that an institutional workflow requires data from an unconnected system:
+
+create:
+
+# INTEGRATION REQUIREMENT
+
+with:
+
+* source institution
+* system
+* data
+* purpose
+* urgency
+* dependency
+* authorization status
+* proposed connector type.
+
+---
+
+# PART LV — MISSING-SYSTEM MAP
+
+For each case/workflow show:
+
+### Connected
+
+### Degraded
+
+### Unavailable
+
+### Not Integrated
+
+### Authorization Required
+
+---
+
+# PART LVI — CITIZEN SERVICE DIRECTORY
+
+Build a machine-readable directory for:
+
+* official service
+* responsible institution
+* department
+* channel
+* phone
+* website
+* physical location
+* emergency number
+* hours
+* geographic coverage
+* accessibility
+* languages
+* last verified date.
+
+No unofficial information should be represented as official.
+
+---
+
+# PART LVII — SERVICE CHANNEL HEALTH
+
+Where technically possible:
+
+* available
+* degraded
+* unavailable
+* requires login
+* manual
+* emergency-only.
+
+---
+
+# PART LVIII — SERVICE OUTAGE REPORTING
+
+Citizens can report:
+
+* government portal unavailable
+* service failure
+* transaction failure
+* queue-system malfunction
+* payment-system problem
+* broken website
+* technical outage.
+
+This is routed to the appropriate authority.
+
+---
+
+# PART LIX — GOVERNMENT DIGITAL HEALTH RADAR
+
+Aggregate authorized data to detect:
+
+* repeated outages
+* transaction failures
+* abandonment
+* complaints
+* processing delays.
+
+This may generate service-health intelligence.
+
+---
+
+# PART LX — CITIZEN → SERVICE → ACA
+
+If a service repeatedly fails:
+
+Citizen Shield
+→ service intelligence
+→ repeated pattern
+→ systemic issue candidate
+→ controlled ACA Signal
+
+ACA does NOT automatically receive the entire citizen history.
+
+---
+
+# PART LXI — INSTITUTIONAL AI SEPARATION
+
+Do not create one universal government AI with unrestricted access.
+
+Each institution gets policy-controlled AI:
+
+### ACA AI
+
+oversight/investigation.
+
+### Police AI
+
+policing/investigation.
+
+### EMS AI
+
+medical/emergency operations.
+
+### Other institutional AI
+
+their domain.
+
+The AI environments are isolated by policy and data boundary.
+
+---
+
+# PART LXII — UNIVERSAL CIRCLE AI VS INSTITUTIONAL AI
+
+Separate:
+
+# PUBLIC CIRCLE AI
+
+from:
+
+# GOVERNMENT INSTITUTIONAL AI
+
+and:
+
+# ACA INVESTIGATION AI.
+
+Do not mix training or retrieval data without explicit authorization.
+
+---
+
+# PART LXIII — AI DATA FIREWALL
+
+Every institutional AI request goes through:
+
+Institution
+→ Policy
+→ AI Data Access Broker
+→ authorized information
+→ AI
+→ evidence-linked answer.
+
+---
+
+# PART LXIV — GOVERNMENT DATA CLEAN ROOM
+
+Support sensitive multi-party analytics without exposing all underlying identity/data.
+
+---
+
+# PART LXV — PSEUDONYMOUS FEDERATED LINKAGE
+
+Where legally and technically appropriate, support cross-system matching using controlled/pseudonymous identifiers.
+
+Do not silently merge identities.
+
+---
+
+# PART LXVI — ENTITY RESOLUTION
+
+Support:
+
+* Arabic variants
+* English transliterations
+* aliases
+* company-name variation
+* abbreviations
+* historical names.
+
+Output:
+
+* exact match
+* high-confidence match
+* possible match
+* unresolved.
+
+Never silently merge uncertain entities.
+
+---
+
+# PART LXVII — GOVERNMENT MASTER DATA
+
+Create:
+
+# GOVERNMENT MASTER DATA ENGINE
+
+for:
+
+* people
+* organizations
+* agencies
+* offices
+* services
+* addresses
+* document types
+* service names.
+
+Maintain source ownership and provenance.
+
+---
+
+# PART LXVIII — GOVERNMENT-SPECIFIC DATA PLANES
+
+The architecture must allow:
+
+# ACA DATA PLANE
+
+# POLICE DATA PLANE
+
+# EMS DATA PLANE
+
+# CIVIL PROTECTION DATA PLANE
+
+# TRAFFIC DATA PLANE
+
+# HEALTH DATA PLANE
+
+# OTHER INSTITUTIONAL DATA PLANES
+
+Each can have distinct:
+
+* encryption
+* storage
+* identity
+* policies
+* audit
+* retention.
+
+---
+
+# PART LXIX — FEDERATION DOES NOT MEAN CENTRALIZATION
+
+Explicitly document:
+
+> Federation permits controlled communication among sovereign systems without requiring all data to be stored in one centralized system.
+
+---
+
+# PART LXX — INSTITUTIONAL DEPLOYMENT MODELS
+
+Support:
+
+* government datacenter
+* sovereign/private cloud
+* isolated Kubernetes/private infrastructure
+* institutional self-hosting where appropriate
+* controlled hybrid architecture where approved.
+
+Do not assume public cloud is acceptable for sensitive data.
+
+---
+
+# PART LXXI — INSTITUTIONAL SECURITY BOUNDARY
+
+For every institutional deployment define:
+
+* identity boundary
+* network boundary
+* data boundary
+* API boundary
+* evidence boundary
+* AI boundary
+* audit boundary
+* administrative boundary.
+
+---
+
+# PART LXXII — GOVERNMENT DEVICE TRUST
+
+For official government apps/devices:
+
+* device registration
+* certificate
+* trust status
+* software version
+* security posture
+* assignment
+* revocation.
+
+---
+
+# PART LXXIII — DEVICE LOSS / REVOCATION
+
+If an institutional device is lost or compromised:
+
+* revoke credentials
+* revoke device trust
+* invalidate future evidence capture
+* initiate preservation procedures
+* remotely lock/wipe where policy and platform capability allow.
+
+---
+
+# PART LXXIV — OFFLINE INSTITUTIONAL OPERATIONS
+
+Institutional apps may operate offline when necessary.
+
+Offline actions must have:
+
+* local encryption
+* sequence numbers
+* signatures
+* replay protection
+* integrity checks
+* duplicate detection
+* synchronization receipts.
+
+---
+
+# PART LXXV — SYNC CONFLICT ENGINE
+
+Offline and online changes must never silently overwrite one another.
+
+Produce:
+
+# SYNC CONFLICT
+
+and require policy-controlled resolution.
+
+---
+
+# PART LXXVI — SECURITY SUPPLY CHAIN
+
+Add:
+
+# SOFTWARE SUPPLY CHAIN SECURITY
+
+including:
+
+* SBOM
+* dependency inventory
+* vulnerability monitoring
+* signed builds
+* artifact verification
+* secure CI/CD
+* approved dependencies.
+
+---
+
+# PART LXXVII — GOVERNMENT AI MODEL SUPPLY CHAIN
+
+Maintain:
+
+* model registry
+* model origin
+* version
+* hash/signature
+* evaluation
+* license
+* vulnerabilities
+* approval status.
+
+---
+
+# PART LXXVIII — MODEL CHANGE CONTROL
+
+Model change:
+
+→ evaluation
+→ security review
+→ approval
+→ deployment
+→ monitoring
+→ rollback.
+
+No silent model changes.
+
+---
+
+# PART LXXIX — AI SHADOW TESTING
+
+Before changing a material institutional model:
+
+run old model vs new model on controlled evaluation data.
+
+---
+
+# PART LXXX — AI INCIDENT MANAGEMENT
+
+Create:
+
+# AI INCIDENT
+
+with:
+
+* model
+* version
+* input
+* output
+* source data
+* policy
+* impact
+* reviewer
+* correction
+* root cause
+* remediation.
+
+---
+
+# PART LXXXI — AI KILL SWITCH
+
+ACA and each institutional administrator must be able to disable:
+
+* model
+* AI feature
+* integration
+* automation workflow
+
+without necessarily disabling the entire platform.
+
+---
+
+# PART LXXXII — AI AUTOMATION LEVELS
+
+Define:
+
+### Level 0
+
+Information only.
+
+### Level 1
+
+Recommendation.
+
+### Level 2
+
+Human approval required.
+
+### Level 3
+
+Low-risk automation allowed by explicit policy.
+
+### Level 4
+
+Prohibited autonomous action.
+
+Use these levels across institutional deployments.
+
+---
+
+# PART LXXXIII — SECURITY TESTING
+
+Add mandatory testing for:
+
+* privilege escalation
+* authentication bypass
+* data boundary violation
+* cross-tenant leakage
+* API abuse
+* prompt injection
+* malicious documents
+* evidence modification
+* unauthorized export
+* replay attacks
+* offline synchronization attacks
+* device compromise.
+
+---
+
+# PART LXXXIV — DATA EXFILTRATION
+
+Monitor:
+
+* bulk export
+* bulk queries
+* unusual download volume
+* abnormal API use
+* external transfer.
+
+---
+
+# PART LXXXV — INSTITUTIONAL AUDIT
+
+Every institution has its own audit environment.
+
+Also create:
+
+# INTER-AGENCY EXCHANGE AUDIT
+
+for information crossing boundaries.
+
+---
+
+# PART LXXXVI — INDEPENDENT AUDIT PLANE
+
+Operational administrators must not have unlimited power to alter historical audit evidence.
+
+---
+
+# PART LXXXVII — GOVERNMENT SERVICE SLA
+
+Each government service can have its own:
+
+* SLA
+* escalation
+* working hours
+* regional variation
+* temporary exceptions.
+
+Circle must not impose a universal SLA.
+
+---
+
+# PART LXXXVIII — POLICY ENGINE
+
+Everything government-facing should be policy-configurable:
+
+* institution
+* region
+* service
+* law
+* authority
+* access
+* retention
+* escalation
+* emergency
+* disclosure
+* AI
+* evidence.
+
+---
+
+# PART LXXXIX — NO HARD-CODED GOVERNMENT ASSUMPTIONS
+
+Do not hardcode:
+
+* legal authority
+* emergency API
+* government endpoint
+* access right
+* data-sharing permission
+* institutional workflow
+
+unless verified.
+
+Use configuration and explicit authorization.
+
+---
+
+# PART XC — GOVERNMENT REGISTRY
+
+Create a configurable:
+
+# GOVERNMENT INSTITUTION REGISTRY
+
+Each entry:
+
+* institution
+* authority
+* services
+* official channels
+* integrations
+* status
+* data classification
+* last verification
+* effective date.
+
+---
+
+# PART XCI — SERVICE OWNERSHIP
+
+Each service must map to:
+
+* owner institution
+* responsible department
+* official system
+* SLA
+* escalation
+* contact
+* integration state.
+
+---
+
+# PART XCII — INSTITUTIONAL WORKFLOW ENGINE
+
+Do not use one universal workflow.
+
+Each institution should define its own process engine.
+
+Examples:
+
+ACA:
+Signal → Case → Investigation → Finding → Recommendation → Reform
+
+Police:
+Emergency → Dispatch → Incident → Investigation → Case → Referral
+
+EMS:
+Emergency → Dispatch → Response → Treatment → Handoff
+
+Utilities:
+Fault → Work Order → Dispatch → Repair → Verification
+
+Government licensing:
+Application → Review → Inspection → Decision → Issuance
+
+---
+
+# PART XCIII — SHARED CIRCLE CAPABILITIES VS INSTITUTION-SPECIFIC CAPABILITIES
+
+Create a matrix identifying:
+
+### Shared infrastructure
+
+* identity foundation
+* federation
+* notifications
+* maps
+* messaging infrastructure
+* document infrastructure
+* security
+* audit
+* translation
+* integration gateway.
+
+### Institution-specific capabilities
+
+* ACA investigation
+* Police dispatch
+* EMS medical workflow
+* Civil Protection response
+* tax processing
+* customs operations
+* court proceedings.
+
+Do not blur the two.
+
+---
+
+# PART XCIV — SHARED INFRASTRUCTURE DOES NOT MEAN SHARED DATA
+
+A common Circle technology stack does not imply:
+
+> common database access.
+
+Hard-code the distinction.
+
+---
+
+# PART XCV — SHARED IDENTITY FOUNDATION DOES NOT MEAN SHARED PRIVILEGE
+
+A federated identity system can authenticate a person across institutions, but authorization remains institution-specific.
+
+---
+
+# PART XCVI — CITIZEN ACCOUNT ≠ GOVERNMENT ACCOUNT
+
+Make this explicit.
+
+Citizen Circle ID:
+
+≠
+
+Government institutional identity.
+
+Government institutional identity:
+
+≠
+
+ACA identity unless ACA provisions it.
+
+---
+
+# PART XCVII — PUBLIC-TO-GOVERNMENT DATA FLOW
+
+Define the flow:
+
+Citizen
+→ Circle
+→ classification/routing
+→ authorized institution
+→ official institutional system
+→ response
+→ Circle citizen-facing status where supported.
+
+---
+
+# PART XCVIII — GOVERNMENT-TO-GOVERNMENT DATA FLOW
+
+Define:
+
+Institution A
+→ authorized request/referral
+→ federation gateway
+→ Institution B
+→ permitted response
+→ provenance
+→ Institution A.
+
+---
+
+# PART XCIX — ACA DATA FLOW
+
+Define:
+
+Citizen/other authority
+→ permitted ACA signal/referral
+→ ACA secure intake
+→ ACA case
+→ ACA intelligence
+→ ACA finding/action.
+
+Never:
+
+Citizen
+→ unrestricted ACA database.
+
+---
+
+# PART C — INSTITUTIONAL CASE CORRELATION
+
+A common correlation/reference mechanism can identify:
+
+> these institutional records may refer to the same underlying event.
+
+But each institution maintains its own case.
+
+---
+
+# PART CI — FEDERATED INCIDENT ID
+
+Where useful, create:
+
+# FEDERATED INCIDENT REFERENCE
+
+to connect:
+
+Police Incident
+↔ EMS Incident
+↔ Fire Incident
+↔ Traffic Incident
+
+without forcing the systems to become one database.
+
+---
+
+# PART CII — MULTI-AGENCY EMERGENCY
+
+A major incident may involve:
+
+Police
+
+* EMS
+* Civil Protection
+* Traffic.
+
+Each remains operationally sovereign.
+
+Circle can provide a federated incident reference and controlled information exchange.
+
+---
+
+# PART CIII — AFTER-ACTION FEDERATION
+
+After a major incident:
+
+each authority retains its own official report.
+
+Circle can assemble an authorized cross-institution chronology/analytics view.
+
+---
+
+# PART CIV — ACA SYSTEMIC CORRELATION
+
+ACA may receive a high-level systemic signal:
+
+> Same government facility has repeated emergency/service issues.
+
+This does not expose unrelated emergency-system data automatically.
+
+---
+
+# PART CV — PUBLIC TRANSPARENCY
+
+Where authorized:
+
+Citizen-facing transparency can show aggregate:
+
+* service performance
+* response times
+* improvements
+* outcomes.
+
+But never expose confidential institutional data.
+
+---
+
+# PART CVI — INSTITUTIONAL PRIVACY
+
+A citizen must not be able to determine from Circle:
+
+* which confidential ACA investigation exists
+* which police intelligence case exists
+* which restricted evidence exists
+* which protected identity exists.
+
+---
+
+# PART CVII — EMERGENCY PRIVACY
+
+Do not retain unnecessary medical/emergency information simply because Circle transmitted it.
+
+Retention follows:
+
+**purpose + policy + law + operational requirement.**
+
+---
+
+# PART CVIII — GOVERNMENT PROCUREMENT POSITIONING
+
+The blueprint must explicitly say:
+
+> Circle is an interoperability and institutional-intelligence platform, not a mandatory replacement for Egypt's existing digital-government systems.
+
+This should be a core commercial and architecture statement.
+
+---
+
+# PART CIX — GOVERNMENT DEPLOYMENT STRATEGY
+
+Recommend implementation in phases:
+
+### Phase 1
+
+Directory + referral.
+
+### Phase 2
+
+Citizen service routing.
+
+### Phase 3
+
+Operational integration.
+
+### Phase 4
+
+Institutional workspaces.
+
+### Phase 5
+
+Institutional intelligence.
+
+### Phase 6
+
+Federated analytics where authorized.
+
+This allows government adoption without asking institutions to replace existing systems.
+
+---
+
+# PART CX — COMMERCIAL MODEL
+
+Do not charge a government institution for functionality that merely duplicates a system it already owns.
+
+Charge for:
+
+* Circle institutional environment
+* implementation
+* integration
+* intelligence
+* orchestration
+* evidence
+* analytics
+* security
+* AI governance
+* support
+* training
+* continuity.
+
+---
+
+# PART CXI — NO "ETA REPLACEMENT" PRODUCT
+
+If an institution already has a government system:
+
+Circle sells:
+
+# INTEGRATION + INTELLIGENCE + ORCHESTRATION
+
+not:
+
+# REPLACEMENT.
+
+---
+
+# PART CXII — INSTITUTION-SPECIFIC COMMERCIAL CONTRACTS
+
+Each institution is independently contracted.
+
+Examples:
+
+ACA contract
+≠
+Police contract
+≠
+EMS contract
+≠
+Health contract.
+
+No institution automatically receives another institution's Circle environment.
+
+---
+
+# PART CXIII — CONSUMER SERVICES REMAIN FREE
+
+Citizen-facing Circle services remain free according to Circle's existing business model.
+
+Government pays for the institutional layer.
+
+---
+
+# PART CXIV — FINAL DATA OWNERSHIP MODEL
+
+For every data object define:
+
+### Source owner
+
+### Operational system of record
+
+### Circle reference/derived data
+
+### Institutional user
+
+### Retention
+
+### Export
+
+### Legal basis
+
+### Audit.
+
+---
+
+# PART CXV — FINAL ARCHITECTURE DIAGRAM
+
+The blueprint MUST include a diagram similar to:
+
+```text
+                           CITIZENS
+                              │
+                              ▼
+                     CIRCLE UNIVERSAL
+                        PUBLIC LAYER
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        │                     │                     │
+      SOCIAL                SERVICE            CITIZEN SHIELD
+        │                     │                     │
+        └─────────────────────┼─────────────────────┘
+                              │
+                    TRUST / IDENTITY LAYER
+                              │
+                 ROUTING / POLICY / CONSENT
+                              │
+               CIRCLE FEDERATION FABRIC
+                              │
+        ┌─────────────────────┼──────────────────────┐
+        │                     │                      │
+    GOVERNMENT             EMERGENCY             OVERSIGHT
+     SERVICES             INSTITUTIONS            INSTITUTIONS
+        │                     │                      │
+        │          ┌──────────┼───────────┐          │
+        │          │          │           │          │
+        │        Police      EMS       Fire/Traffic  ACA
+        │          │          │           │          │
+        ▼          ▼          ▼           ▼          ▼
+   THEIR OWN   THEIR OWN   THEIR OWN   THEIR OWN   ACA OWN
+    SYSTEM      SYSTEM      SYSTEM      SYSTEM      SYSTEM
+        │          │          │           │          │
+        └──────────┴──────────┴───────────┴──────────┘
+                              │
+                  CONTROLLED INTER-AGENCY
+                         EXCHANGE
+                              │
+                 GOVERNMENT SYSTEMS OF RECORD
+```
+
+Under everything:
+
+```text
+ZERO TRUST
++
+INSTITUTIONAL DATA PLANES
++
+IDENTITY
++
+PKI
++
+HSM
++
+IMMUTABLE EVIDENCE
++
+PROVENANCE
++
+AI GOVERNANCE
++
+AUDIT
++
+PRIVACY
++
+DISASTER RECOVERY
+```
+
+---
+
+# PART CXVI — FINAL ARCHITECTURAL RULES
+
+Add these as hard requirements:
+
+### Rule 1
+
+Circle does not replace government.
+
+### Rule 2
+
+Government institutions remain sovereign.
+
+### Rule 3
+
+Each institution has its own secure workspace.
+
+### Rule 4
+
+Each institution has its own system of record.
+
+### Rule 5
+
+Institutional permissions do not automatically cross boundaries.
+
+### Rule 6
+
+Government integrations require explicit authorization.
+
+### Rule 7
+
+Citizen Shield is the universal public-facing front door.
+
+### Rule 8
+
+ACA is confidential and invisible to ordinary users.
+
+### Rule 9
+
+ACA agents are provisioned by ACA.
+
+### Rule 10
+
+Emergency services are separate from ACA.
+
+### Rule 11
+
+Service authorities remain separate from ACA.
+
+### Rule 12
+
+Circle routes to the competent institution rather than absorbing its function.
+
+### Rule 13
+
+Federation does not mean centralization.
+
+### Rule 14
+
+Shared infrastructure does not imply shared data.
+
+### Rule 15
+
+AI does not inherit institutional authority.
+
+### Rule 16
+
+A government integration does not transfer ownership of the underlying government record to Circle.
+
+### Rule 17
+
+Every cross-boundary exchange is policy-controlled and audited.
+
+### Rule 18
+
+Existing Egyptian government systems remain authoritative where they already perform the official function.
+
+### Rule 19
+
+Circle adds interoperability, citizen access, orchestration, intelligence and evidence capabilities around those systems.
+
+### Rule 20
+
+No unsupported claim of legal authority, government API, certification or institutional integration may be inserted into the blueprint.
+
+---
+
+# PART CXVII — BLUEPRINT RECONCILIATION
+
+After integrating these changes, run a complete audit against the existing Circle blueprint and all previous ACA requirements.
+
+Check for:
+
+* duplicate features
+* contradictory permissions
+* accidental ACA visibility
+* accidental cross-institution data sharing
+* duplicated government functionality
+* replacement claims
+* unsupported integration assumptions
+* incorrect system-of-record ownership
+* universal workflow assumptions
+* universal AI assumptions
+* security boundary failures
+* citizen/government identity confusion
+* emergency/ACA confusion
+* missing authorization controls.
+
+---
+
+# PART CXVIII — REQUIRED FINAL OUTPUT
+
+Produce the revised blueprint as:
+
+# CIRCLE — UNIVERSAL CITIZEN PLATFORM + FEDERATED SOVEREIGN GOVERNMENT ARCHITECTURE + ACA SOVEREIGN EDITION
+
+It must contain:
+
+1. Circle Universal Vision
+2. Public Citizen Architecture
+3. Citizen Shield
+4. Government Federation Fabric
+5. Institutional Sovereign Workspace Framework
+6. Government System-of-Record Architecture
+7. Government Identity Federation
+8. Inter-Agency Exchange
+9. Emergency Integration Architecture
+10. Government Service Routing
+11. ACA Sovereign Environment
+12. Police Sovereign Environment
+13. EMS Sovereign Environment
+14. Other Institutional Environment Model
+15. ACA Smart Evidence / Timeline / Intelligence
+16. Government Integration Gateway
+17. Data Governance
+18. Zero Trust
+19. AI Governance
+20. Evidence Security
+21. Institutional Privacy
+22. Deployment
+23. Commercial Model
+24. Egyptian Government Integration Strategy
+25. Implementation Roadmap
+26. Full Requirements Traceability
+27. Full Security / Architecture Audit
+28. End-to-End Acceptance Tests.
+
+---
+
+# PART CXIX — FINAL EXECUTIVE STATEMENT
+
+The revised blueprint should end with this architectural philosophy:
+
+> **Circle provides one simple civic experience without requiring one centralized government system. Citizens interact with Circle; institutions operate their own sovereign systems; Circle provides the controlled federation connecting them. ACA remains a completely separate, confidential institutional environment whose agents are provisioned by ACA. Police remains Police. Ambulance remains Ambulance. Civil Protection remains Civil Protection. ETA remains ETA. NAFEZA remains NAFEZA. Courts remain Courts. Circle does not replace their authority or systems of record. It makes the ecosystem easier for citizens to access and, where authorized, easier for institutions to interoperate, investigate, coordinate, analyze and improve.**
+
+## The core model is:
+
+# **ONE CIVIC FRONT DOOR**
+
+# **MANY SOVEREIGN INSTITUTIONS**
+
+# **ONE CONTROLLED FEDERATION FABRIC**
+
+# **NO UNAUTHORIZED CENTRALIZATION**
+
+# **NO INSTITUTIONAL AUTHORITY TRANSFER**
+
+# **NO REPLACEMENT OF EXISTING GOVERNMENT SYSTEMS**
+
+End of architectural amendment.
