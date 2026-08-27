@@ -771,15 +771,7 @@ export const OVERLAY_REGISTRY: OverlayEntry[] = [
   },
 
   // ── Blueprint round 3 ─────────────────────────────────────────────────
-  {
-    id: "poll-creator",
-    name: "Polls & Quizzes",
-    description: "Create polls for your posts and Circles. Live results, 1h–7d durations.",
-    emoji: "📊",
-    category: "social",
-    event: "circle:poll-creator",
-    keywords: ["poll", "vote", "quiz", "survey", "results", "live"],
-  },
+  // (poll-creator moved to TIER D+F section below to avoid duplicate id)
   {
     id: "bullet-comments",
     name: "Bullet Comments",
