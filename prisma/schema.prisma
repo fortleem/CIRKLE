@@ -2228,3 +2228,161 @@ model ChatTopicSummary {
   @@index([conversationId, scope])
   @@index([conversationId, topic])
 }
+
+// ───────────────────────────────────────────────────────────────────────────
+// TIER B — Chat Core Features (reactions, editing, read receipts, typing,
+// threading, disappearing, scheduled messages)
+// ───────────────────────────────────────────────────────────────────────────
+model MessageReaction {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
+}
+
+model MessageEditHistory {
+  id        String   @id @default(cuid())
+  messageId String
+  oldBody   String
+  editedAt  DateTime @default(now())
+  @@index([messageId, editedAt])
+}
+
+model ReadReceipt {
+  id              String   @id @default(cuid())
+  conversationId  String
+  messageId       String
+  readerId        String
+  readAt          DateTime @default(now())
+  @@unique([conversationId, readerId])
+  @@index([conversationId, messageId])
+}
+
+model TypingIndicator {
+  id              String   @id @default(cuid())
+  conversationId  String
+  userId          String
+  lastSeen        DateTime @default(now())
+  @@unique([conversationId, userId])
+  @@index([conversationId, lastSeen])
+}
+
+model MessageReply {
+  id               String   @id @default(cuid())
+  parentMessageId  String
+  replyMessageId   String
+  createdAt        DateTime @default(now())
+  @@index([parentMessageId])
+}
+
+model DisappearingSetting {
+  id              String   @id @default(cuid())
+  conversationId  String   @unique
+  duration        String   @default("off") // off | 24h | 7d | 90d | view-once
+  setBy           String
+  setAt           DateTime @default(now())
+  @@index([conversationId])
+}
+
+model ScheduledMessage {
+  id              String   @id @default(cuid())
+  conversationId  String
+  body            String
+  scheduledFor    DateTime
+  status          String   @default("pending") // pending | sent | cancelled
+  createdAt       DateTime @default(now())
+  @@index([conversationId, scheduledFor])
+  @@index([status])
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// TIER B — Voice/Video Features (voice messages, voice rooms, meeting notes,
+// voice cloning)
+// ───────────────────────────────────────────────────────────────────────────
+model VoiceMessage {
+  id            String   @id @default(cuid())
+  messageId     String
+  audioBlobUrl  String
+  duration      Int
+  transcript    String?
+  language      String?
+  createdAt      DateTime @default(now())
+  @@index([messageId])
+}
+
+model VoiceRoom {
+  id            String   @id @default(cuid())
+  name          String
+  hostId        String
+  topic         String?
+  status        String   @default("live") // live | ended
+  speakerCount  Int      @default(1)
+  audienceCount Int      @default(0)
+  createdAt     DateTime @default(now())
+  endedAt       DateTime?
+  @@index([status])
+}
+
+model VoiceRoomParticipant {
+  id          String   @id @default(cuid())
+  roomId      String
+  userId      String
+  displayName  String
+  avatarColor  String   @default("teal")
+  role         String   @default("audience") // audience | speaker | host
+  muted        Boolean  @default(true)
+  handRaised   Boolean  @default(false)
+  joinedAt     DateTime @default(now())
+  @@index([roomId])
+}
+
+model CallMeetingNotes {
+  id           String   @id @default(cuid())
+  callId       String
+  summary      String
+  actionItems  String   @default("[]") // JSON array
+  decisions    String   @default("[]") // JSON array
+  participants String   @default("[]") // JSON array
+  generatedAt  DateTime @default(now())
+  @@index([callId])
+}
+
+model VoiceClone {
+  id        String   @id @default(cuid())
+  userId    String
+  voiceId   String
+  sampleUrl String
+  status    String   @default("training") // training | ready | failed
+  createdAt DateTime @default(now())
+  @@index([userId])
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// TIER E — AI Features (action items, content moderation)
+// ───────────────────────────────────────────────────────────────────────────
+model ActionItem {
+  id              String   @id @default(cuid())
+  conversationId  String
+  messageId       String
+  body            String
+  assignee        String?
+  dueDate         DateTime?
+  done            Boolean  @default(false)
+  extractedAt     DateTime @default(now())
+  @@index([conversationId, done])
+  @@index([dueDate])
+}
+
+model ModerationLog {
+  id          String   @id @default(cuid())
+  contentId   String
+  contentType String   // post | message | comment
+  category    String   // spam | scam | harassment | nsfw | clean
+  confidence  Float
+  action      String   // allow | flag | block | shadowban
+  reviewedAt  DateTime @default(now())
+  @@index([contentType, category])
+}

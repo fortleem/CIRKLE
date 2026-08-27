@@ -134,6 +134,37 @@ const SmartNotifications = dynamic(() => import("@/components/overlays/smart-not
 const ConnectionGraph = dynamic(() => import("@/components/overlays/connection-graph").then(m => ({ default: m.ConnectionGraph })), { ssr: false });
 const ContentCalendar = dynamic(() => import("@/components/overlays/content-calendar").then(m => ({ default: m.ContentCalendar })), { ssr: false });
 const ContentDiscovery = dynamic(() => import("@/components/overlays/content-discovery").then(m => ({ default: m.ContentDiscovery })), { ssr: false });
+// ── TIER B+A+E: Chat core + voice/video + AI overlays (19) ──
+const MessageReactions = dynamic(() => import("@/components/overlays/message-reactions").then(m => ({ default: m.MessageReactions })), { ssr: false });
+const MessageEditHistory = dynamic(() => import("@/components/overlays/message-edit-history").then(m => ({ default: m.MessageEditHistory })), { ssr: false });
+const ReplyThread = dynamic(() => import("@/components/overlays/reply-thread").then(m => ({ default: m.ReplyThread })), { ssr: false });
+const DisappearingMessages = dynamic(() => import("@/components/overlays/disappearing-messages").then(m => ({ default: m.DisappearingMessages })), { ssr: false });
+const ScheduledMessages = dynamic(() => import("@/components/overlays/scheduled-messages").then(m => ({ default: m.ScheduledMessages })), { ssr: false });
+const WebRTCCall = dynamic(() => import("@/components/overlays/webrtc-call").then(m => ({ default: m.WebRTCCall })), { ssr: false });
+const VoiceMessageRecorder = dynamic(() => import("@/components/overlays/voice-message-recorder").then(m => ({ default: m.VoiceMessageRecorder })), { ssr: false });
+const GroupVideoCall = dynamic(() => import("@/components/overlays/group-video-call").then(m => ({ default: m.GroupVideoCall })), { ssr: false });
+const VoiceRoom = dynamic(() => import("@/components/overlays/voice-room").then(m => ({ default: m.VoiceRoom })), { ssr: false });
+const MeetingNotesOverlay = dynamic(() => import("@/components/overlays/meeting-notes").then(m => ({ default: m.MeetingNotesOverlay })), { ssr: false });
+const VoiceCloneStudio = dynamic(() => import("@/components/overlays/voice-clone-studio").then(m => ({ default: m.VoiceCloneStudio })), { ssr: false });
+const SmartReplyChips = dynamic(() => import("@/components/overlays/smart-reply-chips").then(m => ({ default: m.SmartReplyChips })), { ssr: false });
+const UniversalShareSheet = dynamic(() => import("@/components/overlays/universal-share-sheet").then(m => ({ default: m.UniversalShareSheet })), { ssr: false });
+const AICatchUp = dynamic(() => import("@/components/overlays/ai-catch-up").then(m => ({ default: m.AICatchUp })), { ssr: false });
+const SmartNotificationsV2 = dynamic(() => import("@/components/overlays/smart-notifications-v2").then(m => ({ default: m.SmartNotificationsV2 })), { ssr: false });
+const AIToneAdjuster = dynamic(() => import("@/components/overlays/ai-tone-adjuster").then(m => ({ default: m.AIToneAdjuster })), { ssr: false });
+const AIConversationStarters = dynamic(() => import("@/components/overlays/ai-conversation-starters").then(m => ({ default: m.AIConversationStarters })), { ssr: false });
+const AIFriendshipHealth = dynamic(() => import("@/components/overlays/ai-friendship-health").then(m => ({ default: m.AIFriendshipHealth })), { ssr: false });
+const AIActionItems = dynamic(() => import("@/components/overlays/ai-action-items").then(m => ({ default: m.AIActionItems })), { ssr: false });
+// ── TIER D+F: Revenue + Polish overlays (10) ──
+const VerifiedBadgeApply = dynamic(() => import("@/components/overlays/verified-badge-apply").then(m => ({ default: m.VerifiedBadgeApply })), { ssr: false });
+const CommitTemplatesOverlay = dynamic(() => import("@/components/overlays/commit-templates").then(m => ({ default: m.CommitTemplatesOverlay })), { ssr: false });
+const PremiumFeatures = dynamic(() => import("@/components/overlays/premium-features").then(m => ({ default: m.PremiumFeatures })), { ssr: false });
+const ChatFolders = dynamic(() => import("@/components/overlays/chat-folders").then(m => ({ default: m.ChatFolders })), { ssr: false });
+const SavedMessages = dynamic(() => import("@/components/overlays/saved-messages").then(m => ({ default: m.SavedMessages })), { ssr: false });
+const MessageSearch = dynamic(() => import("@/components/overlays/message-search").then(m => ({ default: m.MessageSearch })), { ssr: false });
+const StoryStatus = dynamic(() => import("@/components/overlays/story-status").then(m => ({ default: m.StoryStatus })), { ssr: false });
+const AppLock = dynamic(() => import("@/components/overlays/app-lock").then(m => ({ default: m.AppLock })), { ssr: false });
+const LiveLocation = dynamic(() => import("@/components/overlays/live-location").then(m => ({ default: m.LiveLocation })), { ssr: false });
+const PollCreator = dynamic(() => import("@/components/overlays/poll-creator").then(m => ({ default: m.PollCreator })), { ssr: false });
 import { useApp } from "@/lib/app-store";
 import { useAuth } from "@/lib/auth-store";
 import { toast } from "sonner";
@@ -430,6 +461,37 @@ export default function Page() {
   const [dsrOpen, setDsrOpen] = useState(false);
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
   const [circleCreateOpen, setCircleCreateOpen] = useState(false);
+  // ── TIER B+A+E overlay state (19) ──
+  const [messageReactionsOpen, setMessageReactionsOpen] = useState(false);
+  const [editHistoryOpen, setEditHistoryOpen] = useState(false);
+  const [replyThreadOpen, setReplyThreadOpen] = useState(false);
+  const [disappearingOpen, setDisappearingOpen] = useState(false);
+  const [scheduledMessagesOpen, setScheduledMessagesOpen] = useState(false);
+  const [webrtcCallOpen, setWebrtcCallOpen] = useState(false);
+  const [voiceRecorderOpen, setVoiceRecorderOpen] = useState(false);
+  const [groupVideoCallOpen, setGroupVideoCallOpen] = useState(false);
+  const [voiceRoomOpen, setVoiceRoomOpen] = useState(false);
+  const [meetingNotesOpen, setMeetingNotesOpen] = useState(false);
+  const [voiceCloneOpen, setVoiceCloneOpen] = useState(false);
+  const [smartReplyOpen, setSmartReplyOpen] = useState(false);
+  const [universalShareOpen, setUniversalShareOpen] = useState(false);
+  const [aiCatchUpOpen, setAiCatchUpOpen] = useState(false);
+  const [smartNotificationsOpen, setSmartNotificationsOpen] = useState(false);
+  const [toneAdjusterOpen, setToneAdjusterOpen] = useState(false);
+  const [conversationStartersOpen, setConversationStartersOpen] = useState(false);
+  const [friendshipHealthOpen, setFriendshipHealthOpen] = useState(false);
+  const [actionItemsOpen, setActionItemsOpen] = useState(false);
+  // ── TIER D+F overlay state (10) ──
+  const [verifiedBadgeOpen, setVerifiedBadgeOpen] = useState(false);
+  const [commitTemplatesOpen, setCommitTemplatesOpen] = useState(false);
+  const [premiumFeaturesOpen, setPremiumFeaturesOpen] = useState(false);
+  const [chatFoldersOpen, setChatFoldersOpen] = useState(false);
+  const [savedMessagesOpen, setSavedMessagesOpen] = useState(false);
+  const [messageSearchOpen, setMessageSearchOpen] = useState(false);
+  const [storyStatusOpen, setStoryStatusOpen] = useState(false);
+  const [appLockOpen, setAppLockOpen] = useState(false);
+  const [liveLocationOpen, setLiveLocationOpen] = useState(false);
+  const [pollCreatorOpen, setPollCreatorOpen] = useState(false);
   const [circleDetailId, setCircleDetailId] = useState<string | null>(null);
   const [composer, setComposer] = useState<{ open: boolean; kind?: "post" | "poll" | "media"; draft?: string; anonymous?: boolean; circleId?: string }>({ open: false });
   const Screen = screens[tab];
@@ -780,6 +842,66 @@ export default function Page() {
     };
     window.addEventListener("share-to-wasl", onShareWasl as any);
     window.addEventListener("share-to-midan", onShareMidan as any);
+    // ── TIER B+A+E overlay events (19) ──
+    const onMessageReactions = () => setMessageReactionsOpen(true);
+    const onEditHistory = () => setEditHistoryOpen(true);
+    const onReplyThread = () => setReplyThreadOpen(true);
+    const onDisappearing = () => setDisappearingOpen(true);
+    const onScheduledMessages = () => setScheduledMessagesOpen(true);
+    const onWebrtcCall = () => setWebrtcCallOpen(true);
+    const onVoiceRecorder = () => setVoiceRecorderOpen(true);
+    const onGroupVideoCall = () => setGroupVideoCallOpen(true);
+    const onVoiceRoom = () => setVoiceRoomOpen(true);
+    const onMeetingNotes = () => setMeetingNotesOpen(true);
+    const onVoiceClone = () => setVoiceCloneOpen(true);
+    const onSmartReply = () => setSmartReplyOpen(true);
+    const onUniversalShare = () => setUniversalShareOpen(true);
+    const onAiCatchUp = () => setAiCatchUpOpen(true);
+    const onSmartNotifications = () => setSmartNotificationsOpen(true);
+    const onToneAdjuster = () => setToneAdjusterOpen(true);
+    const onConversationStarters = () => setConversationStartersOpen(true);
+    const onFriendshipHealth = () => setFriendshipHealthOpen(true);
+    const onActionItems = () => setActionItemsOpen(true);
+    window.addEventListener("circle:message-reactions", onMessageReactions);
+    window.addEventListener("circle:edit-history", onEditHistory);
+    window.addEventListener("circle:reply-thread", onReplyThread);
+    window.addEventListener("circle:disappearing-messages", onDisappearing);
+    window.addEventListener("circle:scheduled-messages", onScheduledMessages);
+    window.addEventListener("circle:webrtc-call", onWebrtcCall);
+    window.addEventListener("circle:voice-recorder", onVoiceRecorder);
+    window.addEventListener("circle:group-video-call", onGroupVideoCall);
+    window.addEventListener("circle:voice-room", onVoiceRoom);
+    window.addEventListener("circle:meeting-notes", onMeetingNotes);
+    window.addEventListener("circle:voice-clone-studio", onVoiceClone);
+    window.addEventListener("circle:smart-reply", onSmartReply);
+    window.addEventListener("circle:universal-share", onUniversalShare);
+    window.addEventListener("circle:ai-catch-up", onAiCatchUp);
+    window.addEventListener("circle:smart-notifications-v2", onSmartNotifications);
+    window.addEventListener("circle:ai-tone-adjuster", onToneAdjuster);
+    window.addEventListener("circle:ai-conversation-starters", onConversationStarters);
+    window.addEventListener("circle:ai-friendship-health", onFriendshipHealth);
+    window.addEventListener("circle:ai-action-items", onActionItems);
+    // ── TIER D+F overlay events (10) ──
+    const onVerifiedBadge = () => setVerifiedBadgeOpen(true);
+    const onCommitTemplates = () => setCommitTemplatesOpen(true);
+    const onPremiumFeatures = () => setPremiumFeaturesOpen(true);
+    const onChatFolders = () => setChatFoldersOpen(true);
+    const onSavedMessages = () => setSavedMessagesOpen(true);
+    const onMessageSearch = () => setMessageSearchOpen(true);
+    const onStoryStatus = () => setStoryStatusOpen(true);
+    const onAppLock = () => setAppLockOpen(true);
+    const onLiveLocation = () => setLiveLocationOpen(true);
+    const onPollCreator = () => setPollCreatorOpen(true);
+    window.addEventListener("circle:verified-badge-apply", onVerifiedBadge);
+    window.addEventListener("circle:commit-templates", onCommitTemplates);
+    window.addEventListener("circle:premium-features", onPremiumFeatures);
+    window.addEventListener("circle:chat-folders", onChatFolders);
+    window.addEventListener("circle:saved-messages", onSavedMessages);
+    window.addEventListener("circle:message-search", onMessageSearch);
+    window.addEventListener("circle:story-status", onStoryStatus);
+    window.addEventListener("circle:app-lock", onAppLock);
+    window.addEventListener("circle:live-location", onLiveLocation);
+    window.addEventListener("circle:poll-creator", onPollCreator);
     return () => {
       window.removeEventListener("circle:composer", onComposer as any);
       window.removeEventListener("circle:governance", onGovernance);
@@ -898,6 +1020,36 @@ export default function Page() {
       window.removeEventListener("circle:navigate", onNavigate as any);
       window.removeEventListener("share-to-wasl", onShareWasl as any);
       window.removeEventListener("share-to-midan", onShareMidan as any);
+      window.removeEventListener("circle:message-reactions", onMessageReactions);
+      window.removeEventListener("circle:edit-history", onEditHistory);
+      window.removeEventListener("circle:reply-thread", onReplyThread);
+      window.removeEventListener("circle:disappearing-messages", onDisappearing);
+      window.removeEventListener("circle:scheduled-messages", onScheduledMessages);
+      window.removeEventListener("circle:webrtc-call", onWebrtcCall);
+      window.removeEventListener("circle:voice-recorder", onVoiceRecorder);
+      window.removeEventListener("circle:group-video-call", onGroupVideoCall);
+      window.removeEventListener("circle:voice-room", onVoiceRoom);
+      window.removeEventListener("circle:meeting-notes", onMeetingNotes);
+      window.removeEventListener("circle:voice-clone-studio", onVoiceClone);
+      window.removeEventListener("circle:smart-reply", onSmartReply);
+      window.removeEventListener("circle:universal-share", onUniversalShare);
+      window.removeEventListener("circle:ai-catch-up", onAiCatchUp);
+      window.removeEventListener("circle:smart-notifications-v2", onSmartNotifications);
+      window.removeEventListener("circle:ai-tone-adjuster", onToneAdjuster);
+      window.removeEventListener("circle:ai-conversation-starters", onConversationStarters);
+      window.removeEventListener("circle:ai-friendship-health", onFriendshipHealth);
+      window.removeEventListener("circle:ai-action-items", onActionItems);
+      // ── TIER D+F cleanup (10) ──
+      window.removeEventListener("circle:verified-badge-apply", onVerifiedBadge);
+      window.removeEventListener("circle:commit-templates", onCommitTemplates);
+      window.removeEventListener("circle:premium-features", onPremiumFeatures);
+      window.removeEventListener("circle:chat-folders", onChatFolders);
+      window.removeEventListener("circle:saved-messages", onSavedMessages);
+      window.removeEventListener("circle:message-search", onMessageSearch);
+      window.removeEventListener("circle:story-status", onStoryStatus);
+      window.removeEventListener("circle:app-lock", onAppLock);
+      window.removeEventListener("circle:live-location", onLiveLocation);
+      window.removeEventListener("circle:poll-creator", onPollCreator);
     };
   }, []);
 
@@ -1118,6 +1270,37 @@ export default function Page() {
 
       {/* P0.4: What's New — feature discoverability overlay */}
       <WhatsNew open={whatsNewOpen} onClose={() => setWhatsNewOpen(false)} />
+      {/* ── TIER B+A+E overlays (19) ── */}
+      <MessageReactions open={messageReactionsOpen} onClose={() => setMessageReactionsOpen(false)} />
+      <MessageEditHistory open={editHistoryOpen} onClose={() => setEditHistoryOpen(false)} />
+      <ReplyThread open={replyThreadOpen} onClose={() => setReplyThreadOpen(false)} />
+      <DisappearingMessages open={disappearingOpen} onClose={() => setDisappearingOpen(false)} />
+      <ScheduledMessages open={scheduledMessagesOpen} onClose={() => setScheduledMessagesOpen(false)} />
+      <WebRTCCall open={webrtcCallOpen} onClose={() => setWebrtcCallOpen(false)} />
+      <VoiceMessageRecorder open={voiceRecorderOpen} onClose={() => setVoiceRecorderOpen(false)} />
+      <GroupVideoCall open={groupVideoCallOpen} onClose={() => setGroupVideoCallOpen(false)} />
+      <VoiceRoom open={voiceRoomOpen} onClose={() => setVoiceRoomOpen(false)} />
+      <MeetingNotesOverlay open={meetingNotesOpen} onClose={() => setMeetingNotesOpen(false)} />
+      <VoiceCloneStudio open={voiceCloneOpen} onClose={() => setVoiceCloneOpen(false)} />
+      <SmartReplyChips open={smartReplyOpen} onClose={() => setSmartReplyOpen(false)} />
+      <UniversalShareSheet open={universalShareOpen} onClose={() => setUniversalShareOpen(false)} />
+      <AICatchUp open={aiCatchUpOpen} onClose={() => setAiCatchUpOpen(false)} />
+      <SmartNotificationsV2 open={smartNotificationsOpen} onClose={() => setSmartNotificationsOpen(false)} />
+      <AIToneAdjuster open={toneAdjusterOpen} onClose={() => setToneAdjusterOpen(false)} />
+      <AIConversationStarters open={conversationStartersOpen} onClose={() => setConversationStartersOpen(false)} />
+      <AIFriendshipHealth open={friendshipHealthOpen} onClose={() => setFriendshipHealthOpen(false)} />
+      <AIActionItems open={actionItemsOpen} onClose={() => setActionItemsOpen(false)} />
+      {/* ── TIER D+F overlays (10) ── */}
+      <VerifiedBadgeApply open={verifiedBadgeOpen} onClose={() => setVerifiedBadgeOpen(false)} />
+      <CommitTemplatesOverlay open={commitTemplatesOpen} onClose={() => setCommitTemplatesOpen(false)} />
+      <PremiumFeatures open={premiumFeaturesOpen} onClose={() => setPremiumFeaturesOpen(false)} />
+      <ChatFolders open={chatFoldersOpen} onClose={() => setChatFoldersOpen(false)} />
+      <SavedMessages open={savedMessagesOpen} onClose={() => setSavedMessagesOpen(false)} />
+      <MessageSearch open={messageSearchOpen} onClose={() => setMessageSearchOpen(false)} />
+      <StoryStatus open={storyStatusOpen} onClose={() => setStoryStatusOpen(false)} />
+      <AppLock open={appLockOpen} onClose={() => setAppLockOpen(false)} />
+      <LiveLocation open={liveLocationOpen} onClose={() => setLiveLocationOpen(false)} />
+      <PollCreator open={pollCreatorOpen} onClose={() => setPollCreatorOpen(false)} />
 
       {/* P1.7 — Circle Groups: creation flow + detail view. Reachable
           from any surface via `circle:create-circle` and
