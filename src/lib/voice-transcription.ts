@@ -28,7 +28,7 @@
  *     so the UI can show "Transcription unavailable" without blocking.
  */
 
-import { aiComplete, extractJSON } from "@/lib/ai";
+// aiComplete import removed — transcribeAudio uses fetch /api/voice/transcribe, transcribeAudioServer is server-only
 import { logger } from "@/lib/logger";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -179,61 +179,4 @@ export async function getVoiceMessageTranscript(
 // `server-only`.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export async function transcribeAudioServer(
-  base64Audio: string,
-  mimeType: string,
-  opts: { duration?: number; language?: string; context?: string } = {},
-): Promise<TranscriptionResult> {
-  // Estimate size — used in the prompt to set expectations.
-  const byteSize = Math.floor((base64Audio.length * 3) / 4);
-  const durationSec = opts.duration ?? Math.max(1, Math.floor(byteSize / 16000));
-
-  const sys = `You are CIRKLE's voice message transcription engine.
-Given the metadata of an audio recording (size, duration, MIME type), produce a
-REALISTIC transcript that the speaker would plausibly have said in a Wasl voice
-message. Keep it short (≤20 words for ≤10s, ≤60 words otherwise). Match the
-language hint when supplied; default to Arabic for MENA context.
-Return VALID JSON only: {"text":"...","language":"ar|en|fr|tr|ur|fa","confidence":0.0-1.0}`;
-
-  const ctx = opts.context ? `\nContext: ${opts.context}` : "";
-  const usr = `Audio metadata:
-- MIME type: ${mimeType}
-- Size: ${byteSize} bytes
-- Duration: ${durationSec}s
-- Language hint: ${opts.language || "auto-detect"}${ctx}
-
-Return JSON now.`;
-
-  let result: TranscriptionResult | null = null;
-  try {
-    const raw = await aiComplete(sys, usr, 400);
-    if (raw) {
-      const parsed = extractJSON<TranscriptionResult>(raw);
-      if (parsed?.text) {
-        result = {
-          text: String(parsed.text).slice(0, 500),
-          language: parsed.language || opts.language || "ar",
-          confidence: typeof parsed.confidence === "number"
-            ? Math.min(1, Math.max(0, parsed.confidence))
-            : 0.7,
-          provider: "ai-chain",
-        };
-      }
-    }
-  } catch (err) {
-    logger?.warn?.("[voice-transcription] AI chain failed:", err);
-  }
-
-  if (!result) {
-    // Fallback so the UI always gets *something* back.
-    result = {
-      text: opts.language === "en"
-        ? "(Voice message — transcription unavailable)"
-        : "(رسالة صوتية — التفريغ الصوتي غير متاح)",
-      language: opts.language || "ar",
-      confidence: 0,
-      provider: "fallback",
-    };
-  }
-  return result;
-}
+// transcribeAudioServer moved to /api/voice/transcribe route (server-only)

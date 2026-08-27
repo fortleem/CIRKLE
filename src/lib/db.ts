@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
+import { PrismaLibSQL } from "@prisma/adapter-libsql";
 import { createClient } from "@libsql/client";
 
 /**
@@ -20,18 +20,21 @@ import { createClient } from "@libsql/client";
 function createPrismaClient(): PrismaClient {
   const tursoUrl = process.env.TURSO_DATABASE_URL;
   const tursoToken = process.env.TURSO_AUTH_TOKEN;
+  const isProd = process.env.NODE_ENV === "production";
 
-  // If Turso is configured, use the libsql adapter
-  if (tursoUrl && tursoUrl.startsWith("libsql://")) {
+  // In production (Vercel), use the Turso libsql adapter.
+  // In development, use local SQLite directly (the Turso adapter has a known
+  // URL_INVALID issue when DATABASE_URL is also set for local dev).
+  if (isProd && tursoUrl && tursoUrl.startsWith("libsql://")) {
     const libsql = createClient({
       url: tursoUrl,
       authToken: tursoToken,
     });
-    const adapter = new PrismaLibSql(libsql);
+    const adapter = new PrismaLibSQL(libsql);
     return new PrismaClient({ adapter, log: ["error"] } as any);
   }
 
-  // Local SQLite fallback
+  // Local SQLite (dev) — also used as fallback in prod if Turso not configured
   if (!process.env.DATABASE_URL) {
     process.env.DATABASE_URL = "file:./db/custom.db";
   }

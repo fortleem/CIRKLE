@@ -110,7 +110,6 @@ const KnowledgeWiki = dynamic(() => import("@/components/overlays/knowledge-wiki
 const ProNetwork = dynamic(() => import("@/components/overlays/pro-network").then(m => ({ default: m.ProNetwork })), { ssr: false });
 const CirkleMaps = dynamic(() => import("@/components/overlays/cirkle-maps").then(m => ({ default: m.CirkleMaps })), { ssr: false });
 const CircleMail = dynamic(() => import("@/components/overlays/circle-mail").then(m => ({ default: m.CircleMail })), { ssr: false });
-const PollCreator = dynamic(() => import("@/components/overlays/poll-creator").then(m => ({ default: m.PollCreator })), { ssr: false });
 const BulletComments = dynamic(() => import("@/components/overlays/bullet-comments").then(m => ({ default: m.BulletComments })), { ssr: false });
 const FamilyVault = dynamic(() => import("@/components/overlays/family-vault").then(m => ({ default: m.FamilyVault })), { ssr: false });
 const TicketMint = dynamic(() => import("@/components/overlays/ticket-mint").then(m => ({ default: m.TicketMint })), { ssr: false });
@@ -430,7 +429,6 @@ export default function Page() {
   const [adStudioOpen, setAdStudioOpen] = useState(false);
   const [cirkleGradebookOpen, setCirkleGradebookOpen] = useState(false);
   const [knowledgeWikiOpen, setKnowledgeWikiOpen] = useState(false);
-  const [pollCreatorOpen, setPollCreatorOpen] = useState(false);
   const [bulletCommentsOpen, setBulletCommentsOpen] = useState(false);
   const [familyVaultOpen, setFamilyVaultOpen] = useState(false);
   const [ticketMintOpen, setTicketMintOpen] = useState(false);
@@ -472,11 +470,11 @@ export default function Page() {
   const [groupVideoCallOpen, setGroupVideoCallOpen] = useState(false);
   const [voiceRoomOpen, setVoiceRoomOpen] = useState(false);
   const [meetingNotesOpen, setMeetingNotesOpen] = useState(false);
-  const [voiceCloneOpen, setVoiceCloneOpen] = useState(false);
+  const [voiceCloneStudioOpen, setVoiceCloneStudioOpen] = useState(false);
   const [smartReplyOpen, setSmartReplyOpen] = useState(false);
   const [universalShareOpen, setUniversalShareOpen] = useState(false);
   const [aiCatchUpOpen, setAiCatchUpOpen] = useState(false);
-  const [smartNotificationsOpen, setSmartNotificationsOpen] = useState(false);
+  const [smartNotificationsV2Open, setSmartNotificationsV2Open] = useState(false);
   const [toneAdjusterOpen, setToneAdjusterOpen] = useState(false);
   const [conversationStartersOpen, setConversationStartersOpen] = useState(false);
   const [friendshipHealthOpen, setFriendshipHealthOpen] = useState(false);
@@ -748,13 +746,11 @@ export default function Page() {
     window.addEventListener("circle:cirkle-maps", onCirkleMaps);
     window.addEventListener("circle:circle-mail", onCircleMail);
 
-    // ── Blueprint round 3: Polls, Bullet Comments, Family Vault, Ticket Mint, Phone Migrate ──
-    const onPollCreator = () => setPollCreatorOpen(true);
+    // ── Blueprint round 3: Bullet Comments, Family Vault, Ticket Mint, Phone Migrate ──
     const onBulletComments = () => setBulletCommentsOpen(true);
     const onFamilyVault = () => setFamilyVaultOpen(true);
     const onTicketMint = () => setTicketMintOpen(true);
     const onPhoneMigrate = () => setPhoneMigrateOpen(true);
-    window.addEventListener("circle:poll-creator", onPollCreator);
     window.addEventListener("circle:bullet-comments", onBulletComments);
     window.addEventListener("circle:family-vault", onFamilyVault);
     window.addEventListener("circle:ticket-mint", onTicketMint);
@@ -852,12 +848,12 @@ export default function Page() {
     const onVoiceRecorder = () => setVoiceRecorderOpen(true);
     const onGroupVideoCall = () => setGroupVideoCallOpen(true);
     const onVoiceRoom = () => setVoiceRoomOpen(true);
-    const onMeetingNotes = () => setMeetingNotesOpen(true);
-    const onVoiceClone = () => setVoiceCloneOpen(true);
+    const onMeetingNotes2 = () => setMeetingNotesOpen(true);
+    const onVoiceCloneStudio = () => setVoiceCloneStudioOpen(true);
     const onSmartReply = () => setSmartReplyOpen(true);
     const onUniversalShare = () => setUniversalShareOpen(true);
     const onAiCatchUp = () => setAiCatchUpOpen(true);
-    const onSmartNotifications = () => setSmartNotificationsOpen(true);
+    const onSmartNotificationsV2 = () => setSmartNotificationsV2Open(true);
     const onToneAdjuster = () => setToneAdjusterOpen(true);
     const onConversationStarters = () => setConversationStartersOpen(true);
     const onFriendshipHealth = () => setFriendshipHealthOpen(true);
@@ -871,12 +867,12 @@ export default function Page() {
     window.addEventListener("circle:voice-recorder", onVoiceRecorder);
     window.addEventListener("circle:group-video-call", onGroupVideoCall);
     window.addEventListener("circle:voice-room", onVoiceRoom);
-    window.addEventListener("circle:meeting-notes", onMeetingNotes);
-    window.addEventListener("circle:voice-clone-studio", onVoiceClone);
+    window.addEventListener("circle:meeting-notes", onMeetingNotes2);
+    window.addEventListener("circle:voice-clone-studio", onVoiceCloneStudio);
     window.addEventListener("circle:smart-reply", onSmartReply);
     window.addEventListener("circle:universal-share", onUniversalShare);
     window.addEventListener("circle:ai-catch-up", onAiCatchUp);
-    window.addEventListener("circle:smart-notifications-v2", onSmartNotifications);
+    window.addEventListener("circle:smart-notifications-v2", onSmartNotificationsV2);
     window.addEventListener("circle:ai-tone-adjuster", onToneAdjuster);
     window.addEventListener("circle:ai-conversation-starters", onConversationStarters);
     window.addEventListener("circle:ai-friendship-health", onFriendshipHealth);
@@ -987,7 +983,6 @@ export default function Page() {
       window.removeEventListener("circle:pro-network", onProNetwork);
       window.removeEventListener("circle:cirkle-maps", onCirkleMaps);
       window.removeEventListener("circle:circle-mail", onCircleMail);
-      window.removeEventListener("circle:poll-creator", onPollCreator);
       window.removeEventListener("circle:bullet-comments", onBulletComments);
       window.removeEventListener("circle:family-vault", onFamilyVault);
       window.removeEventListener("circle:ticket-mint", onTicketMint);
@@ -1029,12 +1024,12 @@ export default function Page() {
       window.removeEventListener("circle:voice-recorder", onVoiceRecorder);
       window.removeEventListener("circle:group-video-call", onGroupVideoCall);
       window.removeEventListener("circle:voice-room", onVoiceRoom);
-      window.removeEventListener("circle:meeting-notes", onMeetingNotes);
-      window.removeEventListener("circle:voice-clone-studio", onVoiceClone);
+      window.removeEventListener("circle:meeting-notes", onMeetingNotes2);
+      window.removeEventListener("circle:voice-clone-studio", onVoiceCloneStudio);
       window.removeEventListener("circle:smart-reply", onSmartReply);
       window.removeEventListener("circle:universal-share", onUniversalShare);
       window.removeEventListener("circle:ai-catch-up", onAiCatchUp);
-      window.removeEventListener("circle:smart-notifications-v2", onSmartNotifications);
+      window.removeEventListener("circle:smart-notifications-v2", onSmartNotificationsV2);
       window.removeEventListener("circle:ai-tone-adjuster", onToneAdjuster);
       window.removeEventListener("circle:ai-conversation-starters", onConversationStarters);
       window.removeEventListener("circle:ai-friendship-health", onFriendshipHealth);
@@ -1234,8 +1229,7 @@ export default function Page() {
       <CirkleMaps open={cirkleMapsOpen} onClose={() => setCirkleMapsOpen(false)} />
       <CircleMail open={circleMailOpen} onClose={() => setCircleMailOpen(false)} />
 
-      {/* Blueprint round 3: Polls, Bullet Comments, Family Vault, Ticket Mint, Phone Migrate */}
-      <PollCreator open={pollCreatorOpen} onClose={() => setPollCreatorOpen(false)} />
+      {/* Blueprint round 3: Bullet Comments, Family Vault, Ticket Mint, Phone Migrate */}
       <BulletComments open={bulletCommentsOpen} onClose={() => setBulletCommentsOpen(false)} />
       <FamilyVault open={familyVaultOpen} onClose={() => setFamilyVaultOpen(false)} />
       <TicketMint open={ticketMintOpen} onClose={() => setTicketMintOpen(false)} />
@@ -1276,16 +1270,16 @@ export default function Page() {
       <ReplyThread open={replyThreadOpen} onClose={() => setReplyThreadOpen(false)} />
       <DisappearingMessages open={disappearingOpen} onClose={() => setDisappearingOpen(false)} />
       <ScheduledMessages open={scheduledMessagesOpen} onClose={() => setScheduledMessagesOpen(false)} />
-      <WebRTCCall open={webrtcCallOpen} onClose={() => setWebrtcCallOpen(false)} />
-      <VoiceMessageRecorder open={voiceRecorderOpen} onClose={() => setVoiceRecorderOpen(false)} />
-      <GroupVideoCall open={groupVideoCallOpen} onClose={() => setGroupVideoCallOpen(false)} />
+      {/* <WebRTCCall open={webrtcCallOpen} onClose={() => setWebrtcCallOpen(false)} /> */}
+      {/* <VoiceMessageRecorder open={voiceRecorderOpen} onClose={() => setVoiceRecorderOpen(false)} /> */}
+      {/* <GroupVideoCall open={groupVideoCallOpen} onClose={() => setGroupVideoCallOpen(false)} /> */}
       <VoiceRoom open={voiceRoomOpen} onClose={() => setVoiceRoomOpen(false)} />
       <MeetingNotesOverlay open={meetingNotesOpen} onClose={() => setMeetingNotesOpen(false)} />
-      <VoiceCloneStudio open={voiceCloneOpen} onClose={() => setVoiceCloneOpen(false)} />
+      {/* <VoiceCloneStudio open={voiceCloneStudioOpen} onClose={() => setVoiceCloneStudioOpen(false)} /> */}
       <SmartReplyChips open={smartReplyOpen} onClose={() => setSmartReplyOpen(false)} />
       <UniversalShareSheet open={universalShareOpen} onClose={() => setUniversalShareOpen(false)} />
       <AICatchUp open={aiCatchUpOpen} onClose={() => setAiCatchUpOpen(false)} />
-      <SmartNotificationsV2 open={smartNotificationsOpen} onClose={() => setSmartNotificationsOpen(false)} />
+      <SmartNotificationsV2 open={smartNotificationsV2Open} onClose={() => setSmartNotificationsV2Open(false)} />
       <AIToneAdjuster open={toneAdjusterOpen} onClose={() => setToneAdjusterOpen(false)} />
       <AIConversationStarters open={conversationStartersOpen} onClose={() => setConversationStartersOpen(false)} />
       <AIFriendshipHealth open={friendshipHealthOpen} onClose={() => setFriendshipHealthOpen(false)} />

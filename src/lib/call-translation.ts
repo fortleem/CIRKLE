@@ -28,7 +28,7 @@
  *     (see translation-service.ts) takes precedence.
  */
 
-import { aiComplete, extractJSON } from "@/lib/ai";
+// aiComplete import removed — translateStream now calls /api/calls/translate to avoid server-only transitive import
 import { logger } from "@/lib/logger";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -120,24 +120,23 @@ export async function translateStream(
     };
   }
 
-  const sys = `You are CIRKLE's real-time call translator.
-Translate the user utterance from ${from} to ${to}.
-Preserve tone, idioms, and brevity. Do NOT add commentary.
-Return VALID JSON only: {"translated":"...","confidence":0.0-1.0}`;
-
-  const usr = `Translate: ${trimmed}`;
-
   let translated = trimmed;
   let confidence = 0.5;
 
   try {
-    const raw = await aiComplete(sys, usr, 400, false, undefined);
-    if (raw) {
-      const parsed = extractJSON<{ translated: string; confidence: number }>(raw);
-      if (parsed?.translated) {
-        translated = String(parsed.translated).slice(0, 500);
-        confidence = typeof parsed.confidence === "number"
-          ? Math.min(1, Math.max(0, parsed.confidence))
+    const res = await fetch("/api/calls/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: trimmed, from, to }),
+      signal,
+      cache: "no-store",
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.translated) {
+        translated = String(data.translated).slice(0, 500);
+        confidence = typeof data.confidence === "number"
+          ? Math.min(1, Math.max(0, data.confidence))
           : 0.7;
       }
     }
