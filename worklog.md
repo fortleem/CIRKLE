@@ -9176,3 +9176,203 @@ Stage Summary:
   - `voice-cloning.ts`: replace `cloneVoiceServer` mock with real ElevenLabs/Coqui/PlayHT API call (outline documented in function header).
   - `call-translation.ts`: on-device ONNX NLLB-200 is the privacy-default for future work.
 - No issues encountered. All 24 files compile cleanly, all 12 API routes are reachable, all 6 overlays render with OverlayShell + glass aesthetic + emerald accent + full ARIA + mobile responsive + permission-denial handling + MediaRecorder unsupported handling.
+
+---
+Task ID: ACA-BLUEPRINT-PART-II
+Agent: Lead (Circle Architect)
+Task: Write Part II of the ACA Sovereign Edition Blueprint — Oversight Fabric & Evidence Intelligence (source sections §9–§26 + §208).
+
+Work Log:
+- Read worklog tail (last 30 lines) for context.
+- Read source requirements: `/home/z/my-project/upload/Pasted Content_1787843211586.txt` lines 200–1010 covering sections 9–26; also lines 3338–3397 for the §208 Case 118/2024 readiness example.
+- Created `/home/z/my-project/docs/ACA-EVIDENCE-INTELLIGENCE.md` (1,723 lines).
+- No existing files modified.
+
+Document structure:
+- Front matter (scope, companion documents, reading conventions).
+- Table of Contents covering 19 chapters.
+- Chapter 1 — ACA Oversight Fabric (§9): 22 institutional object classes, canonical relationship contract, ASCII architecture diagram, 6 fabric invariants, boundary at Secure Institutional Gateway.
+- Chapter 2 — National Administrative Ontology (§10): all 37 canonical objects with mandatory attributes; 8 typed relationships (`relates_to`, `part_of`, `owns`, `produced`, `references`, `triggered`, `contradicts`, `supersedes`); core relationship matrix excerpt (18×18); 4 lifecycle invariants; ontology governance process.
+- Chapter 3 — Smart Evidence Graph (§11): 21 automatic connection targets; 6-class confidence taxonomy (Confirmed/Documented/System-derived/Potential/Unverified/Contradicted); three-layer enforcement of "never present system-derived inference as proven fact"; ASCII evidence graph visualization; connection refresh triggers.
+- Chapter 4 — Smart Dynamic Timeline (§12): 7-tuple event schema; end-to-end Application→Complaint→ACA Action chain with evidence anchors; 7 click-through destinations; 4 timeline integrity invariants; 3 rendering modes.
+- Chapter 5 — Temporal Intelligence (§13): 11 anomaly classes with default severity; 3-step detection method; example Temporal Integrity Report.
+- Chapter 6 — Investigation Time Machine (§14): three-state comparison (Date A vs Date B vs current); anti-rewrite principle (append-only ledger, decision snapshots, versioned findings); 4 use cases; separate authorization class.
+- Chapter 7 — Expected Process vs Actual Process (§15): Administrative Process Digital Twin with 8 elements; example twin for Construction Permit Standard Track; EXPECTED vs ACTUAL overlay surfacing 3 signals; twin maintenance & versioning.
+- Chapter 8 — Administrative Process Replay (§16): REPLAY CASE feature with 4 modes; per-step output template; integrity & logging requirements.
+- Chapter 9 — "What Should Exist?" Engine (§17): computation pseudocode; Expected 31 / Found 24 / Missing 7 example; 4-tier ranking heuristics; investigator action options.
+- Chapter 10 — Evidence Gap Engine (§18): 7 gap categories; 10-field gap record schema; example 4-gap register; continuous reconciliation rules.
+- Chapter 11 — Evidence Volatility Engine (§19): 4-class volatility taxonomy; assessment heuristics; Volatility Surface example; 8-step authorized preservation workflow; preservation-loss invariant.
+- Chapter 12 — Smart Evidence Acquisition Planner (§20): 6 ranking factors; acquisition score formula with default weights; example next-acquisition plan output.
+- Chapter 13 — Case Information Readiness (§21): 14-component readiness panel; NEXT BEST INVESTIGATIVE ACTION framing; readiness score formula; auto-refresh triggers.
+- Chapter 14 — Alternative-Hypothesis Engine (§22): 6 hypothesis classes (H1 procedural error → H6 potential misconduct indicator); per-hypothesis tracking schema; worked example for "approval before authorization" anomaly; discrimination discipline preventing premature advancement of H6.
+- Chapter 15 — Devil's Advocate AI (§23): 8 challenge surfaces; challenge workflow diagram; finding acceptance gate; gating invariant for material findings.
+- Chapter 16 — Mandatory Exculpatory Search (§24): policy configuration; 4-state outcome recording (Found/Not found/Unavailable/Not searched); example 4-target exculpatory search record; gating rules.
+- Chapter 17 — Negative-Space Intelligence (§25): 5 mandatory + 7 illustrative absence patterns; detection pseudocode; negative-space report example; framing discipline tying to Chapters 14–16.
+- Chapter 18 — "Too Perfect" Detector (§26): 5 perfection patterns; detection method against historical baseline; OPERATIONAL / DATA ANOMALY output; cardinal rule "never automatically label fraud"; example output.
+- Chapter 19 — Case Readiness Example (§208): full CASE 118/2024 ASCII readiness panel with all 14 headline numbers matching the source spec (People 7, Entities 4, Services 3, Agencies 5, Systems 9, Relevant Rules 8, Expected Records 31, Received 24, Evidence 17, Evidence Gaps 4, Contradictions 3, Similar Cases 12, External Requests 5, Volatile Evidence 2, NEXT BEST ACTION: Request inspection record); expanded component details (people/entities/services/agencies/systems/rules/records/evidence/gaps/contradictions/similar cases/external requests/volatile evidence); demonstration-data notice.
+- Appendix A — Confidence Classification Decision Tree (ASCII).
+- Appendix B — Cross-Chapter Reasoning Flow (ASCII pipeline showing how new evidence propagates through all 12 engines).
+- Appendix C — Glossary (16 terms).
+- Appendix D — Source section reference table.
+- Appendix E — Implementation Notes (10 non-normative engineering notes).
+- Closing note reiterating the 5 cardinal commitments.
+
+Stage Summary:
+- Files created (1): `/home/z/my-project/docs/ACA-EVIDENCE-INTELLIGENCE.md` (1,723 lines).
+- Files modified: 0 (per the "CREATE ONLY one new file" rule).
+- Line count: 1,723 — within the requested 1,200–1,800 range.
+- Style: professional institutional language throughout; tables for data models, relationship matrices, gap registers, classification matrices; ASCII diagrams for the Oversight Fabric, Evidence Graph, Timeline chain, Devil's Advocate workflow, Confidence decision tree, and Cross-Chapter reasoning flow.
+- All 19 chapters written and aligned to source sections §9–§26 plus §208.
+- No issues encountered.
+
+---
+Task ID: ACA-BLUEPRINT-PART-I
+Agent: general-purpose
+Task: Write Part I of CIRCLE ACA Sovereign Edition Blueprint (foundation, architecture, confidentiality boundary)
+
+Work Log:
+- Read mandatory files: worklog.md (last ~50 lines), CIRKLE-BLUEPRINT-v16.md (first 120 lines + TOC), CIRKLE-BLUEPRINT-COMPLIANCE.md (first 50 lines), source requirements Pasted Content_1787843211586.txt sections 1-8 (lines 1-400), 188 (lines 2935+), 205-207 (lines 3262-3335), 210 (lines 3383+), 220-221 (lines 3587-3653), 236-240 (lines 3950-4093).
+- Read additional context: Chapter 8 source requirements (sections 9-21 of source requirements, lines 325-599) to confirm Parts II-V layer boundaries.
+- Verified docs/ directory contents — no existing CIRKLE-ACA-BLUEPRINT.md file present; created new file only (per "CREATE ONLY one new file" rule; no existing files modified).
+- Wrote /home/z/my-project/docs/CIRKLE-ACA-BLUEPRINT.md with full Part I scope:
+  - Front matter (audience, status, sources, confidentiality)
+  - Table of Contents (Part I + cross-part map)
+  - Chapter 1: Executive Summary (positioning, value proposition, public Circle relationship, Part I scope)
+  - Chapter 2: Non-Negotiable Architectural Distinction (Section 1) — 16 "separate" requirements table, Citizen Shield vs ACA boundary, what does NOT count as separate, acceptance criteria
+  - Chapter 3: ACA Login Model (Section 2) — 14 institutional identity components table, separation enforcement, provisioning flow, lifecycle states
+  - Chapter 4: ACA Access Architecture (Section 3) — 5-stage identity federation diagram, 8 access dimensions, Egyptian PKI placeholders, failure handling
+  - Chapter 5: Zero-Trust ACA Architecture (Section 4) — 11 zero-trust dimensions, ACA Data Access Broker 6-step pipeline, human-vs-AI access, fail-closed rules
+  - Chapter 6: ACA Confidentiality Boundary (Section 5) — 7 boundary rules table, boundary diagram, cross-boundary motion pathways, enforcement mechanisms
+  - Chapter 7: Public Circle vs ACA Architecture (Section 6) — full ASCII architecture diagram (3 zones: Public Circle / Secure Institutional Gateway / ACA Sovereign Environment), logical & visual distinction table
+  - Chapter 8: Do Not Break the Existing Circle Product (Section 7) — 23 protected public features table with ACA relationship & handoff boundary, secure handoff rules, impact matrix preview (8 classifications)
+  - Chapter 9: Blueprint Structure (Section 8) — new major section "CIRCLE ACA — SOVEREIGN OVERSIGHT, INVESTIGATION & ADMINISTRATIVE INTELLIGENCE", 36 logical layers table with part assignments, 14 structural rules
+  - Chapter 10: ACA Navigation & Screen Inventory (Sections 188, 220, 221) — 24 navigation items table, 22 case sub-tabs table, Case Information Readiness panel example, 47 screens inventory table, Integration Control Tower example, navigation security (4 guarantees)
+  - Chapter 11: ACA UX & Form Factors (Sections 205, 206, 207) — 5 form factors table + detailed specs, 13-stage Field Workflow ASCII diagram, 23-stage End-to-End Investigation Workflow table with AI authority per stage
+  - Chapter 12: Business & Commercial Model (Section 210) — 2-tier commercial model, 11 institutional commercial categories table, no-ACA-pricing-in-public-Circle rules
+  - Chapter 13: Final Architecture Summary (Section 239) — canonical ASCII architecture diagram, layer-by-layer reading, 3 architectural invariants
+  - Chapter 14: Executive Positioning (Section 238) — canonical positioning statement, 6 mischaracterizations table, verbatim core value proposition, 10 commitments mapped to parts
+  - Chapter 15: Blueprint Language & Quality Rules (Sections 236, 237, 240) — placeholder formats table, proscribed/preferred phrasings tables, AI human-authority boundary table, 12-category gap audit, 14 blueprint quality rules with Part I application
+  - Part I Closing Notes: scope confirmation, forward references table (60+ cross-references to Parts II-V sections), acceptance summary (8 criteria)
+- All cross-references use "See Part X: <topic>" format per style requirements.
+- All unverified integrations use "Requires government authorization / technical discovery" marker (no invented endpoints).
+- All credentials/URLs/certificates use placeholders ({UPPER_SNAKE_CASE}).
+- Verified no proscribed phrasings ("AI proves guilt", "AI determines corruption", "video is automatically legally admissible", "all government systems are connected", "all data is centralized") appear; preferred phrasings used.
+- AI human-authority boundary (Section 204) restated in Chapters 5, 11, 14, 15.
+- No existing files modified (verified against original docs/ listing).
+- Final line count: 1870 lines (within the 1500-2500 target range).
+
+Stage Summary:
+- File produced: /home/z/my-project/docs/CIRKLE-ACA-BLUEPRINT.md (1870 lines)
+- Chapters written: 15 chapters + front matter + TOC + Part I Closing Notes
+- Tables: 16+ structured tables (16 separations, 14 identity components, 8 access dimensions, 11 zero-trust dimensions, 7 boundary rules, 23 protected features, 36 logical layers, 24 navigation items, 22 case sub-tabs, 47 screens, 5 form factors, 23-stage workflow with AI authority, 11 commercial categories, 14 quality rules, etc.)
+- ASCII diagrams: 3 (zero-trust broker pipeline, public-vs-ACA 3-zone architecture, final canonical architecture diagram from Section 239) + 1 boundary diagram + 1 field workflow flow
+- Cross-references: 60+ forward references to Parts II-V sections
+- No issues encountered. No existing files modified. Created only /home/z/my-project/docs/CIRKLE-ACA-BLUEPRINT.md.
+
+---
+Task ID: ACA-BLUEPRINT-PART-V
+Agent: Lead (Circle Architect)
+Task: Write Part V of the CIRCLE BLUEPRINT — ACA SOVEREIGN EDITION, covering Government Integration, National Intelligence, Deployment, Compliance, and the final audit matrices.
+
+Work Log:
+- Read /home/z/my-project/worklog.md (last 30 lines) for prior context.
+- Read /home/z/my-project/upload/Pasted Content_1787843211586.txt lines 2200–4092 (source requirements Sections 121–240).
+- Read /home/z/my-project/docs/CIRKLE-BLUEPRINT-v16.md (head) for format/voice reference.
+- Created /home/z/my-project/docs/ACA-INTEGRATION-DEPLOYMENT-COMPLIANCE.md — Part V of the ACA Sovereign Edition.
+- File is 3,288 lines, 100 chapters, organized in 12 thematic Blocks (A–L):
+  - Block A (Ch.1–3): National Administrative Early Warning, Administrative Health Index, Entity/Office Scorecards.
+  - Block B (Ch.4–11): Government Data Quality Engine, Data Freshness, System-of-Record Registry, Zero-Copy Federation, Secure Data Clean Room, Pseudonymous Linkage, Purpose-Bound Query, Information Boundary Matrix.
+  - Block C (Ch.12–21): Government Integration Fabric, Protocol Support, Government Event Bus, Event-to-Evidence Auto-Link, Integration Health Control Tower, Schema Change Sentinel, Missing-System Map, Automated Integration Discovery, Egypt-Specific Integration Roadmap, ACA Internal Integrations.
+  - Block D (Ch.22–30): CAOA, Ministry of Finance, Procurement, ETA, GAFI, FRA, AMLU, Illicit Gains, Ministry of Interior.
+  - Block E (Ch.31–38): Administrative Prosecution Bridge, Public Prosecution Bridge, Court/Judicial Bridge, NAFEZA/Customs, Governorate/Local Admin, Land/Property, Health/Education/Utilities/Transport, Consumer Protection/NTRA.
+  - Block F (Ch.39–42): International Cooperation, International Asset Recovery, International Obligations, Global Benchmarking.
+  - Block G (Ch.43–52): ACA Command Center, Daily Intelligence Brief, Situation Room, National Service Map, National Integrity Map, Reform/Strategy Cockpit, Training Academy, Administrative Red-Team, Governance Stress Test, Administrative Integrity Digital Twin.
+  - Block H (Ch.53–58): Security of ACA Itself, Cyber Incident Investigation Mode, Disaster Recovery, Evidence Recovery Drill, Surge Mode, Continuity Mode.
+  - Block I (Ch.59–73): Privacy Architecture, Protected Reporter Architecture, Whistleblower Retaliation Signal, Public/ACA Data Boundary, Citizen Status Experience, ACA Agent Profile, Device-to-Agent Binding, Case-Based Access, Temporary Access, Two-Person Authorization, Audit Trail, Evidence Access Audit, Provenance Ledger, Data Conflict, Data Reliability.
+  - Block J (Ch.74–87): Compliance/Assurance Layer, Egyptian Legal/Regulatory Configuration, Retention/Legal Hold, ACA Evidence Disposition, AI Human-Authority Boundary, Session Security, Export Security, Evidence Package, Public Transparency, Public Outcome Communication, Positive Governance, False-Accusation Analysis, Whistleblower/Retaliation Architecture, International Language Support.
+  - Block K (Ch.88–92): Deployment Options, Separate ACA Data Plane, Key Management, Secret Management, Security Error-Check.
+  - Block L (Ch.93–100): Requirements Traceability Matrix, Original Circle → ACA Impact Matrix, Data Classification Matrix, Acceptance Criteria, End-to-End Test Scenarios (43), Absolute Security Tests (A–J), Login Failure/Lockout, Gap/Duplication/Conflict Audit.
+- Discipline applied per Sections 235–240:
+  - Every Egyptian integration labeled per Section 236 (confirmed/API-ready, standards-compatible, secure-file compatible, requires government agreement, requires additional technical discovery) — default is "requires government authorization / technical discovery" with the literal text used where unverified.
+  - No hardcoded claims of "legally admissible", "fully compliant", "authorized" — replaced by outputs of the configurable Jurisdiction/Policy Engine (Ch.75).
+  - No invented Egyptian endpoints, APIs, certificates, or credentials — placeholders only.
+  - Institutional language (Section 237) — investigative indicator, evidence-supported finding, analytical signal, human determination throughout; no "AI proves guilt" / "AI determines corruption" / "video is automatically legally admissible" statements.
+  - "Corruption score" explicitly rejected (Ch.2) — Administrative Health Index is multi-dimensional, methodology-disclosed, never a single guilt score.
+  - Public/ACA boundary architecturally enforced (Ch.62, Ch.89) — not just UI hiding.
+- Tables written: 5 large matrices (Requirements Traceability ~110 rows; Original Circle → ACA Impact Matrix 50 modules; Data Classification Matrix 7 classes × 5 controls; Acceptance Criteria 106 criteria; E2E Test Scenarios 43; Absolute Security Tests 10; Gap/Duplication/Conflict Audit 50 findings) plus ~30 inline tables across chapters.
+- Cross-references: 200+ inter-chapter references plus forward references to Parts I–IV.
+- ASCII architecture diagram included at closing (Section 239 reference).
+- File ownership respected: only /home/z/my-project/docs/ACA-INTEGRATION-DEPLOYMENT-COMPLIANCE.md was created; no existing files modified.
+
+Stage Summary:
+- File created (1): /home/z/my-project/docs/ACA-INTEGRATION-DEPLOYMENT-COMPLIANCE.md
+- Files modified: 0 (per the "CREATE ONLY one new file" rule)
+- Length: 3,288 lines (within the requested ~2,000–3,000 range, slightly over because the four mandatory matrices and the 43-scenario + 10-absolute-test tables pushed the closing audit block to higher density than the chapter narrative average).
+- Chapters written: 100, organized in Blocks A–L.
+- Mandatory matrices: all four (Requirements Traceability §217, Original Circle → ACA Impact §218, Data Classification §219, Acceptance Criteria §232) plus the End-to-End Test Scenarios §233, Absolute Security Tests §234, Login Failure/Lockout §222, and Gap/Duplication/Conflict Audit §240.
+- All 240 source sections reconciled in Chapter 93 traceability matrix; Sections 121, 122, 123, 188, 189, 205–210 explicitly cross-referenced to Parts I–IV ownership (not lost, not duplicated).
+- No issues encountered.
+
+---
+Task ID: ACA-BLUEPRINT-PART-III
+Agent: Sub-agent (general-purpose) — ACA Blueprint Part III (service & financial intelligence)
+Task: Author Part III of the ACA Sovereign Edition Blueprint covering Service Intelligence, Financial Intelligence, and Government Systems Integration (source blueprint sections 27–55, 124–127, 209).
+
+Work Log:
+- Read mandatory sources first: `/home/z/my-project/worklog.md` (last 60 lines — confirmed prior Parts I–IV scaffold under Task IDs covering source sections 1–240); `/home/z/my-project/upload/Pasted Content_1787843211586.txt` lines 560–1100 (source sections 27–55) and lines 2050–2093 + 3364–3380 (sections 124–127 + 209). Verified exact wording of each source section before drafting.
+- Created one new file only: `/home/z/my-project/docs/ACA-SERVICE-FINANCIAL-INTELLIGENCE.md`. No existing files modified (per the CREATE ONLY rule).
+- Document structure: 34 chapters (one per source section) + 2 appendices (Cross-Capability Authorization Map, Capability Coupling Diagram) + Closing Note.
+- Each chapter carries inline `*(§N · Authority: AN)*` tag in its H2 header so authority class is visible without consulting the appendix. Appendix A condenses the same info by authority tier (A1-only, A2-only, A2/A3, A3-only) for quick scanning.
+- Professional institutional language throughout: passive voice where appropriate, no marketing tone, no emojis.
+- Tables used for: signal sources, readiness states, SFI components, GSKG node schema, GSKG edge types, dependency engine output, reuse decision matrix, correlation dimensions, pattern occurrence report, escalator promotion rules, blast-radius classification, control effectiveness metrics, CCM test library, population analytics privacy model, procurement analytical dimensions, funds-flow node schema, funds-flow integrity tests, contract lifecycle stages, corporate/asset edge types, FIG request types, FIG authorization model, observatory tracked metrics, benchmark output, negative/positive balance indicators, control-tower tiles, control-tower drill-downs, authorization map.
+- ASCII flow diagrams included for: Ch.1 algorithm sketch, Ch.2 reentry-vs-drop-off, Ch.4 SFI decomposition bar chart, Ch.5 GSKG node hierarchy, Ch.6 discovery pipeline, Ch.7 example dependency map (with ✓/⚠/✕/⏳/↩ states per source §33), Ch.9 nine-stage workflow, Ch.13 federated pattern search, Ch.14 six-step escalator progression, Ch.17 weekly digest, Ch.20 handoff topology, Ch.24 procurement lifecycle, Ch.25 funds flow, Ch.26 contract lifecycle, Ch.27 corporate graph, Ch.28 asset graph, Ch.29 FIG workflow, Ch.30 observatory dashboard, Ch.34 control tower demo. Appendix B couples them.
+- Demonstration-data banner (§209) explicitly labels the Control Tower example as illustrative-only, both inline next to the figures and via the documented banner text in §34.6.
+- All guardrails respected: no automatic accusation (Ch. 24 §24.5), no blocking of case creation (Ch. 11 §11.4), no auto-classification as FRAUD/MISCONDUCT (Document Conventions §2), graceful degradation to request-and-await mode where data is unavailable (Closing Note), FIG hard constraint "Do not turn Circle into a bank" prominently placed (Ch. 29 §29.1).
+- Cross-references to Part I (§18 Evidence Gap, §19 Volatility, §20 Smart Acquisition Planner, §22 Hypotheses, §25 Negative-Space, §26 Too-Perfect, §56 Regulatory Temporal, §57 Law at the Time, §128 Data Quality) and Part II (§61 immutability) used throughout to anchor Part III in the larger blueprint.
+- Iteration to hit the 1200–1800 line target: initial draft was 2440 lines; tightened via header consolidation (merged `### Source:` line into chapter H2 header via inline `*(§N · Authority: AN)*` tag — saved 34 lines), replaced 7 multi-bullet lists with inline semicolon-separated prose (Ch. 2, 6, 10, 11, 12, 13, 28), compressed 3 ASCII diagrams (Ch. 24 procurement lifecycle, Ch. 26 contract lifecycle, Ch. 34 control tower box), condensed Appendix A from a 34-row table to a 6-row authority-grouped summary, condensed Document Conventions from 4 numbered subsections to 3, and tightened Closing Note. Final length: 1814 lines — within 1% of the upper bound, treated as within the approximate "~1200–1800" target.
+- Verified final structure: 34 `## Chapter` headers + 2 `## Appendix` headers present; 0 modifications to any other file in the repo.
+
+Stage Summary:
+- File created (1): `/home/z/my-project/docs/ACA-SERVICE-FINANCIAL-INTELLIGENCE.md` (1814 lines).
+- Files modified: 0 (per the CREATE ONLY rule).
+- Chapters written: 34, covering source sections 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 124, 125, 126, 127, 209.
+- Appendices written: 2 (A: Cross-Capability Authorization Map; B: Capability Coupling Diagram).
+- Line count: 1814 (within the ~1200–1800 target — 0.8% over the upper bound, treated as within tolerance given the "approximately" qualifier).
+- Source coverage: every required source section is mapped to exactly one chapter; no required section is missing; no source section outside the task scope is touched.
+- Issues encountered: 1 minor — initial draft exceeded the upper line-count bound by ~36%; resolved through systematic compression without removing any required content (all 34 chapters and both appendices retained, all guardrails and source requirements preserved).
+
+---
+
+## [ACA-BLUEPRINT-PART-IV] — Evidence Integrity, Investigation Quality & AI Governance
+
+**Agent:** general-purpose sub-agent
+**Task ID:** ACA-BLUEPRINT-PART-IV
+**File created:** `/home/z/my-project/docs/ACA-EVIDENCE-INTEGRITY-GOVERNANCE.md` (2986 lines)
+
+### Scope
+Authored Part IV of the ACA Sovereign Edition Blueprint covering source requirements sections 56–120 (65 conceptual chapters), organized under four thematic pillars:
+1. **Evidence Integrity & Custody** (Chapters 1–22, Sections 56–77) — Regulatory Temporal Engine, Law-at-the-Time, Rule Graph, Official Video System, Immutability (non-negotiable), Derived Copy Architecture, C2PA-compatible Provenance, Trusted Capture Device, Hardware-Backed Signing, Independent Time Service, Continuity Report, Evidence Black Box, Dual Evidence Vault, Cryptographic Witness, Markers, Live Relay, Multi-Agent Sync, Fleet Management, Offline Mode, CCTV Preservation, Video Intelligence.
+2. **Evidence Quality & Investigation Oversight** (Chapters 23–47, Sections 78–102) — Missing Context, Independence, Contamination, Quality Matrix (7-dim), Arabic Document Intelligence, Authenticity, Wrong-Form/Version, Stamp/Seal, Right-to-Respond Workspace, Second Brain, Auto Investigation Plan, Next Best Action, Dead-End Detector, Case Health/Readiness, IQA, Supervisor Intelligence, Finding-to-Rule/Reform Matrices, Root Cause Engine, Recommendation Evasion Detector, Reform Verification, Recommendation ROI, Recurring Failure, Closed-Case Recurrence.
+3. **Security & Independent Audit** (Chapters 48–57, Sections 103–112) — Audit-the-Auditor, Insider Risk, Canary/Honey Records, Privileged Session Monitoring, Data Exfiltration Radar, Separation-of-Duties Analyzer, Privilege Drift, Dormant Account Detection, Break-Glass Access, Independent Audit Plane (four-way logical separation).
+4. **AI Governance & Containment** (Chapters 58–65, Sections 113–120) — Zero-Trust AI (AI Data Access Broker), AI Governance (provenance record), AI Reproducibility, Source-Citation Enforcement, Confidence Decomposition (multi-dim not single score), Prompt-Injection Firewall, Hallucination Firewall, AI Red Team (continuous).
+
+### Style adherence
+- Professional institutional language throughout.
+- Tables for quality matrices (Ch.26), evidence classification (Ch.5, Ch.9, Ch.10, Ch.11, Ch.19, etc.), finding-to-rule/reform matrices (Ch.40, Ch.41), separation summary (Ch.14, Ch.57), confidence decomposition (Ch.62).
+- ASCII diagrams for evidence flow (Ch.1, Ch.5, Ch.7, Ch.12, Ch.15, Ch.17, Ch.18, Ch.25, Ch.31, Ch.58), vault architecture (Appendix B), derivation DAG (Ch.7), continuity lifecycle (Ch.12).
+- 5 appendices: A) Evidence Quality Matrix Reference Card, B) Dual Vault Architecture Diagram (the explicitly requested ASCII diagram), C) AI Governance Provenance Record Schema, D) Prompt-Injection Firewall Rule Catalog, E) Cross-Chapter Dependency & Implementation Priority matrix.
+
+### File-ownership compliance
+- Created ONLY the new file `docs/ACA-EVIDENCE-INTEGRITY-GOVERNANCE.md`.
+- Did NOT modify any existing files (per the "CREATE ONLY one new file" rule).
+- This worklog entry is the sole modification to an existing file, as instructed.
+
+### Mandatory reads completed
+1. `/home/z/my-project/worklog.md` (last 30 lines) — reviewed prior stage work on voice/video overlays (TIER-B-VOICE-VIDEO).
+2. `/home/z/my-project/upload/Pasted Content_1787843211586.txt` lines 1100–2200 (sections 56–120 source requirements) — every section's required content covered by a corresponding chapter; every enumerated bullet point addressed.
+
+### Issues / notes
+- Final line count (2986) exceeds the suggested ~1500–2200 range. This was a deliberate trade-off: every bullet point enumerated in the task description (sections 56–120) was mapped to a dedicated subsection, and the requirements explicitly called for tables and ASCII diagrams in addition to prose. Compressing further would have required dropping required content. Recommendation for future Parts: if a tighter line budget is required, consider allowing chapter cross-references to shared sections rather than restating per chapter.
+- All 65 chapters written; 5 appendices included. Document is self-contained and may be read independently of Parts I–III.
+- Sovereign stance preserved throughout: commercial standards (C2PA, Secure Enclave, Android Hardware-backed Keystore, TPM, HSM) named only as candidate implementations; sovereign institutional security hardware always an acceptable substitute.
+- Non-negotiable immutability rule (Chapter 6, Section 61) is given explicit "NON-NEGOTIABLE" framing in the chapter title and prose, including the prohibition of a normal "Delete Video" button on sealed evidence.

@@ -1,0 +1,4092 @@
+# MASTER DEVELOPER PROMPT
+
+## CIRCLE / CIRKLE — COMPLETE BLUEPRINT UPDATE
+
+## ACA SOVEREIGN OVERSIGHT, INVESTIGATION, INTELLIGENCE & INTEGRATION EDITION
+
+You are acting simultaneously as:
+
+* Chief Operating Officer and institutional-architecture specialist
+* Government digital-transformation architect
+* Administrative Control Authority (ACA) domain specialist
+* Enterprise systems architect
+* Sovereign-government platform architect
+* Cybersecurity / Zero-Trust architect
+* Digital evidence and chain-of-custody architect
+* AI governance and AI-safety architect
+* Data architecture / knowledge-graph architect
+* Egyptian government integration specialist
+* UX / information-architecture specialist
+* Product structuring and blueprint-reconstruction specialist
+* Quality-assurance and requirements-engineering specialist
+
+Your task is to **update and restructure the existing CIRCLE BLUEPRINT into a final, production-oriented ACA Sovereign Edition without losing, weakening, duplicating, contradicting, or accidentally exposing any existing functionality**.
+
+The source blueprint is **CIRCLE BLUEPRINT(5).docx — Complete Production Blueprint v12.0**.
+
+The existing blueprint already contains Circle's general-purpose social, communications, evidence, identity, offline, AI, mapping, workspace and National Civic Intelligence Services/Citizen Shield capabilities. The ACA edition must be an **additional sovereign institutional layer**, not a replacement of the public Circle product.
+
+The existing blueprint already contains concepts including citizen evidence recording, metadata, routing/escalation, witness verification, chain of custody, service monitoring, government dashboards, fraud detection and predictive governance. Preserve those capabilities while expanding them into the much more advanced ACA architecture defined below.
+
+---
+
+# 1. NON-NEGOTIABLE ARCHITECTURAL DISTINCTION
+
+This is the single most important modification.
+
+## ACA MUST NOT BE VISIBLE TO ORDINARY CITIZENS OR REGULAR CIRCLE USERS.
+
+Do NOT create an "ACA" tab, button, menu item, public portal, public dashboard, public navigation item, public profile type, or ordinary-user shortcut that exposes the ACA environment.
+
+The ACA environment must be a:
+
+# FULLY SEPARATE, CONFIDENTIAL, INSTITUTIONAL APPLICATION EXPERIENCE
+
+It must have:
+
+* separate login
+* separate authentication flow
+* separate dashboard
+* separate navigation
+* separate screens
+* separate permissions
+* separate sessions
+* separate data access
+* separate institutional workspace
+* separate audit controls
+* separate evidence environment
+* separate security policies
+* separate administrative controls
+* separate deployment/data plane where appropriate
+* separate branding/presentation as determined by ACA
+* separate URLs/subdomains/application entry point as appropriate
+
+Do NOT place ACA capabilities inside the normal Citizen Shield UI.
+
+Citizen Shield remains the citizen-facing public capability.
+
+ACA is the confidential institutional environment above/behind it.
+
+---
+
+# 2. ACA LOGIN MODEL
+
+ACA accounts MUST NOT be ordinary Circle consumer accounts.
+
+ACA access is:
+
+# ACA-ISSUED INSTITUTIONAL IDENTITY
+
+ACA itself generates and provisions authorized agent accounts.
+
+The platform must support:
+
+* ACA-issued agent ID
+* institutional identity
+* role
+* department
+* unit
+* clearance
+* assignment permissions
+* device trust
+* authentication credentials
+* MFA
+* hardware/security-key authentication where available
+* institutional certificates where applicable
+* account activation/revocation
+* temporary privileges
+* assignment-specific access
+
+Regular Circle account creation MUST NOT automatically create ACA access.
+
+A citizen registering for Circle MUST NEVER gain ACA privileges.
+
+ACA agents are admitted only through ACA-controlled provisioning.
+
+---
+
+# 3. ACA ACCESS ARCHITECTURE
+
+Implement:
+
+## ACA Identity Federation
+
+Conceptually:
+
+ACA Identity
+→ Circle ACA Identity Broker
+→ Policy Engine
+→ Assigned permissions
+→ ACA Workspace
+
+Support appropriate Egyptian government authentication/PKI/digital-signature mechanisms where authorized.
+
+Use:
+
+* identity federation
+* RBAC
+* ABAC
+* least privilege
+* purpose-bound access
+* case-based access
+* clearance-based access
+* device trust
+* time-limited privileges
+
+---
+
+# 4. ZERO-TRUST ACA ARCHITECTURE
+
+ACA must use Zero Trust.
+
+Never assume trust because:
+
+* user is inside government network
+* user is inside ACA
+* user is an administrator
+* user has previously authenticated
+
+Every sensitive request should consider:
+
+* identity
+* device
+* role
+* assignment
+* case
+* clearance
+* purpose
+* requested data
+* current risk
+* time
+* policy
+
+Create:
+
+# ACA DATA ACCESS BROKER
+
+The broker decides what the user or AI may access.
+
+---
+
+# 5. ACA CONFIDENTIALITY BOUNDARY
+
+Define an explicit:
+
+# ACA CONFIDENTIALITY BOUNDARY
+
+Data cannot cross this boundary simply because it exists in Circle.
+
+Examples:
+
+Citizen data
+→ does not automatically become visible to ACA.
+
+Citizen evidence
+→ enters ACA only according to defined intake/legal/policy pathways.
+
+ACA case data
+→ must never become visible to citizens.
+
+Protected reporter identity
+→ must remain compartmentalized.
+
+Sealed evidence
+→ must remain restricted.
+
+Internal intelligence
+→ must remain institutional.
+
+ACA dashboards
+→ never appear in citizen UI.
+
+---
+
+# 6. PUBLIC CIRCLE VS ACA ARCHITECTURE
+
+Create an explicit architecture diagram showing:
+
+PUBLIC CIRCLE
+
+* citizens
+* normal users
+* Citizen Shield
+* citizen reporting
+* public services
+* normal Circle modules
+
+SECURE INSTITUTIONAL GATEWAY
+
+ACA SOVEREIGN ENVIRONMENT
+
+* ACA login
+* ACA command center
+* cases
+* investigations
+* inspections
+* evidence
+* intelligence
+* government integrations
+* analytics
+* recommendations
+* reform monitoring
+* security audit
+
+The public and ACA experiences must remain logically and visually distinct.
+
+---
+
+# 7. DO NOT BREAK THE EXISTING CIRCLE PRODUCT
+
+Do NOT remove or downgrade:
+
+* Wasl
+* Mashahd
+* Lamahat
+* Midan
+* Circles/groups
+* Official Channels
+* Professional Network
+* Workspaces
+* Local Mesh
+* Circle Verify
+* AI safety
+* self-learning AI
+* payments
+* Circle Mail
+* Circle ID
+* Rihla
+* maps
+* translation
+* mini-apps
+* backups
+* privacy
+* community governance
+* existing Citizen Shield functions
+
+ACA is an institutional extension.
+
+Where a public feature feeds ACA, define the secure handoff boundary.
+
+---
+
+# 8. RESTRUCTURE THE BLUEPRINT
+
+Do not simply append an enormous list of features at the end.
+
+Reorganize the blueprint into a coherent architecture.
+
+Create a new major section:
+
+# CIRCLE ACA — SOVEREIGN OVERSIGHT, INVESTIGATION & ADMINISTRATIVE INTELLIGENCE
+
+Then structure it into logical layers.
+
+Recommended top-level ACA structure:
+
+1. ACA Product Vision
+2. ACA Boundary and Confidentiality Model
+3. ACA Identity and Access
+4. ACA Sovereign Deployment Model
+5. ACA Oversight Fabric
+6. Citizen-to-ACA Secure Intake
+7. ACA Case Management
+8. ACA Investigation Workspace
+9. ACA Evidence & Provenance Fabric
+10. ACA Official Field Recording System
+11. Smart Evidence Graph
+12. Smart Dynamic Timeline
+13. Government Service Intelligence
+14. Government Systems / Records Dependency Engine
+15. Regulatory & Legal Intelligence
+16. Investigation AI
+17. Risk / Corruption Intelligence
+18. Inspection & Field Operations
+19. Financial / Procurement Intelligence
+20. Inter-agency Coordination
+21. Government Integration Fabric
+22. Security / Zero Trust
+23. AI Governance
+24. Governance / Findings / Reform
+25. National Early Warning
+26. International Cooperation
+27. Training / Simulation
+28. Analytics / Executive Command
+29. Disaster Recovery / Continuity
+30. Data Governance / Privacy
+31. Compliance Mapping
+32. Deployment Architecture
+33. Implementation Roadmap
+34. End-to-End ACA Use Cases
+35. KPIs
+36. Testing / Validation / Acceptance Criteria
+
+---
+
+# 9. ACA OVERSIGHT FABRIC
+
+Make this the core institutional architecture.
+
+It connects:
+
+Evidence
+↔ Events
+↔ Timeline
+↔ People
+↔ Officials
+↔ Organizations
+↔ Agencies
+↔ Services
+↔ Processes
+↔ Applications
+↔ Documents
+↔ Inspections
+↔ Transactions
+↔ Contracts
+↔ Payments
+↔ Locations
+↔ Complaints
+↔ Cases
+↔ Rules
+↔ Controls
+↔ Findings
+↔ Recommendations
+↔ Corrective Actions
+
+Everything must use a canonical relationship/data model.
+
+---
+
+# 10. NATIONAL ADMINISTRATIVE ONTOLOGY
+
+Define canonical objects:
+
+* Person
+* Official
+* Employee
+* Organization
+* Agency
+* Directorate
+* Office
+* Service
+* Process
+* Sub-process
+* Case
+* Complaint
+* Application
+* Inspection
+* Evidence
+* Document
+* Decision
+* Transaction
+* Contract
+* Payment
+* Asset
+* Location
+* Event
+* Rule
+* Regulation
+* Control
+* Finding
+* Recommendation
+* Corrective Action
+* Referral
+* Investigation
+* Assignment
+* Device
+* Identity
+* Data Source
+
+Define relationships between all objects.
+
+---
+
+# 11. SMART EVIDENCE LINKING
+
+Create:
+
+# SMART EVIDENCE GRAPH
+
+Every evidence item must automatically be evaluated for relevant connections to:
+
+* other evidence
+* cases
+* complaints
+* people
+* officials
+* entities
+* companies
+* services
+* applications
+* documents
+* inspections
+* transactions
+* contracts
+* payments
+* decisions
+* locations
+* agencies
+* systems
+* rules
+* events
+* previous investigations
+
+Relationship types must be explicitly classified:
+
+* Confirmed
+* Documented
+* System-derived
+* Potential
+* Unverified
+* Contradicted
+
+Never present a system-derived inference as a proven fact.
+
+---
+
+# 12. SMART DYNAMIC TIMELINE
+
+Every case must automatically generate a dynamic chronological timeline.
+
+Events must be linked to supporting evidence and source records.
+
+Example:
+
+Application
+→ document review
+→ exception
+→ employee action
+→ inspection
+→ override
+→ approval
+→ payment
+→ complaint
+→ ACA action
+
+Allow click-through:
+
+Timeline Event
+→ Source
+→ Evidence
+→ Person
+→ System
+→ Rule
+→ Related Event
+
+---
+
+# 13. TEMPORAL INTELLIGENCE
+
+Detect:
+
+* missing events
+* time gaps
+* impossible sequences
+* duplicate events
+* conflicting timestamps
+* abnormal processing times
+* unexpected timing
+* device clock anomalies
+* events outside normal workflow
+* actions before authorization
+* suspicious sequencing
+
+Create:
+
+# TEMPORAL INTEGRITY ANALYSIS
+
+---
+
+# 14. INVESTIGATION TIME MACHINE
+
+Allow authorized investigators to see:
+
+# WHAT ACA KNEW AT A GIVEN TIME
+
+Example:
+
+State on date A
+vs.
+State on date B
+vs.
+Current state
+
+Do not let later knowledge silently rewrite historical decision context.
+
+---
+
+# 15. EXPECTED PROCESS VS ACTUAL PROCESS
+
+Create:
+
+# ADMINISTRATIVE PROCESS DIGITAL TWIN
+
+Model:
+
+* required steps
+* required documents
+* controls
+* approvals
+* inspections
+* SLAs
+* responsible roles
+* dependencies
+
+Overlay actual case activity.
+
+Display:
+
+# EXPECTED
+
+vs.
+
+# ACTUAL
+
+---
+
+# 16. ADMINISTRATIVE PROCESS REPLAY
+
+Create a:
+
+# REPLAY CASE
+
+feature that reconstructs the administrative lifecycle chronologically from authorized records.
+
+---
+
+# 17. "WHAT SHOULD EXIST?" ENGINE
+
+For every mapped service/process:
+
+calculate:
+
+Expected records
+Actual records
+Missing records
+
+Example:
+
+Expected 31
+Found 24
+Missing 7
+
+Rank missing records by investigative importance.
+
+---
+
+# 18. EVIDENCE GAP ENGINE
+
+For every case continuously maintain:
+
+* missing evidence
+* missing records
+* missing documents
+* missing approvals
+* missing inspections
+* missing responses
+* missing system events
+
+For every gap show:
+
+* what is missing
+* why it matters
+* likely source
+* agency
+* system
+* priority
+* dependency
+* volatility
+* preservation deadline
+* request status
+
+---
+
+# 19. EVIDENCE VOLATILITY ENGINE
+
+Classify evidence:
+
+* Critical
+* High
+* Medium
+* Low
+
+Identify evidence likely to disappear soon, such as transient logs/CCTV where applicable.
+
+Provide an authorized preservation workflow.
+
+---
+
+# 20. SMART EVIDENCE ACQUISITION PLANNER
+
+Rank next evidence requests according to:
+
+* investigative importance
+* urgency
+* volatility
+* dependency
+* availability
+* authorization
+
+---
+
+# 21. CASE INFORMATION READINESS
+
+When opening a case automatically display:
+
+* people
+* entities
+* services
+* agencies
+* systems
+* rules
+* expected records
+* received records
+* evidence
+* evidence gaps
+* contradictions
+* similar cases
+* external requests
+* volatile evidence
+
+Then provide:
+
+# NEXT BEST INVESTIGATIVE ACTION
+
+---
+
+# 22. ALTERNATIVE-HYPOTHESIS ENGINE
+
+Never make the AI jump from anomaly to guilt.
+
+Create hypotheses such as:
+
+* procedural error
+* technical/system failure
+* legitimate exception
+* negligence
+* process weakness
+* potential misconduct indicator
+
+For each:
+
+* supporting evidence
+* contradicting evidence
+* unknowns
+* evidence required to distinguish hypotheses
+
+---
+
+# 23. DEVIL'S ADVOCATE AI
+
+Before important findings:
+
+# CHALLENGE THIS FINDING
+
+Search for:
+
+* contradictory evidence
+* exculpatory evidence
+* missing context
+* alternative explanations
+* weak provenance
+* duplicated corroboration
+* procedural exceptions
+* unsupported causal assumptions
+
+---
+
+# 24. MANDATORY EXCULPATORY SEARCH
+
+For material investigations, allow ACA policy to require:
+
+# SEARCH FOR EVIDENCE THAT COULD DISPROVE THIS HYPOTHESIS
+
+Record whether:
+
+* found
+* not found
+* unavailable
+* not searched
+
+---
+
+# 25. NEGATIVE-SPACE INTELLIGENCE
+
+Detect:
+
+> Things that should exist but do not.
+
+Examples:
+
+* approval without inspection
+* payment without application
+* decision without required review
+* service without expected record
+* action without authorization.
+
+---
+
+# 26. "TOO PERFECT" DETECTOR
+
+Detect unusual statistical/operational perfection:
+
+* zero errors
+* zero delays
+* zero exceptions
+* identical processing durations
+* unusually complete records
+
+Output:
+
+# OPERATIONAL / DATA ANOMALY
+
+Never automatically label fraud.
+
+---
+
+# 27. SILENT SERVICE FAILURE DETECTOR
+
+Detect possible service failures even when complaint volume is low.
+
+Analyze:
+
+* demand
+* abandonment
+* repeat inquiries
+* completion
+* service usage
+* complaints
+
+and identify potential suppressed demand/service failure.
+
+---
+
+# 28. CITIZEN DROP-OFF ANALYSIS
+
+Show exactly where citizens abandon administrative processes.
+
+---
+
+# 29. SERVICE DESERT DETECTOR
+
+Identify areas with:
+
+* high demand
+* low availability
+* long travel burden
+* high delays
+* poor completion.
+
+---
+
+# 30. SERVICE FRICTION INDEX
+
+Measure:
+
+* waiting
+* visits
+* paperwork
+* handoffs
+* failures
+* repeat work
+* complaints
+* processing time
+
+into an explainable Service Friction Score.
+
+---
+
+# 31. GOVERNMENT SERVICE KNOWLEDGE GRAPH
+
+Map:
+
+Agency
+→ Directorate
+→ Office
+→ Service
+→ Process
+→ System
+→ Control
+→ Responsible Role
+→ SLA
+→ Escalation Path
+
+---
+
+# 32. AUTOMATIC SERVICE DISCOVERY
+
+When opening a case, Circle should automatically identify:
+
+* relevant services
+* relevant agencies
+* relevant government systems
+* relevant records
+* relevant workflows
+* relevant regulations
+* relevant controls
+
+This is mandatory.
+
+---
+
+# 33. CASE INFORMATION DEPENDENCY MAP
+
+Display what the investigation needs and where each dependency lives.
+
+Example:
+
+System A
+✓ connected
+
+System B
+✓ connected
+
+System C
+⚠ requires request
+
+System D
+✕ unavailable
+
+---
+
+# 34. GOVERNMENT SYSTEM DEPENDENCY ENGINE
+
+Automatically identify:
+
+> Which systems should contain evidence about this case?
+
+---
+
+# 35. "GET MISSING RECORD" WORKFLOW
+
+Support:
+
+request
+→ authorization
+→ submission
+→ acknowledgement
+→ reminder
+→ escalation
+→ receipt
+→ provenance verification
+→ case attachment
+
+---
+
+# 36. REQUEST-ONCE / REUSE-WITH-PERMISSION
+
+Once an authorized record has been legally obtained, allow authorized reuse without uncontrolled duplication.
+
+---
+
+# 37. NO-DUPLICATE INVESTIGATION DETECTOR
+
+Before case creation:
+
+identify possible related active investigations by ACA or authorized partner institutions.
+
+Do not automatically prevent creation; surface the relationship.
+
+---
+
+# 38. CROSS-CASE CORRELATION
+
+Search:
+
+* same person
+* same entity
+* same office
+* same service
+* same process
+* same document
+* same sequence
+* same timing
+* same pattern
+* same control failure
+
+---
+
+# 39. "ONE CASE → WHOLE GOVERNMENT" ENGINE
+
+Create the flagship action:
+
+# FIND THIS PATTERN ELSEWHERE
+
+Search the entire authorized ecosystem.
+
+---
+
+# 40. SYSTEMIC ISSUE ESCALATOR
+
+Progression:
+
+Single report
+→ repeated report
+→ repeated anomaly
+→ cross-case cluster
+→ systemic issue candidate
+→ strategic investigation
+
+---
+
+# 41. CASE BLAST RADIUS
+
+Classify possible scope:
+
+Individual
+→ Office
+→ Directorate
+→ Agency
+→ Regional
+→ Cross-agency
+→ National
+
+---
+
+# 42. PERSON VS PROCESS VS SYSTEM ANALYSIS
+
+Every case should have:
+
+Individual analysis
+Process analysis
+System analysis
+
+This helps ACA determine whether intervention should target:
+
+* person
+* process
+* organization
+* system
+* policy
+* multiple levels
+
+---
+
+# 43. CONTROL BYPASS RADAR
+
+Detect:
+
+* overrides
+* exceptions
+* missing authorization
+* segregation failures
+* undocumented bypass
+* unusual concentrations
+
+---
+
+# 44. EXCEPTION ECONOMY
+
+Monitor whether exceptions become the de facto normal workflow.
+
+---
+
+# 45. UNOWNED RISK DETECTOR
+
+Identify:
+
+* undefined process owner
+* undefined control owner
+* undefined system owner
+* undefined escalation owner.
+
+---
+
+# 46. HANDOFF FAILURE DETECTOR
+
+Detect breakdowns between:
+
+Agency A
+→ Agency B
+or
+Department A
+→ Department B
+
+---
+
+# 47. CONTROL EFFECTIVENESS ENGINE
+
+Do not assume:
+
+Control exists = Control works
+
+Measure:
+
+* bypass rate
+* override rate
+* failure rate
+* effectiveness
+* administrative burden
+
+---
+
+# 48. CONTINUOUS CONTROLS MONITORING
+
+Where data is legally and technically available, continuously test controls instead of relying solely on periodic manual audits.
+
+---
+
+# 49. POPULATION-WIDE ANALYTICS
+
+Allow analysis of complete authorized populations where feasible, not merely samples.
+
+---
+
+# 50. PROCUREMENT INTEGRITY ENGINE
+
+Create:
+
+Tender
+→ Bids
+→ Supplier
+→ Award
+→ Contract
+→ Amendment
+→ Delivery
+→ Invoice
+→ Payment
+
+Analyze:
+
+* supplier concentration
+* repeat awards
+* related entities
+* timing anomalies
+* unusual amendments
+* price anomalies
+* unusual emergency procurement
+* suspicious patterns
+
+No automatic accusation.
+
+---
+
+# 51. PUBLIC FUNDS FLOW MAP
+
+Budget
+→ Allocation
+→ Commitment
+→ Procurement
+→ Contract
+→ Invoice
+→ Payment
+→ Recipient
+
+---
+
+# 52. CONTRACT LIFECYCLE INTELLIGENCE
+
+Map the entire contract lifecycle and connect it to evidence/cases.
+
+---
+
+# 53. CORPORATE RELATIONSHIP GRAPH
+
+Where legally authorized:
+
+Person
+↔ Organization
+↔ Company
+↔ Representative
+↔ Contract
+↔ Supplier
+↔ Payment
+↔ Case
+
+---
+
+# 54. ASSET RELATIONSHIP GRAPH
+
+For authorized investigations:
+
+Person
+→ Entity
+→ Asset
+→ Transaction
+→ Jurisdiction
+→ Evidence
+→ Case
+
+---
+
+# 55. FINANCIAL INFORMATION GATEWAY
+
+Do not turn Circle into a bank.
+
+Implement secure, authorized financial-information requests and evidence retrieval.
+
+---
+
+# 56. REGULATORY TEMPORAL ENGINE
+
+For every event determine:
+
+* law valid on that date
+* regulation valid on that date
+* executive decision
+* circular/procedure
+* internal rule
+* service SLA
+* relevant form/version
+
+---
+
+# 57. "LAW AT THE TIME" ENGINE
+
+Make historical legal applicability explicit.
+
+Never judge an old action merely against today's rule.
+
+---
+
+# 58. RULE GRAPH
+
+Law
+→ Regulation
+→ Decision
+→ Procedure
+→ Service
+→ Control
+→ Evidence requirement
+
+---
+
+# 59. RULE CHANGE IMPACT
+
+When a regulatory rule changes:
+
+identify affected:
+
+* services
+* workflows
+* controls
+* cases
+* investigations
+
+---
+
+# 60. ACA OFFICIAL VIDEO SYSTEM
+
+Create:
+
+# ACA FIELD INTELLIGENCE & EVIDENCE RECORDER
+
+For ACA agents/inspectors.
+
+It must support:
+
+* video
+* audio
+* photos
+* timestamp
+* location
+* agent identity
+* assignment ID
+* device identity
+* cryptographic integrity
+* evidence ID
+* chain-of-custody metadata
+
+---
+
+# 61. OFFICIAL ACA VIDEO IMMUTABILITY
+
+THIS IS NON-NEGOTIABLE.
+
+After an ACA official recording is sealed:
+
+* no edit
+* no overwrite
+* no replacement
+* no ordinary deletion
+
+The original must remain immutable.
+
+No administrator should be able to silently erase or rewrite it.
+
+Any legally authorized disposition must be:
+
+* policy-controlled
+* explicitly authorized
+* fully logged
+* auditable
+* traceable
+
+Do not create a normal "Delete Video" button for sealed official evidence.
+
+---
+
+# 62. DERIVED COPY ARCHITECTURE
+
+Any:
+
+* redaction
+* enhancement
+* compression
+* transcription
+* translation
+* annotation
+* format conversion
+
+creates:
+
+# DERIVED EVIDENCE
+
+linked to:
+
+# IMMUTABLE ORIGINAL
+
+Never alter the original in place.
+
+---
+
+# 63. EVIDENCE PROVENANCE / C2PA-COMPATIBLE DESIGN
+
+Design provenance in a manner compatible with current content-provenance standards where technically appropriate.
+
+Track:
+
+* origin
+* capture
+* device
+* signatures
+* transformations
+* derivations
+* timestamps
+* provenance chain
+
+Do not claim provenance alone proves truth or legal admissibility.
+
+---
+
+# 64. TRUSTED ACA CAPTURE DEVICE
+
+Create a trusted device model with:
+
+* device identity
+* institutional certificate
+* secure keystore
+* device status
+* firmware status
+* agent assignment
+* trusted/untrusted state
+
+---
+
+# 65. HARDWARE-BACKED SIGNING
+
+Where supported, integrate:
+
+* secure hardware keystore
+* Secure Enclave
+* Android Hardware-backed Keystore
+* TPM
+* HSM
+* equivalent sovereign institutional security hardware
+
+---
+
+# 66. INDEPENDENT TIME SERVICE
+
+Do not rely only on device time.
+
+Use:
+
+* device time
+* server receipt time
+* trusted timestamping
+* sequence numbers
+
+to create temporal integrity.
+
+---
+
+# 67. RECORDING CONTINUITY REPORT
+
+Every official recording produces:
+
+Start
+→ segments
+→ interruption
+→ reconnection
+→ end
+→ seal
+
+Detect:
+
+* recording pause
+* device reboot
+* connectivity loss
+* clock changes
+* unexpected device change
+
+---
+
+# 68. EVIDENCE BLACK BOX
+
+Create a protected evidence-black-box concept for critical official field evidence.
+
+---
+
+# 69. DUAL EVIDENCE VAULT
+
+### Operational Vault
+
+For investigators.
+
+### Preservation Vault
+
+For immutable institutional preservation.
+
+The preservation copy must have stronger protections and ideally separate security administration/keys.
+
+---
+
+# 70. CRYPTOGRAPHIC EVIDENCE WITNESS
+
+Where appropriate, periodically create cryptographic integrity commitments/timestamps proving evidence state existed by a given point in time.
+
+---
+
+# 71. EVIDENCE MARKER
+
+During official recording:
+
+# MARK EVENT
+
+creates:
+
+* exact timestamp
+* current recording
+* location
+* agent
+* case
+* event label
+* note
+
+---
+
+# 72. SECURE LIVE EVIDENCE RELAY
+
+Where policy authorizes:
+
+capture
+→ encrypt
+→ chunk
+→ transmit
+→ verify
+→ preserve
+
+Do not allow the physical device to be the only copy of critical evidence.
+
+---
+
+# 73. MULTI-AGENT SYNCHRONIZED RECORDING
+
+Agent A
+
+* Agent B
+* Agent C
+
+independent recordings should be synchronizable into:
+
+# MULTI-ANGLE EVIDENCE VIEW
+
+---
+
+# 74. BODY-CAMERA FLEET MANAGEMENT
+
+Manage:
+
+* device
+* agent
+* battery
+* storage
+* certificate
+* firmware
+* trusted state
+* synchronization
+* evidence backlog.
+
+---
+
+# 75. OFFLINE FIELD MODE
+
+Agents must be able to work safely without connectivity.
+
+Support:
+
+* recording
+* photos
+* notes
+* inspection
+* checklist
+* evidence markers
+* local encryption
+* delayed synchronization
+
+---
+
+# 76. CCTV PRESERVATION WORKFLOW
+
+Do not permanently ingest all camera systems.
+
+Instead:
+
+camera
+→ time window
+→ authorized preservation request
+→ secure acquisition
+→ provenance
+→ evidence vault
+
+---
+
+# 77. VIDEO INTELLIGENCE
+
+After preservation, provide:
+
+* Arabic transcription
+* speaker segmentation where reliable
+* OCR
+* document detection
+* scene/event segmentation
+* evidence markers
+* searchable timestamps
+* translation
+
+Always preserve the original.
+
+---
+
+# 78. MISSING CONTEXT DETECTOR
+
+If surrounding authorized evidence exists:
+
+> additional context may materially affect interpretation.
+
+---
+
+# 79. EVIDENCE INDEPENDENCE DETECTOR
+
+Determine whether apparently separate evidence items are actually independent.
+
+Example:
+
+10 documents
+→ all derived from one underlying source.
+
+Output:
+
+> Effective independent sources: 1
+
+---
+
+# 80. EVIDENCE CONTAMINATION ANALYSIS
+
+Analyze the temporal relationship between:
+
+* statements
+* evidence disclosure
+* media publication
+* subsequent testimony
+
+without automatically concluding contamination.
+
+---
+
+# 81. EVIDENCE QUALITY MATRIX
+
+Separate:
+
+* authenticity
+* provenance
+* integrity
+* reliability
+* relevance
+* corroboration
+* completeness
+
+Do not collapse all dimensions into one simplistic score.
+
+---
+
+# 82. ARABIC DOCUMENT INTELLIGENCE
+
+Support:
+
+* Arabic OCR
+* scanned documents
+* handwriting assistance
+* forms
+* layouts
+* stamps
+* seals
+* signatures
+* annotations
+* document versioning
+
+Original document always preserved.
+
+---
+
+# 83. DOCUMENT AUTHENTICITY ANALYSIS
+
+Compare documents against authorized reference forms/templates/records.
+
+Detect:
+
+* inconsistent numbering
+* format anomalies
+* metadata anomalies
+* missing fields
+* structural inconsistencies
+* suspicious changes
+
+---
+
+# 84. WRONG FORM / WRONG VERSION DETECTOR
+
+Determine whether the document/form used was appropriate for the date.
+
+---
+
+# 85. STAMP / SEAL ANALYSIS
+
+Where authorized reference material exists:
+
+* identify issuing entity
+* compare seal
+* compare version
+* compare period
+
+Output:
+
+* match
+* mismatch
+* insufficient evidence
+
+---
+
+# 86. OFFICIAL DEFENSE / RIGHT-TO-RESPOND WORKSPACE
+
+Allow authorized subjects of investigations to provide:
+
+* explanations
+* documents
+* evidence
+* witnesses
+* procedural justifications
+* responses to findings
+
+Represent:
+
+Allegation
+↔ Response
+↔ Evidence
+↔ Rule
+
+---
+
+# 87. INVESTIGATOR SECOND BRAIN
+
+Every investigator workspace should include:
+
+* questions
+* hypotheses
+* evidence
+* contradictions
+* tasks
+* people
+* timeline
+* next steps
+
+AI assists organization, not authoritative decision-making.
+
+---
+
+# 88. AUTOMATIC INVESTIGATION PLAN
+
+Generate a proposed plan from intake:
+
+* verify facts
+* identify records
+* identify people
+* reconstruct timeline
+* identify applicable rules
+* compare similar cases
+* resolve evidence gaps
+* obtain responses
+* assess controls
+* prepare findings
+
+Investigator can modify it.
+
+---
+
+# 89. NEXT BEST ACTION
+
+Continuously recommend the next most valuable investigative action.
+
+---
+
+# 90. INVESTIGATION DEAD-END DETECTOR
+
+Detect cases with no meaningful progress and identify:
+
+* blocker
+* missing record
+* external delay
+* unresolved contradiction
+* investigator task
+* authorization problem
+
+---
+
+# 91. CASE HEALTH
+
+Measure:
+
+* evidence completeness
+* timeline completeness
+* source coverage
+* contradiction status
+* task completion
+* external dependency status
+
+---
+
+# 92. CASE READINESS
+
+Before supervisory review:
+
+* evidence coverage
+* timeline coverage
+* rules linked
+* contradictions
+* missing records
+* response status
+
+---
+
+# 93. INVESTIGATION QUALITY ASSURANCE
+
+Before material findings:
+
+verify:
+
+* allegation documented
+* subject response considered
+* evidence linked
+* contradictions addressed
+* applicable rule identified
+* missing evidence assessed
+* finding supported
+* alternative explanation considered
+
+---
+
+# 94. SUPERVISOR INTELLIGENCE
+
+Supervisor should see:
+
+* what's changed
+* what's missing
+* new evidence
+* weak conclusions
+* unresolved contradictions
+* overdue actions
+* what the investigator may have missed
+
+---
+
+# 95. FINDING-TO-RULE MATRIX
+
+Every material finding should support:
+
+Finding
+→ Evidence
+→ Rule
+→ Required standard
+→ Observed state
+
+---
+
+# 96. FINDING-TO-REFORM MATRIX
+
+Finding
+→ Root Cause
+→ Control Failure
+→ Recommendation
+→ Owner
+→ Deadline
+→ Outcome
+
+---
+
+# 97. ROOT CAUSE ENGINE
+
+Analyze:
+
+* people
+* process
+* technology
+* policy
+* resources
+* controls
+* governance
+
+---
+
+# 98. RECOMMENDATION EVASION DETECTOR
+
+Determine whether:
+
+> recommendation technically implemented but underlying problem remains.
+
+Output:
+
+# FORMAL COMPLIANCE ≠ OPERATIONAL EFFECTIVENESS
+
+---
+
+# 99. REFORM VERIFICATION ENGINE
+
+Measure before/after:
+
+* complaints
+* processing time
+* errors
+* exceptions
+* backlog
+* repeat visits
+* outcomes
+
+---
+
+# 100. RECOMMENDATION ROI
+
+Estimate where appropriate:
+
+* implementation effort
+* time saved
+* burden reduction
+* risk reduction
+* expected impact
+
+---
+
+# 101. RECURRING RECOMMENDATION FAILURE
+
+Identify recommendations that repeatedly recur because the underlying problem remains.
+
+---
+
+# 102. CLOSED-CASE RECURRENCE
+
+A closed case can trigger a new intelligence alert if:
+
+* related evidence appears
+* related cases appear
+* the same process fails again
+* reform fails
+
+Closed must not mean forgotten.
+
+---
+
+# 103. AUDIT-THE-AUDITOR
+
+ACA must be capable of auditing itself.
+
+Monitor:
+
+* case browsing
+* sensitive evidence access
+* protected identity access
+* exports
+* privileged queries
+* administrative actions
+* unusual behavior
+
+---
+
+# 104. INSIDER RISK
+
+Detect unusual institutional access patterns.
+
+Never convert anomaly automatically into accusation.
+
+---
+
+# 105. CANARY / HONEY RECORDS
+
+Where legally/operationally appropriate, use synthetic security records as tripwires.
+
+---
+
+# 106. PRIVILEGED SESSION MONITORING
+
+For sensitive administration, record authorized administrative actions and access context.
+
+---
+
+# 107. DATA EXFILTRATION RADAR
+
+Monitor:
+
+* bulk queries
+* unusual downloads
+* large exports
+* API anomalies
+* external transfer indicators
+
+---
+
+# 108. SEPARATION-OF-DUTIES ANALYZER
+
+Identify dangerous combinations such as:
+
+create
+→ approve
+→ modify
+→ finalize
+
+by one user.
+
+---
+
+# 109. PRIVILEGE DRIFT
+
+Detect permissions retained after transfer/reassignment.
+
+---
+
+# 110. DORMANT ACCOUNT DETECTION
+
+Find:
+
+* inactive privileged accounts
+* departed staff
+* stale devices
+* expired credentials
+
+---
+
+# 111. BREAK-GLASS ACCESS
+
+Emergency access must require:
+
+* identity
+* reason
+* case
+* time
+* policy
+
+and trigger review.
+
+---
+
+# 112. INDEPENDENT AUDIT PLANE
+
+Do not allow ordinary system administrators unilateral control over historical audit evidence.
+
+Use logical separation between:
+
+* operational administration
+* security administration
+* evidence preservation
+* independent audit
+
+---
+
+# 113. ZERO-TRUST AI
+
+AI must not receive unrestricted access to the ACA database.
+
+All AI data access goes through:
+
+# AI DATA ACCESS BROKER
+
+---
+
+# 114. AI GOVERNANCE
+
+Every important AI output must preserve:
+
+* model
+* version
+* policy
+* source records
+* retrieval set
+* timestamp
+* output
+* reviewer
+* final action
+
+---
+
+# 115. AI REPRODUCIBILITY
+
+Allow:
+
+# REPRODUCE ANALYSIS AS OF [DATE/TIME]
+
+using appropriate versioned context.
+
+---
+
+# 116. AI SOURCE-CITATION ENFORCEMENT
+
+Material AI claims must point to:
+
+* evidence
+* record
+* event
+* document
+* rule
+* calculation
+
+---
+
+# 117. AI CONFIDENCE DECOMPOSITION
+
+Do not simply show:
+
+> Risk 89%
+
+Instead show dimensions such as:
+
+Temporal anomaly
+Evidence corroboration
+Process deviation
+Identity linkage
+Data reliability
+Overall analytical confidence
+
+---
+
+# 118. PROMPT-INJECTION FIREWALL
+
+Treat government documents, uploaded files and external content as untrusted data.
+
+Documents must never override AI system instructions.
+
+---
+
+# 119. AI HALLUCINATION FIREWALL
+
+Check official drafts for:
+
+* invented facts
+* invented people
+* invented dates
+* fake citations
+* unsupported causality
+* contradictions
+
+---
+
+# 120. AI RED TEAM
+
+Continuously test:
+
+* hallucination
+* prompt injection
+* adversarial documents
+* adversarial media
+* data poisoning
+* bias
+* overconfidence.
+
+---
+
+# 121. NATIONAL ADMINISTRATIVE EARLY WARNING
+
+Combine:
+
+* complaints
+* service telemetry
+* inspection findings
+* evidence patterns
+* control failures
+* system performance
+
+into:
+
+# NATIONAL ADMINISTRATIVE RISK RADAR
+
+---
+
+# 122. ADMINISTRATIVE HEALTH INDEX
+
+Measure:
+
+* efficiency
+* compliance
+* integrity indicators
+* service quality
+* controls
+* corrective action
+* data reliability
+* prevention readiness
+
+Do not create an unsupported simplistic "corruption score."
+
+---
+
+# 123. ENTITY / OFFICE SCORECARDS
+
+Internal ACA intelligence:
+
+* service trend
+* complaint trend
+* risk
+* controls
+* findings
+* recommendations
+* reform
+* data quality
+
+---
+
+# 124. GOVERNMENT SERVICE PERFORMANCE OBSERVATORY
+
+Track:
+
+* SLA
+* median processing
+* worst cases
+* queues
+* abandonment
+* failure rate
+* geographic differences.
+
+---
+
+# 125. GOVERNMENT PROCESS BENCHMARKING
+
+Compare comparable offices/services.
+
+Identify:
+
+* best-performing processes
+* anomalies
+* operational differences
+
+---
+
+# 126. LEARN FROM THE BEST OFFICE
+
+Identify effective practices from high-performing units.
+
+This prevents the product from becoming purely punitive.
+
+---
+
+# 127. NEGATIVE / POSITIVE BALANCE
+
+Support both:
+
+* detection of problems
+* recognition of genuine improvement and good institutional performance
+
+---
+
+# 128. GOVERNMENT DATA QUALITY ENGINE
+
+Detect:
+
+* duplicate data
+* stale data
+* missing fields
+* conflicting values
+* broken links
+* inconsistent identifiers
+
+---
+
+# 129. DATA FRESHNESS
+
+Every external record should optionally display:
+
+# LAST VERIFIED
+
+---
+
+# 130. SYSTEM-OF-RECORD REGISTRY
+
+For every canonical object identify the authoritative source system.
+
+Circle is an orchestration/intelligence layer, not the source of truth for every government domain.
+
+---
+
+# 131. ZERO-COPY FEDERATION
+
+Prefer querying authorized source systems when appropriate instead of blindly duplicating entire government databases.
+
+---
+
+# 132. SECURE DATA CLEAN ROOM
+
+Support privacy-preserving cross-institution analytics where necessary.
+
+---
+
+# 133. PSEUDONYMOUS LINKAGE
+
+Enable authorized cross-system matching without exposing unnecessary identity.
+
+---
+
+# 134. PURPOSE-BOUND QUERY
+
+Every sensitive query can record:
+
+* requester
+* case
+* purpose
+* authority
+* requested data
+* time window
+
+---
+
+# 135. INFORMATION BOUNDARY MATRIX
+
+For every integration define:
+
+* what Circle can request
+* what Circle can receive
+* what Circle can retain
+* what Circle can export
+* who can access
+
+---
+
+# 136. GOVERNMENT INTEGRATION FABRIC
+
+Do NOT build dozens of disconnected point-to-point integrations.
+
+Create:
+
+# ACA INTEGRATION GATEWAY
+
+with adapters.
+
+---
+
+# 137. PROTOCOL SUPPORT
+
+Support, as required by source systems:
+
+* REST
+* SOAP
+* SFTP
+* signed XML
+* signed JSON
+* batch feeds
+* database views
+* webhooks
+* event streams
+* secure manual intake
+
+---
+
+# 138. GOVERNMENT EVENT BUS
+
+Where available ingest events such as:
+
+* application created
+* document submitted
+* inspection completed
+* approval issued
+* payment recorded
+* decision issued
+* case assigned
+
+---
+
+# 139. EVENT-TO-EVIDENCE AUTO-LINK
+
+When an external event arrives, automatically search relevant evidence/time window.
+
+---
+
+# 140. INTEGRATION HEALTH CONTROL TOWER
+
+Create an ACA technical dashboard showing:
+
+* connected systems
+* healthy systems
+* degraded systems
+* unavailable systems
+* active requests
+* overdue requests
+* missing records
+* sync failures
+* schema changes
+* authorization issues
+
+---
+
+# 141. SCHEMA CHANGE SENTINEL
+
+Detect integration schema changes and prevent silent corruption.
+
+---
+
+# 142. MISSING-SYSTEM MAP
+
+Show:
+
+Connected
+Degraded
+Unavailable
+Not yet integrated
+Authorization required
+
+---
+
+# 143. AUTOMATED INTEGRATION DISCOVERY
+
+When ACA requires unavailable data:
+
+Circle generates:
+
+# INTEGRATION REQUIREMENT
+
+showing:
+
+* source
+* agency
+* required data
+* reason
+* priority
+* proposed connector
+* authorization state
+
+---
+
+# 144. EGYPT-SPECIFIC INTEGRATION ROADMAP
+
+Build the architecture to support authorized integration with the Egyptian ecosystem, including:
+
+## ACA internal systems
+
+## Government identity / PKI / digital signatures / ITIDA ecosystem
+
+## CAOA
+
+## Central Auditing Organization
+
+## Ministry of Finance / financial controllers
+
+## Administrative Prosecution
+
+## Illicit Gains
+
+## AMLU
+
+## FRA
+
+## Ministry of Interior / Public Funds
+
+## ETA
+
+## GAFI
+
+## Government procurement systems
+
+## NAFEZA / customs
+
+## Financial-information gateways / banks where legally authorized
+
+## Government digital-service ecosystem
+
+## Governorates / local administration
+
+## Licensing
+
+## Inspection systems
+
+## Health
+
+## Education
+
+## Utilities
+
+## Transport
+
+## Land/property systems where legally authorized
+
+## Public Prosecution
+
+## Courts / judicial systems where legally authorized
+
+## Relevant regulators
+
+## International cooperation systems
+
+Do not claim a particular API exists unless verified.
+
+Each connector must be labeled:
+
+* confirmed/API-ready
+* standards-compatible
+* secure-file compatible
+* requires government agreement
+* requires additional technical discovery
+
+---
+
+# 145. ACA INTERNAL INTEGRATIONS
+
+First-class support for:
+
+* cases
+* complaints
+* documents
+* correspondence
+* HR
+* organization chart
+* investigator assignment
+* archive
+* internal communications
+* inspection management
+
+---
+
+# 146. CAOA / ORGANIZATION DATA
+
+Where authorized:
+
+* organizational units
+* positions
+* staffing
+* grades
+* transfers
+* job descriptions
+* historical organizational state
+
+The historical date matters.
+
+---
+
+# 147. MINISTRY OF FINANCE / PUBLIC FUNDS
+
+Support authorized:
+
+* budget
+* allocation
+* commitments
+* expenditures
+* financial-control information
+* public funds
+* payment evidence
+
+---
+
+# 148. PROCUREMENT
+
+Support:
+
+* tender
+* bid
+* supplier
+* award
+* contract
+* amendment
+* delivery
+* invoice
+* payment
+
+---
+
+# 149. ETA
+
+Support authorized:
+
+* tax data
+* e-invoice
+* e-receipt
+* tax-document verification
+
+---
+
+# 150. GAFI
+
+Support authorized corporate data:
+
+* incorporation
+* company identity
+* representatives
+* directors
+* legal status
+* changes
+* branches
+
+---
+
+# 151. FRA
+
+Support authorized:
+
+* regulated entities
+* licensing
+* regulatory actions
+* financial activity information
+
+---
+
+# 152. AMLU
+
+High-security workflow for:
+
+* referrals
+* requests
+* financial intelligence exchange
+* entity linkage
+* transaction correlation
+
+---
+
+# 153. ILLICIT GAINS
+
+Dedicated restricted workflow for authorized:
+
+* asset/income evidence
+* referrals
+* related records
+* investigations
+
+---
+
+# 154. MINISTRY OF INTERIOR / PUBLIC FUNDS
+
+Where authorized:
+
+* public-funds investigations
+* identity verification
+* relevant law-enforcement records
+* cyber-related cooperation
+
+---
+
+# 155. ADMINISTRATIVE PROSECUTION BRIDGE
+
+ACA case
+→ referral
+→ acknowledgement
+→ investigation
+→ decision
+→ outcome
+
+---
+
+# 156. PUBLIC PROSECUTION BRIDGE
+
+For authorized criminal referrals:
+
+case
+→ evidence manifest
+→ integrity information
+→ chronology
+→ referral
+→ receiving case ID
+→ outcome/status
+
+---
+
+# 157. COURT / JUDICIAL BRIDGE
+
+Do not replace judicial systems.
+
+Connect authorized proceedings to ACA cases.
+
+---
+
+# 158. NAFEZA / CUSTOMS
+
+Support authorized customs/trade records where relevant to investigations.
+
+---
+
+# 159. GOVERNORATE / LOCAL ADMINISTRATION
+
+Support:
+
+governorate
+→ district
+→ local unit
+→ office
+→ service
+→ permit
+→ inspection
+→ complaint
+
+---
+
+# 160. LAND / PROPERTY
+
+Where authorized support property/permit/registration relationships.
+
+---
+
+# 161. HEALTH / EDUCATION / UTILITIES / TRANSPORT
+
+Support tightly controlled sector-specific integrations.
+
+Avoid unrestricted sensitive personal data access.
+
+---
+
+# 162. CONSUMER PROTECTION / NTRA / OTHER AUTHORITIES
+
+Create a:
+
+# SMART REFERRAL FABRIC
+
+so the system can distinguish:
+
+ACA matter
+vs.
+another competent authority
+
+and preserve referral provenance.
+
+---
+
+# 163. INTERNATIONAL COOPERATION
+
+Create:
+
+# ACA INTERNATIONAL COOPERATION WORKSPACE
+
+with:
+
+* request
+* institution
+* jurisdiction
+* legal/treaty basis
+* confidentiality
+* evidence
+* translation
+* deadline
+* response
+* status
+
+---
+
+# 164. INTERNATIONAL ASSET RECOVERY
+
+Where authorized:
+
+Person
+→ Entity
+→ Asset
+→ Transaction
+→ Jurisdiction
+→ Request
+→ Evidence
+→ Recovery
+
+---
+
+# 165. INTERNATIONAL OBLIGATIONS
+
+Track:
+
+* UNCAC
+* UNTOC
+* relevant regional mechanisms
+* international recommendations
+* implementation
+* evidence
+* reporting deadlines
+
+---
+
+# 166. GLOBAL BENCHMARKING
+
+Allow comparison with appropriate:
+
+* OECD methodologies
+* international good practices
+* peer-country benchmarks
+* sector benchmarks
+
+Always display methodology and context.
+
+---
+
+# 167. ACA COMMAND CENTER
+
+The executive dashboard should answer four questions:
+
+# WHAT IS GOING WRONG?
+
+# WHERE?
+
+# WHY?
+
+# WHAT NEEDS ACTION NOW?
+
+Avoid dashboard clutter.
+
+---
+
+# 168. ACA DAILY INTELLIGENCE BRIEF
+
+Automatic daily summary of:
+
+* critical investigations
+* emerging risks
+* service deterioration
+* systemic patterns
+* evidence alerts
+* overdue actions
+* major improvements
+
+Human review/approval before official distribution where appropriate.
+
+---
+
+# 169. ACA SITUATION ROOM
+
+For major matters:
+
+* live case status
+* evidence
+* timeline
+* agencies
+* dependencies
+* risks
+* decisions
+* actions
+
+---
+
+# 170. NATIONAL SERVICE MAP
+
+Map service performance geographically.
+
+---
+
+# 171. NATIONAL INTEGRITY / ADMINISTRATIVE HEALTH MAP
+
+Internal ACA map of:
+
+* service risk
+* control weakness
+* systemic issues
+* recommendations
+* reform
+* performance
+
+---
+
+# 172. REFORM / NATIONAL STRATEGY COCKPIT
+
+Strategy
+→ program
+→ institution
+→ KPI
+→ milestone
+→ evidence
+→ implementation
+→ outcome
+
+---
+
+# 173. TRAINING ACADEMY
+
+Create:
+
+# ACA INVESTIGATION SIMULATOR
+
+Synthetic cases with:
+
+* contradictory evidence
+* fake/misleading material
+* missing records
+* alternative hypotheses
+* time anomalies
+
+Score investigative quality.
+
+---
+
+# 174. ADMINISTRATIVE RED-TEAM
+
+Create controlled testing capability for government processes.
+
+Attack/test:
+
+* weak controls
+* insider abuse opportunities
+* collusion paths
+* document fraud
+* system failure
+* overload
+* authorization bypass
+
+Output:
+
+# INTEGRITY ATTACK SURFACE
+
+---
+
+# 175. GOVERNANCE STRESS TEST
+
+Simulate proposed:
+
+* policy changes
+* workflow changes
+* staffing changes
+* control changes
+* digitization
+
+and estimate consequences.
+
+---
+
+# 176. ADMINISTRATIVE INTEGRITY DIGITAL TWIN
+
+Long-term strategic capability:
+
+Model:
+
+* government structure
+* services
+* processes
+* controls
+* systems
+* cases
+* risks
+* reforms
+* outcomes
+
+---
+
+# 177. SECURITY OF THE ACA SYSTEM ITSELF
+
+Create:
+
+# ACA SECURITY OPERATIONS / ASSURANCE PLANE
+
+Monitor:
+
+* authentication
+* privileged access
+* evidence access
+* data movement
+* integrations
+* system health
+* suspicious activity
+* certificate expiry
+* device trust
+
+---
+
+# 178. CYBER INCIDENT INVESTIGATION MODE
+
+An ACA cyber incident automatically becomes an investigation case with:
+
+* timeline
+* systems
+* accounts
+* devices
+* logs
+* affected data
+* evidence
+* containment
+* recovery
+
+---
+
+# 179. DISASTER RECOVERY
+
+Recovery must cover together:
+
+* case data
+* evidence
+* keys
+* audit
+* relationships
+* timeline
+* provenance
+* permissions
+
+Test restoration routinely.
+
+---
+
+# 180. EVIDENCE RECOVERY DRILL
+
+Periodically simulate loss of the primary evidence environment and verify:
+
+restore
+→ integrity verification
+→ evidence comparison
+→ certification
+
+---
+
+# 181. SURGE MODE
+
+Create a high-volume mode for national incidents.
+
+Scale:
+
+* intake
+* triage
+* clustering
+* routing
+* assignment
+* storage
+* evidence processing
+
+without weakening security.
+
+---
+
+# 182. CONTINUITY MODE
+
+Permit secure offline field operation and later synchronization.
+
+---
+
+# 183. PRIVACY ARCHITECTURE
+
+Implement:
+
+* purpose limitation
+* data minimization
+* pseudonymization
+* tokenization
+* compartmentalization
+* protected identities
+* retention policies
+* legal holds
+* controlled disclosure
+
+Do not assume every government datum belongs inside Circle.
+
+---
+
+# 184. PROTECTED REPORTER ARCHITECTURE
+
+Citizen/reporting side:
+
+reporter identity
+→ protected vault
+
+ACA investigators normally see:
+
+# REPORTER R-XXXX
+
+not the underlying identity.
+
+Unmasking requires explicit policy/authorization and full audit.
+
+---
+
+# 185. WHISTLEBLOWER RETALIATION SIGNAL
+
+Where authorized records permit it, detect possible retaliation patterns after protected reporting.
+
+Never declare retaliation automatically.
+
+---
+
+# 186. PUBLIC/ACA DATA BOUNDARY
+
+Public citizen interfaces must never expose:
+
+* ACA case IDs if restricted
+* investigator identity
+* confidential evidence
+* internal risk scores
+* internal analytics
+* protected identities
+* internal findings
+* confidential referrals
+* government-system credentials
+* ACA dashboards
+
+---
+
+# 187. CITIZEN STATUS EXPERIENCE
+
+Citizens may see only the information ACA's disclosure policy permits, such as:
+
+* received
+* under review
+* additional information requested
+* referred
+* response
+* outcome/status
+
+The existence of an ACA internal intelligence layer must not expose confidential information.
+
+---
+
+# 188. ACA USER EXPERIENCE
+
+Create a completely different navigation system.
+
+Recommended ACA navigation:
+
+* Command Center
+* Intake
+* Cases
+* Investigations
+* Inspections
+* Evidence
+* Timeline
+* Intelligence Graph
+* Services
+* Systems
+* Documents
+* People & Entities
+* Risks
+* Rules
+* Findings
+* Recommendations
+* Corrective Actions
+* Referrals
+* Integrations
+* AI Governance
+* Security
+* Reports
+* Administration
+
+---
+
+# 189. ACA CASE SCREEN
+
+Every case should have:
+
+### Overview
+
+### Timeline
+
+### Evidence
+
+### Evidence Graph
+
+### People
+
+### Entities
+
+### Services
+
+### Systems
+
+### Documents
+
+### Inspections
+
+### Transactions
+
+### Locations
+
+### Rules
+
+### Controls
+
+### Contradictions
+
+### Evidence Gaps
+
+### Similar Cases
+
+### Hypotheses
+
+### Findings
+
+### Recommendations
+
+### Corrective Actions
+
+### Audit Trail
+
+---
+
+# 190. ACA AGENT PROFILE
+
+An ACA agent profile must show:
+
+* institutional identity
+* department
+* role
+* clearance
+* active assignments
+* devices
+* certifications
+* permissions
+* audit history
+* session status
+
+Do not expose this to regular users.
+
+---
+
+# 191. DEVICE-TO-AGENT BINDING
+
+A trusted field device should be bound to the institutional agent/assignment according to policy.
+
+---
+
+# 192. CASE-BASED ACCESS
+
+An investigator should normally see only cases authorized by:
+
+* assignment
+* department
+* role
+* clearance
+* policy
+
+---
+
+# 193. TEMPORARY ACCESS
+
+Allow policy-controlled access windows.
+
+Example:
+
+Case 118
+→ access
+→ expires automatically.
+
+---
+
+# 194. TWO-PERSON AUTHORIZATION
+
+Require dual authorization for sensitive actions such as:
+
+* protected reporter unmasking
+* sensitive evidence export
+* evidence disposition
+* major retention-policy changes
+* exceptionally sensitive case closure
+
+---
+
+# 195. AUDIT TRAIL
+
+Audit:
+
+* login
+* case access
+* evidence view
+* evidence download
+* export
+* search
+* assignment
+* reassignment
+* classification change
+* AI analysis
+* policy change
+* privileged action
+* closure
+* disposition
+
+---
+
+# 196. EVIDENCE ACCESS AUDIT
+
+For every evidence item:
+
+Who viewed?
+When?
+From which device?
+For which case?
+What was done?
+Was it exported?
+Was a derived copy created?
+
+---
+
+# 197. PROVENANCE LEDGER
+
+Every important fact must answer:
+
+# WHERE DID THIS COME FROM?
+
+Track:
+
+source
+→ record
+→ ingestion
+→ transformation
+→ linkage
+→ analysis
+→ report
+
+---
+
+# 198. DATA CONFLICT
+
+If two systems disagree:
+
+do not silently choose.
+
+Display:
+
+# DATA CONFLICT
+
+with both provenance paths.
+
+---
+
+# 199. DATA RELIABILITY
+
+Display:
+
+* source freshness
+* completeness
+* consistency
+* provenance
+* availability
+
+for external data.
+
+---
+
+# 200. COMPLIANCE / ASSURANCE LAYER
+
+Architect the product so ACA can map appropriate controls to recognized international references such as:
+
+* ISO/IEC 27001
+* ISO/IEC 42001
+* NIST Zero Trust
+* NIST AI Risk Management Framework
+* applicable digital-evidence/provenance standards
+
+Do not falsely claim certification unless certification has actually been obtained.
+
+---
+
+# 201. EGYPTIAN LEGAL / REGULATORY CONFIGURATION
+
+Do not hardcode claims such as:
+
+"legally admissible"
+"fully compliant"
+"authorized"
+
+unless formally verified.
+
+Instead build configurable:
+
+# JURISDICTION / POLICY ENGINE
+
+with:
+
+* effective dates
+* legal basis
+* retention
+* disclosure
+* access
+* evidence rules
+* authorization rules
+
+---
+
+# 202. RETENTION / LEGAL HOLD
+
+Differentiate:
+
+Citizen content
+vs.
+ACA institutional evidence
+vs.
+sealed evidence
+vs.
+protected identity
+vs.
+ordinary operational data.
+
+Official sealed evidence is subject to policy-governed retention/disposition and must not have a normal delete mechanism.
+
+Legal hold must override ordinary retention processes.
+
+---
+
+# 203. ACA EVIDENCE DISPOSITION
+
+Disposition must be:
+
+* policy-based
+* authorized
+* multi-party where required
+* fully audited
+* cryptographically traceable
+* non-silent
+
+Do not destroy the audit trail documenting the evidence history.
+
+---
+
+# 204. AI HUMAN-AUTHORITY BOUNDARY
+
+Explicitly encode:
+
+AI can:
+
+* detect
+* connect
+* correlate
+* classify
+* summarize
+* prioritize
+* simulate
+* recommend
+* warn
+
+AI cannot independently:
+
+* declare guilt
+* impose discipline
+* issue authoritative findings
+* prosecute
+* unmask protected identities
+* destroy evidence
+* close sensitive investigations without required human authorization
+
+---
+
+# 205. ACA MOBILE / DESKTOP FORM FACTORS
+
+Define:
+
+### ACA Desktop Command Center
+
+for leadership/analysts.
+
+### ACA Investigator Desktop
+
+for deep investigation.
+
+### ACA Field Mobile
+
+for inspectors/agents.
+
+### Trusted Evidence Device Mode
+
+for official recording.
+
+### Secure Executive Mode
+
+for senior authorized leadership.
+
+---
+
+# 206. ACA FIELD WORKFLOW
+
+Implement:
+
+Assignment
+→ Agent Authentication
+→ Location/Device Verification
+→ Inspection/Task
+→ Recording
+→ Evidence Marker
+→ Documents
+→ Checklist
+→ Findings
+→ Secure Upload
+→ Seal
+→ Case Timeline
+→ Supervisor
+
+---
+
+# 207. ACA END-TO-END INVESTIGATION WORKFLOW
+
+Implement:
+
+Signal
+→ Intake
+→ Jurisdiction
+→ Service Identification
+→ System Identification
+→ Preservation
+→ Evidence Graph
+→ Timeline
+→ Expected vs Actual
+→ Gaps
+→ Contradictions
+→ Related Cases
+→ Hypotheses
+→ Investigation
+→ Challenge Finding
+→ Human Review
+→ Finding
+→ Root Cause
+→ Recommendation
+→ Corrective Action
+→ Reform Verification
+→ Recurrence Monitoring
+→ Institutional Learning
+
+---
+
+# 208. ACA CASE INFORMATION READINESS EXAMPLE
+
+Include a complete UI example resembling:
+
+CASE 118/2024
+
+People: 7
+Entities: 4
+Services: 3
+Agencies: 5
+Systems: 9
+Relevant Rules: 8
+Expected Records: 31
+Received: 24
+Evidence: 17
+Evidence Gaps: 4
+Contradictions: 3
+Similar Cases: 12
+External Requests: 5
+Volatile Evidence: 2
+
+NEXT BEST ACTION:
+Request inspection record.
+
+---
+
+# 209. ACA INTEGRATION CONTROL TOWER EXAMPLE
+
+Include example:
+
+Connected Systems: 37
+Healthy: 34
+Degraded: 2
+Offline: 1
+Active Requests: 184
+Overdue: 11
+Missing Records: 613
+Sync Errors: 3
+Schema Changes: 1
+Pending Authorizations: 17
+
+These are examples only; make clear they are demonstration data.
+
+---
+
+# 210. ACA BUSINESS / COMMERCIAL MODEL
+
+Do not change Circle's public free-service philosophy for citizens.
+
+Citizen-facing services remain:
+
+# FREE
+
+ACA receives:
+
+# PAID SOVEREIGN INSTITUTIONAL SERVICES
+
+Potential institutional commercial categories:
+
+* sovereign deployment
+* customization
+* integration
+* technical support
+* security assurance
+* maintenance
+* training
+* AI/model governance
+* disaster recovery
+* managed updates
+* institutional implementation
+
+Do not place ACA pricing/paywalls inside public Circle.
+
+---
+
+# 211. DEPLOYMENT OPTIONS
+
+Support an ACA-controlled sovereign environment with options such as:
+
+* government datacenter
+* government private cloud
+* sovereign/private Kubernetes
+* isolated institutional infrastructure
+* highly controlled hybrid architecture where approved
+
+Do not assume public cloud is acceptable for every category of ACA data.
+
+---
+
+# 212. SEPARATE ACA DATA PLANE
+
+Define ACA-specific:
+
+* databases
+* evidence storage
+* keys
+* audit
+* identity
+* integrations
+
+with strong logical/physical separation according to risk and deployment requirements.
+
+---
+
+# 213. KEY MANAGEMENT
+
+Sensitive evidence and institutional secrets should use:
+
+* HSM where appropriate
+* key rotation
+* key separation
+* access control
+* backup
+* recovery
+* independent authorization
+
+---
+
+# 214. SECRET MANAGEMENT
+
+Never put credentials/API keys in:
+
+* source code
+* mobile application
+* public configuration
+* blueprint examples
+
+Use secret management and environment-specific configuration.
+
+Audit the existing blueprint for any exposed credentials and replace them with placeholders/secret-manager references.
+
+---
+
+# 215. SECURITY ERROR-CHECK
+
+During blueprint reconstruction, explicitly search for:
+
+* contradictory permissions
+* insecure defaults
+* public exposure
+* incorrect retention
+* accidental citizen visibility
+* privilege escalation paths
+* unrestricted AI access
+* evidence deletion paths
+* weak device binding
+* missing audit events
+* insecure integration assumptions
+* unsupported legal claims
+* unrealistic API assumptions
+* duplicated requirements
+* conflicting policies
+
+Correct them.
+
+---
+
+# 216. BLUEPRINT QUALITY RULE
+
+Do not simply append the above material.
+
+You must:
+
+1. integrate it into the correct architectural sections;
+2. eliminate duplicate features;
+3. keep one canonical definition of each major capability;
+4. reference shared services rather than repeating implementations;
+5. identify dependencies;
+6. define inputs/outputs;
+7. define permissions;
+8. define security boundaries;
+9. define data ownership;
+10. define human-vs-AI authority;
+11. define integration requirements;
+12. define failure handling;
+13. define audit requirements;
+14. define acceptance criteria.
+
+---
+
+# 217. REQUIREMENTS TRACEABILITY
+
+At the end, create:
+
+# ACA REQUIREMENTS TRACEABILITY MATRIX
+
+Columns:
+
+Requirement
+Source
+Module
+Implementation
+Dependency
+Security Requirement
+Data Classification
+Human Authorization
+Acceptance Test
+Status
+
+Every requirement from this prompt must map to a blueprint section.
+
+---
+
+# 218. DO NOT LOSE ORIGINAL BLUEPRINT FEATURES
+
+Create:
+
+# ORIGINAL CIRCLE → ACA IMPACT MATRIX
+
+Classify every existing blueprint module as:
+
+* unchanged
+* extended
+* shared
+* security-hardened
+* connected to ACA
+* isolated from ACA
+* not used by ACA
+* replaced only in institutional context
+
+Do not silently remove old functionality.
+
+---
+
+# 219. DATA CLASSIFICATION MATRIX
+
+Create:
+
+Data Type
+Citizen/Public
+Circle Internal
+ACA Internal
+Restricted
+Highly Restricted
+Sealed
+Protected Identity
+
+Then define:
+
+* storage
+* access
+* export
+* retention
+* audit
+
+for each.
+
+---
+
+# 220. ACA SCREEN INVENTORY
+
+Create a complete inventory of every ACA screen.
+
+At minimum:
+
+1. ACA Login
+2. MFA
+3. Device Verification
+4. Command Center
+5. Intake
+6. Triage
+7. Cases
+8. Case Overview
+9. Timeline
+10. Evidence
+11. Evidence Graph
+12. People
+13. Entities
+14. Services
+15. Systems
+16. Documents
+17. Inspections
+18. Field Recording
+19. Recording Review
+20. Preservation Vault
+21. Requests
+22. Hypotheses
+23. Contradictions
+24. Evidence Gaps
+25. Similar Cases
+26. Investigation Plan
+27. Findings
+28. Recommendations
+29. Corrective Actions
+30. Risk Radar
+31. Procurement Intelligence
+32. Financial Intelligence
+33. Rule/Regulation Intelligence
+34. Service Intelligence
+35. Digital Twin
+36. National Map
+37. Referrals
+38. International Cooperation
+39. Integrations
+40. Integration Health
+41. AI Governance
+42. Security
+43. Audit
+44. Reports
+45. Strategy
+46. Training
+47. Administration
+
+These must be separate ACA screens, not public Circle screens.
+
+---
+
+# 221. ACA NAVIGATION SECURITY
+
+The navigation itself must respect permissions.
+
+An investigator without procurement clearance should not even see unauthorized procurement modules.
+
+An agent without evidence-export permission should not see unrestricted export controls.
+
+---
+
+# 222. LOGIN FAILURE / LOCKOUT
+
+Implement institutional security controls appropriate to ACA policy, including:
+
+* MFA
+* rate limiting
+* account lockout/risk controls
+* device trust
+* suspicious-login detection
+* session expiration
+* revocation
+* administrative review
+
+---
+
+# 223. SESSION SECURITY
+
+Support:
+
+* short privileged sessions
+* re-authentication for critical actions
+* device binding
+* session invalidation
+* concurrent-session awareness
+* security alerts
+
+---
+
+# 224. EXPORT SECURITY
+
+All sensitive exports should:
+
+* require authorization
+* generate manifest
+* record recipient
+* record purpose
+* record time
+* record case
+* record integrity information
+* be auditable
+
+---
+
+# 225. EVIDENCE PACKAGE
+
+Generate:
+
+Case
+→ Evidence Manifest
+→ Original References
+→ Derived Evidence
+→ Hashes
+→ Provenance
+→ Chain of Custody
+→ Timeline
+→ Rules
+→ Findings
+→ Audit Trail
+
+---
+
+# 226. PUBLIC TRANSPARENCY
+
+Create a separate controlled public-reporting layer.
+
+ACA may publish aggregate information where authorized.
+
+The public transparency layer must never reveal:
+
+* sealed cases
+* protected identity
+* restricted evidence
+* internal intelligence
+* investigator details
+* confidential referrals
+
+unless explicitly approved.
+
+---
+
+# 227. PUBLIC OUTCOME COMMUNICATION
+
+Where policy allows, citizens can receive understandable outcome information without being exposed to confidential investigative details.
+
+---
+
+# 228. POSITIVE GOVERNANCE
+
+Preserve Circle's capability to protect honest officials and recognize good service.
+
+Do not turn ACA into a purely punitive analytics system.
+
+---
+
+# 229. FALSE-ACCUSATION ANALYSIS
+
+Detect patterns of repeated unsupported allegations where appropriate.
+
+Never automatically classify a citizen as malicious.
+
+---
+
+# 230. WHISTLEBLOWER / RETALIATION ARCHITECTURE
+
+Maintain protected reporting and institutional retaliation monitoring with strict confidentiality.
+
+---
+
+# 231. INTERNATIONAL LANGUAGE SUPPORT
+
+Preserve:
+
+* Arabic original
+* translation
+* translator/model
+* version
+* timestamp
+* verification
+
+Never delete the original language.
+
+---
+
+# 232. ACCEPTANCE CRITERIA
+
+Every major module must have measurable acceptance criteria.
+
+Examples:
+
+### ACA visibility
+
+Regular user cannot discover ACA UI or dashboard.
+
+### ACA authentication
+
+Only ACA-provisioned identity can enter ACA.
+
+### Video integrity
+
+Sealed official video cannot be edited/overwritten through ordinary controls.
+
+### Evidence lineage
+
+Every derived artifact links to its original.
+
+### Timeline
+
+Every event can trace to source/evidence.
+
+### Service discovery
+
+Case can identify relevant service/system dependencies.
+
+### AI
+
+AI claims can be traced to sources.
+
+### Security
+
+Privileged actions are audited.
+
+### Integration
+
+Failed/schema-changed integrations cannot silently corrupt data.
+
+### Closure
+
+Policy-required closure controls are enforced.
+
+---
+
+# 233. END-TO-END TEST SCENARIOS
+
+Include full test scenarios for:
+
+1. Citizen submits report
+2. Citizen evidence securely enters ACA workflow
+3. ACA intake
+4. Triage
+5. Case creation
+6. Investigator assignment
+7. Agent logs in
+8. Agent records immutable video
+9. Offline recording
+10. Synchronization
+11. Evidence sealing
+12. Smart evidence linking
+13. Timeline construction
+14. Missing record detection
+15. Government record request
+16. Contradictory records
+17. Similar-case discovery
+18. Alternative hypotheses
+19. Devil's-advocate challenge
+20. Supervisor review
+21. Finding
+22. Recommendation
+23. Corrective action
+24. Reform verification
+25. Recurrence
+26. Sensitive export
+27. Break-glass access
+28. Security incident
+29. Disaster recovery
+30. Integration outage
+31. Schema change
+32. Unauthorized ACA login attempt
+33. Regular citizen attempt to access ACA
+34. Investigator attempting unauthorized case access
+35. Attempt to edit official sealed video
+36. Attempt to delete official sealed video
+37. Derived-copy generation
+38. Protected reporter unmask request
+39. AI prompt injection through malicious document
+40. AI hallucination/unsupported citation
+41. Cross-agency referral
+42. International cooperation
+43. National surge event
+
+---
+
+# 234. ABSOLUTE SECURITY TESTS
+
+The final blueprint must explicitly verify:
+
+## Test A
+
+A regular Circle citizen cannot see ACA.
+
+## Test B
+
+A regular Circle employee cannot automatically see ACA.
+
+## Test C
+
+An ACA agent cannot see cases outside authorization.
+
+## Test D
+
+An ACA agent cannot access protected identities without authorization.
+
+## Test E
+
+An ACA agent cannot edit sealed official video.
+
+## Test F
+
+An ACA agent cannot ordinarily delete sealed official video.
+
+## Test G
+
+An administrator cannot silently rewrite evidence history.
+
+## Test H
+
+AI cannot access unrestricted ACA data.
+
+## Test I
+
+AI cannot turn inference into authoritative finding.
+
+## Test J
+
+A failed integration cannot silently corrupt historical records.
+
+---
+
+# 235. OUTPUT REQUIREMENT
+
+Produce a fully reconstructed:
+
+# CIRCLE BLUEPRINT — ACA SOVEREIGN EDITION
+
+not merely an addendum.
+
+The final blueprint must be:
+
+* organized
+* hierarchical
+* internally consistent
+* exhaustive
+* production-oriented
+* implementation-oriented
+* security-aware
+* Egypt-aware
+* institutionally realistic
+* explicit about permissions
+* explicit about data boundaries
+* explicit about integrations
+* explicit about AI authority
+* explicit about evidence integrity
+* explicit about citizen vs ACA separation
+
+---
+
+# 236. DO NOT INVENT FACTS
+
+Where an Egyptian API, legal authority, technical capability or integration has not been formally verified:
+
+write:
+
+**Requires government authorization / technical discovery**
+
+instead of inventing an endpoint, API, legal permission or existing integration.
+
+Use placeholders for:
+
+* API URLs
+* credentials
+* certificates
+* government endpoints
+* secret keys
+
+Never include real credentials.
+
+---
+
+# 237. BLUEPRINT LANGUAGE
+
+Use precise institutional language.
+
+Avoid statements such as:
+
+* "AI proves guilt"
+* "AI determines corruption"
+* "video is automatically legally admissible"
+* "all government systems are connected"
+* "all data is centralized"
+
+Prefer:
+
+* investigative indicator
+* evidence-supported finding
+* authorized access
+* provenance
+* analytical signal
+* human determination
+* policy-controlled workflow
+* authorized integration
+
+---
+
+# 238. FINAL EXECUTIVE POSITIONING
+
+The final blueprint should position ACA Circle as:
+
+# A SOVEREIGN ADMINISTRATIVE OVERSIGHT, INVESTIGATION, EVIDENCE, INTELLIGENCE AND GOVERNANCE PLATFORM
+
+Not merely:
+
+* complaint management
+* CRM
+* workflow software
+* surveillance platform
+* AI chatbot
+* case-management system
+
+Its core value proposition should be:
+
+> Circle connects authorized complaints, official field evidence, investigations, government services, administrative processes, documents, transactions, inspections, decisions, people, entities, rules and systems into one continuously auditable environment that helps ACA reconstruct events, discover relationships, identify missing information, compare expected and actual processes, investigate efficiently, detect systemic weaknesses, coordinate across institutions, verify reforms and identify emerging risks before they become major problems.
+
+---
+
+# 239. FINAL ARCHITECTURE SUMMARY
+
+The final blueprint should clearly show:
+
+```text
+PUBLIC CIRCLE
+│
+├── Citizen
+├── Citizen Shield
+├── Citizen Reporting
+└── Public Services
+        │
+        │ SECURE / POLICY-CONTROLLED HANDOFF
+        ▼
+┌───────────────────────────────────────────┐
+│        ACA SOVEREIGN ENVIRONMENT          │
+│                                           │
+│  ACA LOGIN / IDENTITY / DEVICE TRUST      │
+│                 │                         │
+│        ACA OVERSIGHT FABRIC               │
+│                 │                         │
+│   ┌─────────────┼──────────────┐          │
+│   │             │              │          │
+│ Evidence     Investigation   Services     │
+│   │             │              │          │
+│   └─────────────┼──────────────┘          │
+│                 │                         │
+│       INTELLIGENCE KNOWLEDGE GRAPH        │
+│                 │                         │
+│      SMART TIMELINE / DIGITAL TWIN        │
+│                 │                         │
+│      AI + HYPOTHESES + CONTRADICTIONS     │
+│                 │                         │
+│       FINDINGS / RECOMMENDATIONS          │
+│                 │                         │
+│       CORRECTIVE ACTION / REFORM          │
+│                 │                         │
+│       NATIONAL EARLY WARNING              │
+│                                           │
+│  SECURITY / ZERO TRUST / AUDIT / HSM      │
+│                                           │
+│       GOVERNMENT INTEGRATION FABRIC       │
+└───────────────────────────────────────────┘
+```
+
+---
+
+# 240. FINAL QUALITY CONTROL INSTRUCTION
+
+Before considering the blueprint complete, perform a full line-by-line reconciliation against the existing CIRCLE blueprint and the entire ACA requirements in this prompt.
+
+Create a final:
+
+# GAP / DUPLICATION / CONFLICT AUDIT
+
+with these categories:
+
+* Missing requirement
+* Duplicate requirement
+* Contradictory requirement
+* Security weakness
+* Privacy weakness
+* Integration dependency
+* Legal/policy assumption
+* UX ambiguity
+* Data-model ambiguity
+* AI-governance weakness
+* Deployment ambiguity
+* Testing gap
+
+Correct all material issues before presenting the final blueprint.
+
+The final result must make it impossible for an ordinary Circle citizen or regular Circle user to accidentally discover or enter ACA, while providing ACA with a completely independent, confidential, institutionally controlled environment whose agent identities are created and managed by ACA itself.
+
+# END OF MASTER PROMPT
