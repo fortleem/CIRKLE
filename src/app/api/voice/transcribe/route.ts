@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
-import { transcribeAudioServer } from "@/lib/voice-transcription";
+import { aiComplete, extractJSON } from "@/lib/ai";
 
 /**
  * POST /api/voice/transcribe
@@ -63,11 +63,25 @@ export async function POST(req: NextRequest) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
     try {
-      const result = await transcribeAudioServer(audio, mimeType, {
-        duration,
-        language,
-        context,
-      });
+      // Inline the server-side transcription logic (was transcribeAudioServer)
+      const sys = `You are CIRKLE's voice transcription AI. Transcribe the audio accurately. Return JSON: {"text":"...","language":"ar|en|...","confidence":0.0-1.0}`;
+      const usr = `Transcribe this ${mimeType} audio (${duration || 0}s). Language hint: ${language || "auto"}. Context: ${context || "none"}`;
+      const raw = await aiComplete(sys, usr, 400);
+      let result: any = { text: "", language: language || "ar", confidence: 0.5 };
+      if (raw) {
+        try {
+          const parsed = extractJSON<any>(raw);
+          if (parsed?.text) {
+            result = {
+              text: String(parsed.text).slice(0, 500),
+              language: parsed.language || language || "ar",
+              confidence: typeof parsed.confidence === "number" ? parsed.confidence : 0.5,
+            };
+          }
+        } catch {
+          result.text = String(raw).slice(0, 500);
+        }
+      }
       return NextResponse.json({ ok: true, result });
     } finally {
       clearTimeout(timeout);
