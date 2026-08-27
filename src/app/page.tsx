@@ -164,6 +164,19 @@ const StoryStatus = dynamic(() => import("@/components/overlays/story-status").t
 const AppLock = dynamic(() => import("@/components/overlays/app-lock").then(m => ({ default: m.AppLock })), { ssr: false });
 const LiveLocation = dynamic(() => import("@/components/overlays/live-location").then(m => ({ default: m.LiveLocation })), { ssr: false });
 const PollCreator = dynamic(() => import("@/components/overlays/poll-creator").then(m => ({ default: m.PollCreator })), { ssr: false });
+// ── ACA + FEDERATED GOV + EMERGENCY + EVIDENCE/AI/POLICY overlays (12) ──
+const AcaLogin = dynamic(() => import("@/components/overlays/aca-login").then(m => ({ default: m.AcaLogin })), { ssr: false });
+const AcaDashboard = dynamic(() => import("@/components/overlays/aca-dashboard").then(m => ({ default: m.AcaDashboard })), { ssr: false });
+const AcaCaseDetail = dynamic(() => import("@/components/overlays/aca-case-detail").then(m => ({ default: m.AcaCaseDetail })), { ssr: false });
+const GovernmentInstitutionRegistry = dynamic(() => import("@/components/overlays/government-institution-registry").then(m => ({ default: m.GovernmentInstitutionRegistry })), { ssr: false });
+const InterAgencyReferralOvl = dynamic(() => import("@/components/overlays/inter-agency-referral").then(m => ({ default: m.InterAgencyReferral })), { ssr: false });
+const ServiceDirectory = dynamic(() => import("@/components/overlays/service-directory").then(m => ({ default: m.ServiceDirectory })), { ssr: false });
+const SmartRouting = dynamic(() => import("@/components/overlays/smart-routing").then(m => ({ default: m.SmartRouting })), { ssr: false });
+const EmergencyRouting = dynamic(() => import("@/components/overlays/emergency-routing").then(m => ({ default: m.EmergencyRouting })), { ssr: false });
+const ServiceOutageReport = dynamic(() => import("@/components/overlays/service-outage-report").then(m => ({ default: m.ServiceOutageReport })), { ssr: false });
+const EvidenceVault = dynamic(() => import("@/components/overlays/evidence-vault").then(m => ({ default: m.EvidenceVault })), { ssr: false });
+const AIGovernancePanel = dynamic(() => import("@/components/overlays/ai-governance-panel").then(m => ({ default: m.AIGovernancePanel })), { ssr: false });
+const PolicyEngineOverlay = dynamic(() => import("@/components/overlays/policy-engine").then(m => ({ default: m.PolicyEngineOverlay })), { ssr: false });
 import { useApp } from "@/lib/app-store";
 import { useAuth } from "@/lib/auth-store";
 import { toast } from "sonner";
@@ -490,6 +503,19 @@ export default function Page() {
   const [appLockOpen, setAppLockOpen] = useState(false);
   const [liveLocationOpen, setLiveLocationOpen] = useState(false);
   const [pollCreatorOpen, setPollCreatorOpen] = useState(false);
+  // ── ACA + FED + EMERGENCY + EVIDENCE/AI/POLICY overlay state (12) ──
+  const [acaLoginOpen, setAcaLoginOpen] = useState(false);
+  const [acaDashboardOpen, setAcaDashboardOpen] = useState(false);
+  const [acaCaseDetailOpen, setAcaCaseDetailOpen] = useState(false);
+  const [institutionRegistryOpen, setInstitutionRegistryOpen] = useState(false);
+  const [interAgencyReferralOpen, setInterAgencyReferralOpen] = useState(false);
+  const [serviceDirectoryOpen, setServiceDirectoryOpen] = useState(false);
+  const [smartRoutingOpen, setSmartRoutingOpen] = useState(false);
+  const [emergencyRoutingOpen, setEmergencyRoutingOpen] = useState(false);
+  const [serviceOutageOpen, setServiceOutageOpen] = useState(false);
+  const [evidenceVaultOpen, setEvidenceVaultOpen] = useState(false);
+  const [aiGovernanceOpen, setAiGovernanceOpen] = useState(false);
+  const [policyEngineOpen, setPolicyEngineOpen] = useState(false);
   const [circleDetailId, setCircleDetailId] = useState<string | null>(null);
   const [composer, setComposer] = useState<{ open: boolean; kind?: "post" | "poll" | "media"; draft?: string; anonymous?: boolean; circleId?: string }>({ open: false });
   const Screen = screens[tab];
@@ -898,6 +924,31 @@ export default function Page() {
     window.addEventListener("circle:app-lock", onAppLock);
     window.addEventListener("circle:live-location", onLiveLocation);
     window.addEventListener("circle:poll-creator", onPollCreator);
+    // ── ACA + FED + EMERGENCY + EVIDENCE/AI/POLICY events (12) ──
+    const onAcaLogin = () => setAcaLoginOpen(true);
+    const onAcaDashboard = () => setAcaDashboardOpen(true);
+    const onAcaCaseDetail = () => setAcaCaseDetailOpen(true);
+    const onInstitutionRegistry = () => setInstitutionRegistryOpen(true);
+    const onInterAgencyReferral = () => setInterAgencyReferralOpen(true);
+    const onServiceDirectory = () => setServiceDirectoryOpen(true);
+    const onSmartRouting = () => setSmartRoutingOpen(true);
+    const onEmergencyRouting = () => setEmergencyRoutingOpen(true);
+    const onServiceOutage = () => setServiceOutageOpen(true);
+    const onEvidenceVault = () => setEvidenceVaultOpen(true);
+    const onAiGovernance = () => setAiGovernanceOpen(true);
+    const onPolicyEngine = () => setPolicyEngineOpen(true);
+    window.addEventListener("circle:aca-login", onAcaLogin);
+    window.addEventListener("circle:aca-dashboard", onAcaDashboard);
+    window.addEventListener("circle:aca-case-detail", onAcaCaseDetail);
+    window.addEventListener("circle:institution-registry", onInstitutionRegistry);
+    window.addEventListener("circle:inter-agency-referral", onInterAgencyReferral);
+    window.addEventListener("circle:service-directory", onServiceDirectory);
+    window.addEventListener("circle:smart-routing", onSmartRouting);
+    window.addEventListener("circle:emergency-routing", onEmergencyRouting);
+    window.addEventListener("circle:service-outage-report", onServiceOutage);
+    window.addEventListener("circle:evidence-vault", onEvidenceVault);
+    window.addEventListener("circle:ai-governance", onAiGovernance);
+    window.addEventListener("circle:policy-engine", onPolicyEngine);
     return () => {
       window.removeEventListener("circle:composer", onComposer as any);
       window.removeEventListener("circle:governance", onGovernance);
@@ -1045,6 +1096,19 @@ export default function Page() {
       window.removeEventListener("circle:app-lock", onAppLock);
       window.removeEventListener("circle:live-location", onLiveLocation);
       window.removeEventListener("circle:poll-creator", onPollCreator);
+      // ── ACA + FED + EMERGENCY + EVIDENCE/AI/POLICY cleanup (12) ──
+      window.removeEventListener("circle:aca-login", onAcaLogin);
+      window.removeEventListener("circle:aca-dashboard", onAcaDashboard);
+      window.removeEventListener("circle:aca-case-detail", onAcaCaseDetail);
+      window.removeEventListener("circle:institution-registry", onInstitutionRegistry);
+      window.removeEventListener("circle:inter-agency-referral", onInterAgencyReferral);
+      window.removeEventListener("circle:service-directory", onServiceDirectory);
+      window.removeEventListener("circle:smart-routing", onSmartRouting);
+      window.removeEventListener("circle:emergency-routing", onEmergencyRouting);
+      window.removeEventListener("circle:service-outage-report", onServiceOutage);
+      window.removeEventListener("circle:evidence-vault", onEvidenceVault);
+      window.removeEventListener("circle:ai-governance", onAiGovernance);
+      window.removeEventListener("circle:policy-engine", onPolicyEngine);
     };
   }, []);
 
@@ -1295,6 +1359,19 @@ export default function Page() {
       <AppLock open={appLockOpen} onClose={() => setAppLockOpen(false)} />
       <LiveLocation open={liveLocationOpen} onClose={() => setLiveLocationOpen(false)} />
       <PollCreator open={pollCreatorOpen} onClose={() => setPollCreatorOpen(false)} />
+      {/* ── ACA + FED + EMERGENCY + EVIDENCE/AI/POLICY overlays (12) ── */}
+      <AcaLogin open={acaLoginOpen} onClose={() => setAcaLoginOpen(false)} />
+      <AcaDashboard open={acaDashboardOpen} onClose={() => setAcaDashboardOpen(false)} />
+      <AcaCaseDetail open={acaCaseDetailOpen} onClose={() => setAcaCaseDetailOpen(false)} />
+      <GovernmentInstitutionRegistry open={institutionRegistryOpen} onClose={() => setInstitutionRegistryOpen(false)} />
+      <InterAgencyReferralOvl open={interAgencyReferralOpen} onClose={() => setInterAgencyReferralOpen(false)} />
+      <ServiceDirectory open={serviceDirectoryOpen} onClose={() => setServiceDirectoryOpen(false)} />
+      <SmartRouting open={smartRoutingOpen} onClose={() => setSmartRoutingOpen(false)} />
+      <EmergencyRouting open={emergencyRoutingOpen} onClose={() => setEmergencyRoutingOpen(false)} />
+      <ServiceOutageReport open={serviceOutageOpen} onClose={() => setServiceOutageOpen(false)} />
+      <EvidenceVault open={evidenceVaultOpen} onClose={() => setEvidenceVaultOpen(false)} />
+      <AIGovernancePanel open={aiGovernanceOpen} onClose={() => setAiGovernanceOpen(false)} />
+      <PolicyEngineOverlay open={policyEngineOpen} onClose={() => setPolicyEngineOpen(false)} />
 
       {/* P1.7 — Circle Groups: creation flow + detail view. Reachable
           from any surface via `circle:create-circle` and

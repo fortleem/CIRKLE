@@ -1247,6 +1247,122 @@ export const OVERLAY_REGISTRY: OverlayEntry[] = [
     event: "circle:poll-creator",
     keywords: ["poll", "quiz", "vote", "survey", "group", "question", "choice"],
   },
+
+  // ── ACA SOVEREIGN ENVIRONMENT (confidential — invisible to ordinary citizens) ──
+  {
+    id: "aca-login",
+    name: "ACA Login",
+    description: "ACA institutional login — separate from public Circle. Confidential.",
+    emoji: "🔐",
+    category: "safety",
+    event: "circle:aca-login",
+    keywords: ["aca", "login", "institutional", "confidential", "sovereign"],
+  },
+  {
+    id: "aca-dashboard",
+    name: "ACA Dashboard",
+    description: "ACA command center — cases, signals, evidence, findings.",
+    emoji: "🏛️",
+    category: "safety",
+    event: "circle:aca-dashboard",
+    keywords: ["aca", "dashboard", "command", "cases", "signals", "evidence"],
+  },
+  {
+    id: "aca-case-detail",
+    name: "ACA Case Detail",
+    description: "ACA case management with timeline, evidence graph, hypotheses, findings.",
+    emoji: "📁",
+    category: "safety",
+    event: "circle:aca-case-detail",
+    keywords: ["aca", "case", "investigation", "timeline", "evidence", "findings"],
+  },
+
+  // ── FEDERATED GOVERNMENT FABRIC ───────────────────────────────────────
+  {
+    id: "government-institution-registry",
+    name: "Institution Registry",
+    description: "Government institution registry — sovereign workspaces, integration levels.",
+    emoji: "🏛️",
+    category: "safety",
+    event: "circle:institution-registry",
+    keywords: ["institution", "government", "federation", "aca", "police", "ems"],
+  },
+  {
+    id: "inter-agency-referral",
+    name: "Inter-Agency Referral",
+    description: "Controlled inter-agency referrals with provenance tracking.",
+    emoji: "🔁",
+    category: "safety",
+    event: "circle:inter-agency-referral",
+    keywords: ["referral", "inter-agency", "exchange", "federation"],
+  },
+  {
+    id: "service-directory",
+    name: "Service Directory",
+    description: "Citizen service directory — official government services, channels, status.",
+    emoji: "📋",
+    category: "safety",
+    event: "circle:service-directory",
+    keywords: ["service", "directory", "citizen", "government", "official"],
+  },
+
+  // ── EMERGENCY & SMART ROUTING ─────────────────────────────────────────
+  {
+    id: "smart-routing",
+    name: "I Need Help",
+    description: "Smart citizen routing — classifies into Emergency, Service, or Integrity.",
+    emoji: "🆘",
+    category: "safety",
+    event: "circle:smart-routing",
+    keywords: ["help", "routing", "emergency", "service", "integrity", "citizen"],
+  },
+  {
+    id: "emergency-routing",
+    name: "Emergency Routing",
+    description: "Emergency routing to Police, EMS, Fire, or Traffic — NEVER to ACA.",
+    emoji: "🚨",
+    category: "safety",
+    event: "circle:emergency-routing",
+    keywords: ["emergency", "police", "ems", "fire", "traffic", "dispatch"],
+  },
+  {
+    id: "service-outage-report",
+    name: "Report Outage",
+    description: "Report government service outages — portal down, payment failure, etc.",
+    emoji: "📡",
+    category: "safety",
+    event: "circle:service-outage-report",
+    keywords: ["outage", "report", "service", "failure", "government", "portal"],
+  },
+
+  // ── EVIDENCE INTEGRITY + AI GOVERNANCE + POLICY ────────────────────────
+  {
+    id: "evidence-vault",
+    name: "Evidence Vault",
+    description: "Dual evidence vault — sealed immutable originals + operational copies, chain of custody.",
+    emoji: "🔒",
+    category: "safety",
+    event: "circle:evidence-vault",
+    keywords: ["evidence", "immutable", "sealed", "custody", "vault", "aca"],
+  },
+  {
+    id: "ai-governance",
+    name: "AI Governance",
+    description: "Zero-trust AI — data access broker, kill switch, automation levels, incident log.",
+    emoji: "🧠",
+    category: "ai",
+    event: "circle:ai-governance",
+    keywords: ["ai", "governance", "kill-switch", "broker", "automation"],
+  },
+  {
+    id: "policy-engine",
+    name: "Policy Engine",
+    description: "Configurable policy rules — access, retention, escalation, AI, evidence.",
+    emoji: "⚖️",
+    category: "productivity",
+    event: "circle:policy-engine",
+    keywords: ["policy", "rules", "access", "retention", "escalation"],
+  },
 ];
 
 // ── Category metadata ──────────────────────────────────────────────────

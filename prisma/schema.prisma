@@ -2386,3 +2386,314 @@ model ModerationLog {
   reviewedAt  DateTime @default(now())
   @@index([contentType, category])
 }
+
+// ───────────────────────────────────────────────────────────────────────────
+// ACA SOVEREIGN ENVIRONMENT — Identity, Cases, Evidence, Signals
+// ───────────────────────────────────────────────────────────────────────────
+model AcaAgent {
+  id              String   @id @default(cuid())
+  agentId         String   @unique
+  institutionalIdentity String
+  role            String
+  department      String
+  unit            String?
+  clearance       String   @default("level1")
+  assignments     String   @default("[]")
+  devices         String   @default("[]")
+  certifications  String   @default("[]")
+  permissions     String   @default("[]")
+  sessionStatus   String   @default("inactive")
+  auditHistory    String   @default("[]")
+  status          String   @default("active")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  @@index([agentId])
+  @@index([status])
+}
+
+model AcaCase {
+  id              String   @id @default(cuid())
+  caseId          String   @unique
+  caseNumber      String   @unique
+  status          String   @default("signal")
+  priority        String   @default("medium")
+  assignedAgent   String?
+  createdFromSignal String?
+  relatedCases    String   @default("[]")
+  timeline        String   @default("[]")
+  evidence        String   @default("[]")
+  findings        String   @default("[]")
+  recommendations String   @default("[]")
+  correctiveActions String  @default("[]")
+  auditTrail      String   @default("[]")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  closedAt        DateTime?
+  @@index([status])
+  @@index([assignedAgent])
+}
+
+model AcaEvidence {
+  id              String   @id @default(cuid())
+  evidenceId      String   @unique
+  caseId          String?
+  type            String
+  captureMethod   String
+  capturedBy      String
+  capturedAt      DateTime @default(now())
+  location        String?
+  deviceIdentity  String?
+  assignmentId    String?
+  integrityHash   String
+  sealed          Boolean  @default(false)
+  sealedAt        DateTime?
+  sealedBy        String?
+  derivedCopies   String   @default("[]")
+  chainOfCustody  String   @default("[]")
+  createdAt       DateTime @default(now())
+  @@index([caseId])
+  @@index([sealed])
+}
+
+model AcaSignal {
+  id              String   @id @default(cuid())
+  signalId        String   @unique
+  source          String
+  pattern         String
+  sourceCount     Int      @default(1)
+  service         String?
+  geography       String?
+  timeframe      String?
+  evidenceAvailability String?
+  repeatedFailures String  @default("[]")
+  potentialIntegrityIndicators String @default("[]")
+  reasonForReferral String
+  status          String   @default("pending")
+  convertedToCaseId String?
+  createdAt       DateTime @default(now())
+  @@index([status])
+}
+
+model AcaFinding {
+  id              String   @id @default(cuid())
+  caseId          String
+  findingId       String   @unique
+  description     String
+  evidence        String   @default("[]")
+  rule            String?
+  requiredStandard String?
+  observedState   String?
+  status          String   @default("draft")
+  challengeResult String?
+  createdAt       DateTime @default(now())
+  @@index([caseId])
+}
+
+model AcaRecommendation {
+  id              String   @id @default(cuid())
+  caseId          String
+  findingId       String?
+  recommendationId String  @unique
+  description     String
+  rootCause       String?
+  controlFailure  String?
+  owner           String?
+  deadline        DateTime?
+  status          String   @default("pending")
+  createdAt       DateTime @default(now())
+  @@index([caseId])
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// FEDERATED GOVERNMENT FABRIC — Institutions, Referrals, Service Directory
+// ───────────────────────────────────────────────────────────────────────────
+model GovernmentInstitution {
+  id              String   @id @default(cuid())
+  institutionId   String   @unique
+  name            String
+  authority       String
+  type            String   // aca|police|ems|fire|traffic|health|local_gov|regulator|financial|other
+  services        String   @default("[]")
+  officialChannels String  @default("[]")
+  integrations    String   @default("[]")
+  status          String   @default("active")
+  dataClassification String @default("restricted")
+  lastVerification DateTime?
+  effectiveDate   DateTime @default(now())
+  country         String   @default("EG")
+  jurisdiction    String?
+  integrationLevel Int     @default(0) // 0-4
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  @@index([type])
+  @@index([status])
+}
+
+model InterAgencyReferral {
+  id              String   @id @default(cuid())
+  referralId      String   @unique
+  fromInstitution String
+  toInstitution   String
+  citizenSubmission String?
+  correlationId    String?
+  fromCaseId      String?
+  toCaseId        String?
+  purpose         String
+  status          String   @default("pending")
+  provenance      String   @default("[]")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  @@index([fromInstitution])
+  @@index([toInstitution])
+  @@index([status])
+}
+
+model ServiceDirectoryEntry {
+  id              String   @id @default(cuid())
+  serviceId       String   @unique
+  serviceName     String
+  responsibleInstitution String
+  department      String?
+  channel         String
+  contactInfo     String   @default("{}")
+  hours           String   @default("{}")
+  geographicCoverage String?
+  accessibility   String   @default("[]")
+  languages       String   @default("[]")
+  category        String?
+  lastVerified    DateTime?
+  status          String   @default("available")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  @@index([responsibleInstitution])
+  @@index([status])
+}
+
+model FederatedIncident {
+  id              String   @id @default(cuid())
+  federatedId     String   @unique
+  incidentType    String
+  participatingInstitutions String @default("[]")
+  institutionCaseRefs String  @default("[]")
+  timeline        String   @default("[]")
+  status          String   @default("active")
+  coordinatedBy   String?
+  correlationId   String?
+  createdAt       DateTime @default(now())
+  closedAt        DateTime?
+  @@index([status])
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// EVIDENCE INTEGRITY + AI GOVERNANCE + POLICY ENGINE
+// ───────────────────────────────────────────────────────────────────────────
+model EvidenceChainOfCustody {
+  id              String   @id @default(cuid())
+  evidenceId      String
+  stage           String
+  actor           String
+  actorType       String
+  action          String
+  timestamp       DateTime @default(now())
+  entryHash       String
+  previousHash    String?
+  @@index([evidenceId])
+}
+
+model EvidenceAccessLog {
+  id              String   @id @default(cuid())
+  evidenceId      String
+  actor           String
+  actorType       String
+  action          String
+  timestamp       DateTime @default(now())
+  purpose         String?
+  authorizedBy    String?
+  ipAddress       String?
+  @@index([evidenceId])
+}
+
+model AIAccessLog {
+  id              String   @id @default(cuid())
+  requestId       String   @unique
+  institution     String
+  model           String
+  modelVersion    String?
+  policy          String?
+  sourceRecords   String   @default("[]")
+  retrievalSet    String   @default("[]")
+  timestamp       DateTime @default(now())
+  output          String?
+  outputHash      String?
+  reviewer        String?
+  decision        String?
+  purpose         String?
+  caseRef         String?
+  @@index([institution])
+  @@index([timestamp])
+}
+
+model AIKillSwitchState {
+  id              String   @id @default(cuid())
+  featureId       String   @unique
+  modelName        String?
+  featureName      String
+  scope            String   @default("feature")
+  status           String   @default("active")
+  disabledBy       String?
+  disabledAt      DateTime?
+  enabledBy       String?
+  enabledAt      DateTime?
+  reason          String?
+  auditTrail      String   @default("[]")
+  updatedAt       DateTime @updatedAt
+  @@index([status])
+}
+
+model PolicyRule {
+  id              String   @id @default(cuid())
+  ruleId          String   @unique
+  institution     String?
+  region          String?
+  service         String?
+  name            String
+  description     String?
+  category        String
+  condition       String   @default("{}")
+  action          String
+  authority       String?
+  effectiveDate   DateTime @default(now())
+  expiryDate      DateTime?
+  status          String   @default("active")
+  createdBy       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  @@index([institution, category])
+  @@index([status])
+}
+
+model AIAutomationLevel {
+  id              String   @id @default(cuid())
+  featureId       String   @unique
+  featureName     String
+  institution     String?
+  level           Int      @default(1)
+  setBy           String?
+  setAt           DateTime @default(now())
+  reason          String?
+  auditTrail      String   @default("[]")
+  @@index([institution])
+}
+
+model AIIncident {
+  id              String   @id @default(cuid())
+  incidentId      String   @unique
+  model           String
+  modelVersion    String?
+  timestamp       DateTime @default(now())
+  impact          String?
+  correction      String?
+  status          String   @default("open")
+  killSwitchEngaged Boolean @default(false)
+  @@index([status])
+}

@@ -9658,3 +9658,645 @@ Create the final part of the federated sovereign government architecture amendme
 - The illustrative institution rows in PART XC (ACA, Police, EMS, Civil Protection, Traffic, Tax, NAFEZA, Courts, ETA) are explicitly marked "Pending verification" to satisfy PART LXXXIX (no hard-coded assumptions) and Rule 20 (no unsupported claims). No integration is asserted as live; the rows describe the shape of registry entries once verified.
 - The 119-row traceability matrix carries forward references for PART I–LXXXII (covered in Parts I–III of the amendment) and makes them consistent with the 28-section final structure of PART CXVIII. Where a Part's section/module mapping is inferential (because the source Parts I–III content was not directly re-read for this task), the mapping is consistent with the section titles in PART CXVIII and with the source requirements read for Part IV.
 - End-of-amendment marker present: "End of Part IV … End of the Federated Sovereign Government Architecture amendment (Parts I–IV)."
+
+---
+
+## EVIDENCE-AI-POLICY-IMPL — Evidence Integrity, AI Governance & Policy Engine layers
+
+**Agent:** full-stack-developer (Task ID: EVIDENCE-AI-POLICY-IMPL)
+**Scope:** Part IV §61–§63 (Evidence Immutability / Derived Copies / Provenance),
+§113 Zero-Trust AI, §LXXXI Kill Switch, §LXXXII Automation Levels, §LXXXIX Policy Engine.
+
+### Files created (16)
+**Lib (5):**
+- `src/lib/evidence-immutability.ts` — sealEvidence / createDerivedCopy / verifyIntegrity /
+  getChainOfCustody / recordAccess / attemptModifySealed (always throws on sealed evidence).
+  Enforces §61 immutability; derived copies never alter originals (§62); full provenance
+  chain source→record→ingestion→transformation→linkage→analysis→report.
+- `src/lib/ai-data-access-broker.ts` — requestAccess / evaluateRequest / getAuthorizedScope /
+  recordAIOutput / listAccessLog. Zero-trust broker: AI cannot touch the unrestricted ACA
+  database; evaluates institution / policy / case / clearance / purpose / requested data.
+- `src/lib/ai-kill-switch.ts` — disable/enableModel|Feature|Integration|Workflow, disableAll
+  (emergency), getStatus, listAllStates. Granular disable WITHOUT platform takedown. Audited.
+- `src/lib/policy-engine.ts` — createRule / evaluatePolicy / evaluatePolicySet /
+  getActiveRules / updateRule. Decisions: allow | deny | require_approval | escalate.
+- `src/lib/ai-automation-levels.ts` — AutomationLevel L0..L4 enum, getAutomationLevel,
+  canAutoExecute, requireHumanApproval, setAutomationLevel. PROHIBITED_AI_ACTIONS set
+  enforces L4 on guilt / discipline / authoritative findings / unmask / destroy / close.
+
+**API routes (8):**
+- `src/app/api/evidence/seal/route.ts` — POST: seal evidence (immutable).
+- `src/app/api/evidence/[id]/chain-of-custody/route.ts` — GET: full chain + access log.
+- `src/app/api/evidence/[id]/derive/route.ts` — POST: derived copy linked to original.
+- `src/app/api/ai/access-broker/route.ts` — POST: AI access request / output recording.
+- `src/app/api/ai/kill-switch/route.ts` — GET list, POST disable/enable, DELETE emergency.
+- `src/app/api/policy/rules/route.ts` — GET list, POST create, PATCH update.
+- `src/app/api/policy/evaluate/route.ts` — POST: single-rule or full-set evaluation.
+- `src/app/api/ai/automation-level/route.ts` — GET level (all or by feature+action), POST set.
+
+**Overlays (3):**
+- `src/components/overlays/evidence-vault.tsx` — Dual vault (preservation/operational) +
+  seal + derive + chain of custody + access audit + sealed-warning banner. Dispatches
+  `circle:evidence-vault`.
+- `src/components/overlays/ai-governance-panel.tsx` — 4 sections (broker / kill switch /
+  automation levels / incidents) + AI-prohibitions banner + emergency kill button.
+  Dispatches `circle:ai-governance`.
+- `src/components/overlays/policy-engine.tsx` — Rule list grouped by institution + create
+  form + evaluate-policy tester (returns decision). Dispatches `circle:policy-engine`.
+
+### Prisma models needed (declarative — schema not modified per file-ownership rules)
+- `EvidenceItem` — sealed evidence records (evidenceId, type, originalHash, sealedAt,
+  sealedBy, sealed, deviceIdentity, captureTimestamp, location, agentId, assignmentId,
+  cryptographicSignature, payloadRef, payloadBytes, mime, derivedFrom, derivationKind,
+  vault, metadata JSON).
+- `EvidenceChainOfCustody` — provenance chain entries (evidenceId, stage, actor, actorType,
+  action, timestamp, entryHash, previousHash, notes). Linked-hash-list for tamper evidence.
+- `EvidenceAccessLog` — who viewed/downloaded/exported (evidenceId, actor, actorType,
+  action, timestamp, purpose, authorizedBy, ipAddress).
+- `AIAccessLog` — broker log (requestId, institution, model, modelVersion, policy,
+  sourceRecords JSON, retrievalSet JSON, timestamp, output, outputHash, reviewer,
+  decision, purpose, caseRef).
+- `AIKillSwitchState` — per capability (featureId, modelName, featureName, scope, status,
+  disabledBy, disabledAt, reason, enabledBy, enabledAt, auditTrail JSON).
+- `PolicyRule` — policy rule store (ruleId, institution, region, service, name, description,
+  category, condition JSON, action, authority, effectiveDate, expiryDate, status, createdBy).
+- `AIAutomationLevel` — automation config (featureId, featureName, institution, level,
+  setBy, setAt, reason, auditTrail JSON).
+- `AIIncident` — incident log (incidentId, model, modelVersion, timestamp, impact, correction,
+  status, killSwitchEngaged).
+
+Note: existing `AuditRecord` model is reused for best-effort audit persistence through
+`safeDbQuery` (libs degrade gracefully when DB is unreachable).
+
+### Events dispatched (3)
+- `circle:evidence-vault`
+- `circle:ai-governance`
+- `circle:policy-engine`
+
+### Overlay-registry entries needed (3)
+```ts
+{ id: "evidence-vault", name: "Evidence Vault",
+  description: "Dual evidence vault — sealed immutable originals + operational working copies, chain of custody, access audit.",
+  emoji: "🔒", category: "safety", event: "circle:evidence-vault",
+  keywords: ["evidence","immutable","sealed","custody","vault","aca"] }
+{ id: "ai-governance", name: "AI Governance",
+  description: "Zero-trust AI: data access broker, kill switch, automation levels, incident log.",
+  emoji: "🧠", category: "ai", event: "circle:ai-governance",
+  keywords: ["ai","governance","kill-switch","broker","automation"] }
+{ id: "policy-engine", name: "Policy Engine",
+  description: "Configurable policy rules — access, retention, escalation, emergency, disclosure, AI, evidence.",
+  emoji: "⚖️", category: "productivity", event: "circle:policy-engine",
+  keywords: ["policy","rules","access","retention","escalation"] }
+```
+
+### Lint result
+`bun run lint` — clean (no errors, no warnings).
+
+---
+
+## EMERGENCY-ROUTING-IMPL — Emergency Routing & Smart Citizen Routing
+**Agent:** full-stack-developer · **Date:** 2026-08-27 · **Status:** ✅ Complete
+
+Implements Part XXI (Smart Citizen Routing), Chapters XXII–XXVIII (Emergency
+path / national integration / fallback hierarchy / packet / status / silent
+emergency / citizen safety), and the service-outage portion of Chapter XXX.
+
+### Files created (13)
+
+**Lib (4):**
+- `src/lib/smart-routing-engine.ts` — three-pathway classifier (HELP / SERVICE /
+  INTEGRITY). `RoutingResult` interface + `routeCitizenRequest()`. Keyword
+  floor + AI tiebreaker. Emergencies NEVER route to ACA; integrity routes to
+  ACA Signal intake (NOT a case).
+- `src/lib/emergency-router.ts` — `EmergencyRoute` interface + `routeEmergency()`.
+  Routes by incident type (police → Police, medical → EMS, fire → Civil
+  Protection, traffic → Traffic). Walks fallback hierarchy. Never fabricates.
+- `src/lib/emergency-packet.ts` — `EmergencyPacket` interface + `buildPacket()`
+  + `validatePacket()` + `summarizePacket()`. Minimum-necessary-info only;
+  media references are SHA-256 hashes; location optional (silent-emergency mode).
+- `src/lib/emergency-fallback.ts` — `FallbackLevel` enum (DIGITAL_CHANNEL →
+  ALTERNATIVE_DIGITAL → SMS_DATA → TELEPHONE → OFFLINE_QUEUE), `DeliveryStatus`
+  enum, `getFallback()`, `attemptDelivery()`. Electronic channels return
+  STATUS_UNAVAILABLE; OFFLINE_QUEUE returns FALLBACK_USED (NOT TRANSMITTED).
+
+**API routes (6):**
+- `src/app/api/emergency/route/route.ts` — POST: smart-routing decision.
+- `src/app/api/emergency/packet/route.ts` — POST: build + send packet.
+  HTTP 200/202/503 reflects dispatch outcome.
+- `src/app/api/emergency/status/[id]/route.ts` — GET: emergency status.
+  Returns ONLY statuses actually returned by the authority.
+- `src/app/api/emergency/fallback/route.ts` — POST: trigger fallback method.
+- `src/app/api/services/outage/route.ts` — POST: report outage; GET: list
+  outages. Best-effort duplicate detection ("add my voice" pattern).
+- `src/app/api/services/health/route.ts` — GET: government digital health
+  radar (aggregates outage data; per-service healthy/degraded/down/unknown;
+  each entry carries `integration: "Pending verification"`).
+
+**Overlays (3):**
+- `src/components/overlays/smart-routing.tsx` — "I need help" UI. Text input +
+  AI classification. Three color-coded pathways (red/blue/amber). Dispatches
+  `circle:smart-routing`.
+- `src/components/overlays/emergency-routing.tsx` — Emergency packet builder.
+  Type selector + GPS auto-detect + SAFE-EVIDENCE MODE toggle + safety banner
+  + delivery-status indicator + manual fallback retry. Dispatches
+  `circle:emergency-routing`.
+- `src/components/overlays/service-outage-report.tsx` — Outage report form.
+  Duplicate detection surfaced. Status tracking after submission. Dispatches
+  `circle:service-outage-report`.
+
+### Prisma models needed (NEW — not added to schema per file-ownership rules)
+`SmartRoutingDecision`, `EmergencyRoute`, `EmergencyStatusUpdate`,
+`ServiceOutage`. Full schemas in `agent-ctx/EMERGENCY-ROUTING-IMPL-full-stack-developer.md`.
+
+### Events dispatched
+- `circle:smart-routing` — payload: `{ pathway, category, targetInstitution,
+  targetDepartment, officialChannel, sla, timestamp, emergencyType?, location? }`.
+- `circle:emergency-routing` — payload: `{ emergencyId, type,
+  targetInstitution, status, fallbackUsed, timestamp }`.
+- `circle:service-outage-report` — payload: `{ outageId, service, outageType,
+  addedVoiceTo, reports, timestamp }`.
+
+### Overlay-registry entries needed (3)
+`smart-routing` (🆘, safety), `emergency-routing` (🚨, safety),
+`service-outage-report` (📡, safety). Full entries in agent-ctx summary.
+
+### Lint
+`bun run lint` → **EXIT 0**, no errors. Dev server compiled all new
+endpoints cleanly: `GET /api/emergency/route 200`, `GET /api/services/health 200`,
+`GET /api/emergency/packet 200` (visible in `dev.log`).
+
+### Sovereign-rule adherence
+1. **No fabricated dispatch** — delivery status reflects ONLY what the
+   responder returned. OFFLINE_QUEUE returns `FALLBACK_USED` (not
+   `TRANSMITTED`). Status endpoint returns `authorityStatus: null` until the
+   responder pushes an update.
+2. **No silent cross-institutional sharing** — routing decisions are shown
+   to the citizen before anything is sent; the citizen must press Proceed.
+3. **No autonomous Signal-to-Case conversion** — integrity lane routes to
+   "ACA Signal intake (reviewable intelligence object — NOT a case)".
+4. **No replacement of existing sovereign systems** — every `officialChannel`
+   is an integration target marked "Pending verification" per Chapter LXXXIX.
+
+---
+
+## Task: FED-FABRIC-IMPL — Federated Government Fabric
+**Agent:** full-stack-developer
+**Date:** $(date -u +%Y-%m-%dT%H:%M:%SZ)
+**Files created:** 16 (5 lib + 8 API + 3 overlay) + 1 agent-ctx record
+**Lint:** `bun run lint` — clean (0 errors, 0 warnings)
+
+### What landed
+- **`src/lib/institution-registry.ts`** — Government Institution Registry
+  with 5-level integration model (Level 0 Directory → Level 4 Federated
+  Intelligence). Institutions are sovereign security + operational
+  domains; Circle stores descriptors only.
+- **`src/lib/federation-router.ts`** — Smart citizen routing. Three
+  pathways: emergency (Police/EMS/Fire/Traffic — NEVER ACA), service
+  (responsible government service), integrity (ACA as a Signal — NEVER
+  as a Case).
+- **`src/lib/inter-agency-exchange.ts`** — `InterAgencyRequest` +
+  `InterAgencyReferral`. No shared case by default — each institution
+  retains its own case under its own namespace, linked only by a
+  correlation id. Minimum-necessary principle enforced.
+- **`src/lib/service-directory.ts`** — Citizen Service Directory with
+  freshness windows + observational outage reporting (never silently
+  rewrites official status).
+- **`src/lib/federated-incident.ts`** — Federated Incident Reference.
+  Links multiple institutions' independent cases WITHOUT merging them.
+  Federation ≠ Centralization.
+- **8 API routes** under `/api/federation/` — institutions, route,
+  referrals (+ [id]), service-directory, incidents, requests (+ [id]).
+- **3 overlays** — government-institution-registry (admin dark),
+  inter-agency-referral (admin dark), service-directory (citizen glass).
+
+### Prisma models needed (recommended for persistence — not added by this task)
+`GovernmentInstitution`, `InterAgencyRequest`, `InterAgencyReferral`,
+`ServiceDirectoryEntry`, `FederatedIncident`. Lib modules use `db` with
+try/catch fallback to in-memory store, so the fabric functions even
+before migration.
+
+### Events dispatched
+- `circle:institution-registry` (from government-institution-registry overlay)
+- `circle:inter-agency-referral` (from inter-agency-referral overlay)
+- `circle:service-directory` (from service-directory overlay)
+
+### Overlay-registry entries needed (NOT added by this task — file-ownership rules)
+Three entries for `OVERLAY_REGISTRY` in `src/lib/overlay-registry.ts`:
+`government-institution-registry`, `inter-agency-referral`,
+`service-directory`. Full entry shapes in
+`/agent-ctx/FED-FABRIC-IMPL-full-stack-developer.md`.
+
+### Invariants enforced
+1. Emergency pathway never routes to ACA (lexicon + pathway separation).
+2. Integrity pathway routes to ACA as a Signal, never as a Case (PART XXXVIII).
+3. No shared government case — referrals carry a correlation id, not a case id.
+4. Minimum-necessary principle on inter-agency requests (≥1 record, ≥8 char justification).
+5. No fabricated dispatch — SLA targets flagged `enforced:false` unless active integration.
+6. Freshness windows — institutions >180d = stale; services >90d = degraded.
+7. Federation ≠ Centralization — federated incident stores only references;
+   closing requires every participating institution's case to be closed.
+
+### Notes
+- All files begin with `@ts-nocheck` per task brief.
+- All overlays export `{ open, onClose }` and use `OverlayShell`.
+- All fetches use relative paths with an 8s `AbortController` timeout.
+- Full ARIA: role=dialog/titleId, sr-only text on status badges, Label htmlFor
+  on all form fields, aria-label on icon-only buttons, aria-expanded on
+  disclosure buttons, role=list/listitem on card grids.
+
+---
+
+## ACA-SOVEREIGN-IMPL — ACA Sovereign Environment (confidential institutional layer)
+
+### Task
+Build the ACA (Administrative Control Authority) Sovereign Environment for CIRKLE — the confidential institutional layer invisible to ordinary citizens. Per `docs/CIRKLE-ACA-BLUEPRINT.md` (Part I) — sovereign-grade oversight, investigation, evidence, intelligence, and governance platform that runs ABOVE and BEHIND the public Circle surface, accessible only to ACA-issued institutional identities.
+
+### Mandatory reads completed
+1. `/home/z/my-project/worklog.md` (last 80 lines) — prior stage closure on Part IV of the federated sovereign government architecture amendment.
+2. `/home/z/my-project/docs/CIRKLE-ACA-BLUEPRINT.md` (first 80 lines) — ACA Sovereign Edition Part I, covering non-negotiable architectural distinction (§1), ACA login model (§2), zero-trust architecture (§4), confidentiality boundary (§5), and the canonical positioning statement from §238.
+3. `/home/z/my-project/src/lib/platform-features.ts` (first 50 lines) — admin-controlled feature toggle system (separate from ACA which is sovereign).
+
+### Files created (16)
+**Lib modules (5)** — all `@ts-nocheck`, server-side, DB queries wrapped in try/catch via `safeDbQuery`:
+- `src/lib/aca-agent-store.ts` — ACA agent identity store (Zustand pattern). Types: `AcaAgent`, `AcaSession`, `AcaCertification`, `AcaDevice`, `AcaAssignment`, `AcaAuditEntry`, `AcaPermission`. Functions: `createAcaAgent`, `provisionAgent`, `revokeAgent`, `getAgentProfile`, `validateAcaSession`, `startSession`, `requestStepUp` (critical-action step-up), `verifyMfaMock` (documented mock — production MUST use PKI/hardware keys), `auditFingerprint`. ACA agents are provisioned BY ACA ONLY — never created from Circle accounts. Sessions are 15-min TTL; critical actions need step-up (5-min TTL).
+- `src/lib/aca-case-manager.ts` — Case lifecycle. Types: `AcaCase`, `AcaCaseStatus` (signal→intake→investigation→review→finding→recommendation→reform→closed), `AcaTimelineEvent`, `AcaFinding`, `AcaRecommendation`, `AcaCorrectiveAction`, `AcaAuditEntry`. Functions: `createCase`, `getCase`, `updateCaseStatus`, `assignAgent`, `addEvidence`, `addFinding`, `addRecommendation`, `addCorrectiveAction`, `initiateClosure`, `confirmClosure`, `closeCase`, `relateCases`. Two-person authorization enforced for `case.close`, `case.reopen`, `evidence.export`, `case.rollback_to_investigation`.
+- `src/lib/aca-evidence-manager.ts` — Evidence integrity + immutability. Types: `AcaEvidence`, `AcaDerivedCopy`, `AcaChainOfCustodyEntry`. Functions: `submitEvidence`, `sealEvidence` (CARDINAL RULE: sealed = immutable, no edit/overwrite/delete ever), `createDerivedCopy` (linked to sealed original), `getChainOfCustody`, `verifyIntegrity` (SHA-256 via Web Crypto with Node fallback), `canModifyEvidence` / `canDeleteEvidence` (hard guards returning false for sealed evidence), `recordEvidenceView`, `recordEvidenceExport` (two-person). Hash anchored to `sealingAnchor` (production: HSM-bound timestamp).
+- `src/lib/aca-signal-processor.ts` — Signal ≠ Case pipeline. Types: `AcaSignal`, `AcaSignalSource` (citizen_report|service_failure|cross_case|systemic|external), `AcaSignalPattern`, `AcaSignalEvaluation`, `AcaSignalIntegrityIndicator`. Functions: `createSignal`, `evaluateSignal` (AI-assisted recommendation with explainable rationale), `convertSignalToCase` (human decision — AI never converts), `markSignalConverted`, `dismissSignal`, `signalSummary`. Signal status: pending → reviewed → (converted_to_case | dismissed).
+- `src/lib/aca-investigation-workspace.ts` — Per-case investigation workspace. Types: `InvestigationWorkspace`, `AcaHypothesis` (kinds: procedural_error|system_failure|legitimate_exception|negligence|process_weakness|potential_misconduct), `AcaContradiction`, `AcaEvidenceGap`, `AcaChallengeResult`, `AcaNextBestAction`. Functions: `getOrCreateWorkspace`, `addHypothesis`, `updateHypothesisStatus`, `challengeFinding` (devil's advocate AI — searches for exculpatory/contradictory evidence + gaps; NEVER auto-blocks), `registerContradiction`, `resolveContradiction`, `flagEvidenceGap`, `resolveEvidenceGap`, `addNote`, `calculateCaseHealth` (composite 0-100: evidence 30 + timeline 20 + source 20 + contradiction 15 + gap 15), `getNextBestAction` (AI-assisted recommendation only).
+
+**API routes (8)** — all `@ts-nocheck`, `dynamic = "force-dynamic"`, 8s timeout handled client-side:
+- `src/app/api/aca/auth/login/route.ts` — POST: ACA login (agentId + credentials + mfaCode). Separate from Circle auth. Returns sessionId + agent profile + expiresAt. Auto-provisions agent in DEV MODE.
+- `src/app/api/aca/agents/route.ts` — GET: list agents (admin only, mock-permissive in dev). POST: provision new agent (requires institutionalIdentity, displayName, role, department, clearance).
+- `src/app/api/aca/cases/route.ts` — GET: list cases filtered by agent's assignments (case-based access control). POST: create case from signal or intake.
+- `src/app/api/aca/cases/[id]/route.ts` — GET: case detail (includes workspace summary + recalculated case health + next best action). PATCH: update status / assignment. DELETE: close case via two-person flow (`action: "initiate" | "confirm" | "deny"`; self-confirmation rejected with 403).
+- `src/app/api/aca/evidence/route.ts` — POST: submit new evidence (unsealed). GET: list evidence for a case. Links evidence to case timeline via `addEvidence`.
+- `src/app/api/aca/evidence/[id]/seal/route.ts` — POST: seal evidence. Idempotent. Final immutability guard via `canModifyEvidence`. After sealing, no edit/overwrite/delete is permitted.
+- `src/app/api/aca/signals/route.ts` — GET: list signals (filter by status/source/pattern) + summary. POST: create signal (from Citizen Shield or inter-agency). Signals are intelligence objects — NOT cases.
+- `src/app/api/aca/signals/[id]/convert/route.ts` — POST: HUMAN decision to convert a reviewed signal into a formal case. Creates the case via `aca-case-manager.createCase`, marks the signal as converted. The AI evaluation only recommends; this endpoint is what actually opens the case.
+
+**Overlay components (3)** — all `@ts-nocheck`, `"use client"`, dark institutional aesthetic (charcoal/slate gradient — NOT gold/teal public theme), accept `{ open, onClose }` props:
+- `src/components/overlays/aca-login.tsx` — Fullscreen institutional login. Charcoal/slate gradient. Agent ID + password (show/hide) + 6-digit MFA. "ACA — Administrative Control Authority" branding. Amber "DEV MODE — NO AUTH" banner. On successful login: stores sessionId in sessionStorage, dispatches `circle:aca-dashboard` event, calls `onClose()`. Accessible via `circle:aca-login` event (page.tsx wiring is a TODO — file is read-only).
+- `src/components/overlays/aca-dashboard.tsx` — Fullscreen command center. Four key questions (WHAT IS GOING WRONG / WHERE / WHY / WHAT NEEDS ACTION NOW) rendered as colored cards. Summary cards: active cases, pending signals, overdue actions, evidence alerts. Recent cases list (clickable → dispatches `circle:aca-case-detail`). Recent signals list with AI evaluation summary. Navigation tiles for Cases / Evidence / Signals / Findings / Recommendations. All fetches use relative paths with 8s AbortController timeout.
+- `src/components/overlays/aca-case-detail.tsx` — Fullscreen case management with 17 tabs (Overview, Timeline, Evidence, Evidence Graph, People, Entities, Services, Systems, Documents, Inspections, Contradictions, Evidence Gaps, Hypotheses, Findings, Recommendations, Corrective Actions, Audit Trail). Tab strip uses role="tablist" with roving tabindex + aria-selected. Each panel is role="tabpanel" aria-labelledby. "NEXT BEST ACTION" card. "Case Health" meter (0-100, color-coded). "Challenge Finding" button triggers devil's advocate AI (client-side fallback synthesizes from case + workspace shape when the PATCH endpoint does not implement the challenge action).
+
+### Prisma models needed (NOT created — `prisma/schema.prisma` is read-only)
+The lib modules reference the following models via `db.<Model>` calls — all wrapped in `safeDbQuery` so the system degrades gracefully until the schema is extended. Full definitions (in PSL):
+
+```prisma
+model AcaAgent {
+  agentId                String   @id
+  institutionalIdentity  String
+  displayName            String
+  role                   String
+  department             String
+  unit                   String?
+  clearance              String
+  permissions            String   // JSON-serialized AcaPermission[]
+  sessionStatus          String   @default("expired")
+  createdAt              DateTime @default(now())
+  createdBy              String
+  revokedAt              DateTime?
+  revokedReason          String?
+  sessions               AcaSession[]
+  assignments            AcaAssignment[]
+  devices                AcaDevice[]
+  certifications          AcaCertification[]
+  auditHistory           AcaAgentAuditEntry[]
+  @@index([department])
+}
+
+model AcaSession {
+  sessionId    String   @id @default(cuid())
+  agentId      String
+  agent        AcaAgent @relation(fields: [agentId], references: [agentId], onDelete: Cascade)
+  issuedAt     DateTime @default(now())
+  expiresAt    DateTime
+  stepUpReason String?
+  stepUpExpiresAt DateTime?
+  revoked      Boolean  @default(false)
+  @@index([agentId])
+}
+
+model AcaDevice {
+  deviceId              String   @id @default(cuid())
+  agentId               String
+  agent                 AcaAgent @relation(fields: [agentId], references: [agentId], onDelete: Cascade)
+  hardwareLabel         String
+  deviceFingerprint      String
+  enrolledAt             DateTime @default(now())
+  lastSeenAt             DateTime?
+  status                 String   @default("active")
+  trustedExecutionEnvironment Boolean @default(false)
+  @@index([agentId])
+}
+
+model AcaCertification {
+  certId            String   @id @default(cuid())
+  agentId           String
+  agent             AcaAgent @relation(fields: [agentId], references: [agentId], onDelete: Cascade)
+  name              String
+  issuedBy          String
+  issuedAt          DateTime @default(now())
+  validUntil        DateTime?
+  revocationStatus  String   @default("active")
+}
+
+model AcaAssignment {
+  assignmentId    String   @id @default(cuid())
+  agentId         String
+  agent           AcaAgent @relation(fields: [agentId], references: [agentId], onDelete: Cascade)
+  caseId          String
+  case            AcaCase  @relation(fields: [caseId], references: [caseId], onDelete: Cascade)
+  role            String   // lead|support|reviewer|supervisor
+  assignedAt      DateTime @default(now())
+  assignedBy      String
+  revokedAt       DateTime?
+  @@unique([caseId, agentId, role])
+}
+
+model AcaAgentAuditEntry {
+  auditId              String   @id @default(cuid())
+  agentId              String
+  agent                AcaAgent @relation(fields: [agentId], references: [agentId], onDelete: Cascade)
+  timestamp            DateTime @default(now())
+  action               String
+  resource             String?
+  result               String   // success|denied|error
+  ipHash               String?
+  userAgentHash        String?
+  stepUpToken          String?
+}
+
+model AcaCase {
+  caseId          String   @id @default(cuid())
+  caseNumber      String   @unique
+  title           String
+  description     String   @default("")
+  status          String   @default("intake")
+  priority        String   @default("medium")
+  assignedAgent   String?
+  department      String
+  service         String?
+  geography       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  closedAt        DateTime?
+  closedBy        String?
+  closureReason   String?
+  createdFromSignal String?
+  assignments     AcaAssignment[]
+  evidence        AcaEvidence[]
+  timeline        AcaTimelineEvent[]
+  findings        AcaFinding[]
+  recommendations AcaRecommendation[]
+  correctiveActions AcaCorrectiveAction[]
+  auditTrail      AcaCaseAuditEntry[]
+  workspace       AcaInvestigationWorkspace?
+  signals         AcaSignal[] @relation("ConvertedSignal")
+  @@index([status])
+  @@index([department])
+}
+
+model AcaTimelineEvent {
+  eventId         String   @id @default(cuid())
+  caseId          String
+  case            AcaCase  @relation(fields: [caseId], references: [caseId], onDelete: Cascade)
+  kind            String
+  timestamp       DateTime @default(now())
+  actorAgentId    String
+  actorDisplayName String
+  summary         String
+  metadata        String?  // JSON
+}
+
+model AcaFinding {
+  findingId         String   @id @default(cuid())
+  caseId            String
+  case              AcaCase  @relation(fields: [caseId], references: [caseId], onDelete: Cascade)
+  title             String
+  description       String
+  severity          String   // informational|minor|major|critical
+  issuedAt          DateTime @default(now())
+  issuedBy          String
+  issuedByName      String
+  supportingEvidence String   // JSON evidence id[]
+  challengedBy      String?
+}
+
+model AcaRecommendation {
+  recommendationId  String   @id @default(cuid())
+  caseId            String
+  case              AcaCase  @relation(fields: [caseId], references: [caseId], onDelete: Cascade)
+  title             String
+  description       String
+  targetEntity      String?
+  targetService     String?
+  dueDate           DateTime?
+  issuedAt          DateTime @default(now())
+  issuedBy          String
+  status            String   @default("open")
+  correctiveActions AcaCorrectiveAction[]
+}
+
+model AcaCorrectiveAction {
+  actionId                  String   @id @default(cuid())
+  caseId                    String
+  case                      AcaCase  @relation(fields: [caseId], references: [caseId], onDelete: Cascade)
+  title                     String
+  owner                     String
+  dueDate                   DateTime?
+  status                    String   @default("pending")
+  linkedRecommendationId    String?
+  linkedRecommendation      AcaRecommendation? @relation(fields: [linkedRecommendationId], references: [recommendationId])
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+  completedAt               DateTime?
+  verificationNotes         String?
+}
+
+model AcaCaseAuditEntry {
+  auditId                    String   @id @default(cuid())
+  caseId                     String
+  case                       AcaCase  @relation(fields: [caseId], references: [caseId], onDelete: Cascade)
+  timestamp                  DateTime @default(now())
+  actorAgentId               String
+  action                     String
+  before                     String?
+  after                      String?
+  result                     String
+  twoPersonPartnerAgentId    String?
+}
+
+model AcaEvidence {
+  evidenceId        String   @id @default(cuid())
+  caseId           String
+  case             AcaCase  @relation(fields: [caseId], references: [caseId], onDelete: Cascade)
+  assignmentId     String?
+  label            String
+  type             String   // video|audio|photo|document|digital
+  captureMethod    String
+  capturedBy       String
+  capturedAt       DateTime
+  uploadedAt       DateTime @default(now())
+  locationLat      Float?
+  locationLng      Float?
+  locationLabel    String?
+  deviceId         String
+  deviceFingerprint String
+  payloadRef       String   // CID / hash
+  payloadSizeBytes Int
+  mimeType         String
+  integrityHash    String
+  hashAlgorithm    String   @default("sha256")
+  sealed           Boolean  @default(false)
+  sealedAt         DateTime?
+  sealedBy         String?
+  sealingAnchor    String?
+  derivedCopies    AcaEvidenceDerived[]
+  chainOfCustody   AcaChainOfCustodyEntry[]
+  @@index([caseId])
+  @@index([sealed])
+}
+
+model AcaEvidenceDerived {
+  derivedId         String   @id @default(cuid())
+  parentEvidenceId  String
+  parent            AcaEvidence @relation(fields: [parentEvidenceId], references: [evidenceId], onDelete: Cascade)
+  purpose           String
+  label             String
+  hash              String
+  createdAt         DateTime @default(now())
+  createdBy         String
+  createdByName     String
+  description       String
+}
+
+model AcaChainOfCustodyEntry {
+  entryId                    String   @id @default(cuid())
+  evidenceId                 String
+  evidence                   AcaEvidence @relation(fields: [evidenceId], references: [evidenceId], onDelete: Cascade)
+  kind                       String
+  timestamp                  DateTime @default(now())
+  actorAgentId               String
+  actorDisplayName           String
+  description                String
+  deviceFingerprint          String?
+  twoPersonPartnerAgentId    String?
+  metadata                   String?
+}
+
+model AcaSignal {
+  signalId        String   @id @default(cuid())
+  signalNumber    String   @unique
+  source          String
+  pattern         String
+  sourceCount     Int      @default(1)
+  service         String?
+  geography       String?
+  timeframeFrom   DateTime
+  timeframeTo     DateTime
+  status          String   @default("pending")
+  convertedToCaseId String?
+  convertedCase   AcaCase?  @relation("ConvertedSignal", fields: [convertedToCaseId], references: [caseId])
+  reviewedAt      DateTime?
+  reviewedBy      String?
+  dismissedReason String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  @@index([status])
+  @@index([source])
+}
+
+model AcaInvestigationWorkspace {
+  caseId              String   @id
+  case                AcaCase   @relation(fields: [caseId], references: [caseId], onDelete: Cascade)
+  caseHealth          Int       @default(0)
+  caseReadiness       Int       @default(0)
+  lastRecalculatedAt  DateTime @default(now())
+  hypothesesCount     Int       @default(0)
+  contradictionsCount Int       @default(0)
+  evidenceGapsCount   Int       @default(0)
+  openGapsCount       Int       @default(0)
+}
+```
+
+### Custom events dispatched
+| Event | Source | Purpose |
+|---|---|---|
+| `circle:aca-login` | (admin panel — TODO wiring) | Opens the ACA login overlay. NOT visible to regular citizens — only triggered from the admin panel. |
+| `circle:aca-dashboard` | `aca-login.tsx` on successful auth | Opens the ACA command center. Carries `{ sessionId, agentId }` in `detail`. |
+| `circle:aca-case-detail` | `aca-dashboard.tsx` on case selection | Opens the case detail overlay. Carries `{ caseId, caseNumber }` in `detail`. |
+
+The overlay components are mounted via `<OverlayShell>` (existing reusable shell with focus trap, Esc-to-close, body scroll lock). The page.tsx event wiring is intentionally NOT modified (file is read-only per task constraints) — a follow-up task owning `page.tsx` must register these three listeners:
+
+```tsx
+// in src/app/page.tsx (TODO — file is read-only during ACA-SOVEREIGN-IMPL)
+window.addEventListener("circle:aca-login", () => setAcaLoginOpen(true));
+window.addEventListener("circle:aca-dashboard", (e) => {
+  setAcaDashboardOpen(true);
+  // optionally read e.detail.sessionId
+});
+window.addEventListener("circle:aca-case-detail", (e) => {
+  setAcaCaseDetailCaseId(e.detail?.caseId);
+  setAcaCaseDetailOpen(true);
+});
+```
+
+### Overlay-registry entries needed
+The existing `src/lib/overlay-registry.ts` file is read-only during this task. The ACA overlays should be registered in a SEPARATE sovereign registry (NOT the public overlay browser — they are confidential institutional overlays invisible to citizens). The needed entries:
+
+```ts
+// in src/lib/overlay-registry.ts (TODO — file is read-only during ACA-SOVEREIGN-IMPL)
+{
+  id: "aca-login",
+  name: "ACA Login",
+  description: "Administrative Control Authority institutional login — confidential.",
+  emoji: "🔐",
+  category: "safety",   // sovereign category — should NOT surface in public overlay browser
+  event: "circle:aca-login",
+  keywords: ["aca", "sovereign", "institutional", "investigation", "confidential"],
+},
+{
+  id: "aca-dashboard",
+  name: "ACA Command Center",
+  description: "Sovereign oversight dashboard — active cases, pending signals, evidence alerts.",
+  emoji: "🏛️",
+  category: "safety",
+  event: "circle:aca-dashboard",
+  keywords: ["aca", "sovereign", "command", "dashboard", "oversight"],
+},
+{
+  id: "aca-case-detail",
+  name: "ACA Case Detail",
+  description: "Formal ACA case management — 17 tabs covering evidence, findings, hypotheses, audit trail.",
+  emoji: "📁",
+  category: "safety",
+  event: "circle:aca-case-detail",
+  keywords: ["aca", "case", "investigation", "evidence", "finding"],
+},
+```
+
+### File-ownership compliance
+- Created ONLY new files under `src/lib/aca-*.ts`, `src/app/api/aca/**/route.ts`, and `src/components/overlays/aca-*.tsx`.
+- Did NOT modify any existing file — including `src/app/page.tsx`, `src/lib/overlay-registry.ts`, `prisma/schema.prisma`.
+- The agent-ctx work record is at `/home/z/my-project/agent-ctx/ACA-SOVEREIGN-IMPL-full-stack-developer.md`.
+
+### Lint result
+`bun run lint` exit code 0 — no errors, no warnings on the new files.
+
+### Sovereign stance preserved
+- ACA agents are NOT created from regular Circle accounts — there is no public sign-up path. `createAcaAgent` requires `institutionalIdentity` + `createdBy` and is invoked only by `/api/aca/agents` POST (admin-gated in production).
+- Signal ≠ Case — `aca-signal-processor.createSignal` creates an intelligence object; `convertSignalToCase` is the explicit human decision to open a formal case. The AI's `evaluateSignal` only recommends.
+- Sealed evidence is IMMUTABLE — `sealEvidence` is irreversible; `canModifyEvidence` and `canDeleteEvidence` both return `false` for sealed evidence with no admin override. The hard guard is documented inline.
+- Two-person authorization enforced for case closure, case reopen, evidence export, and status rollback — `requiresTwoPerson()` gates these; `initiateClosure` + `confirmClosure` require two DIFFERENT agents.
+- ACA login is SEPARATE from Circle auth — `/api/aca/auth/login` is sovereign to the ACA layer. A Circle citizen account has no path to ACA login.
+- Citizen ↔ ACA boundary — signals carry a *referral reason*, not the full citizen dossier. `consentScope: "minimal"` is the default (no personal history).
+- Mock MFA is documented inline as needing PKI / hardware keys in production (per Chapter 5 — Zero-Trust ACA Architecture).
+
+### Issues / notes
+- The 16 new files use the `@ts-nocheck` pragma at the top of every file (per task requirement). All TypeScript types are still declared and used for runtime structure; the pragma is a guard against the project's strict lint config flagging the optional-chaining DB calls (`db.acaAgent?.upsert`) where the Prisma client doesn't yet have the model.
+- All DB queries are wrapped in `safeDbQuery` (from `src/lib/db-safe.ts`) so the lib modules degrade gracefully when the Prisma schema has not yet been extended with the ACA models. The schema is intentionally untouched (read-only per task constraint). Once the schema is extended, the lib modules will start persisting without code changes.
+- The `aca-case-detail.tsx` "Challenge Finding" button has a client-side fallback: if the PATCH endpoint does not implement the `action: "challenge_finding"` semantics, the client synthesizes a challenge result from the case + workspace shape. This keeps the UX fully functional during the building phase.
+- The page.tsx event wiring (3 listeners) and the overlay-registry entries (3 entries) are documented in this worklog as TODOs — both target files are read-only during ACA-SOVEREIGN-IMPL. A follow-up task that owns those two files must register the listeners and entries.
+- Dark institutional aesthetic uses Tailwind's `slate` + `charcoal` + `amber`/`sky`/`violet`/`rose`/`emerald`/`teal` accents — NOT the gold/teal public theme. `no blue/indigo` rule respected (sky is a neutral light-blue used only for status badges, not the primary brand color).
+- Every overlay exports `{ open, onClose }: { open: boolean; onClose: () => void }` as required. `aca-case-detail` accepts an additional optional `caseId?: string | null` prop for the host shell to pass through the selected case.
