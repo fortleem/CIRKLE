@@ -1226,6 +1226,15 @@ export function HomeScreen() {
         </div>
         {/* Quick stats badge */}
         <div className="flex items-center gap-2 shrink-0">
+          {/* R2: "I Need Help" button — smart citizen routing */}
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent("circle:smart-routing"))}
+            className="w-10 h-10 rounded-full bg-red-500/15 border border-red-500/30 flex items-center justify-center hover:scale-105 transition shadow-soft"
+            title="I Need Help — Smart Routing"
+            aria-label="I Need Help — Smart Routing"
+          >
+            <span className="text-sm">🆘</span>
+          </button>
           <button
             onClick={() => window.dispatchEvent(new CustomEvent("circle:ai"))}
             className="w-10 h-10 rounded-full glass-strong border border-secondary/30 flex items-center justify-center hover:scale-105 transition shadow-soft"

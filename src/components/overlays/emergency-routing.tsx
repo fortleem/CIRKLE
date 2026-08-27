@@ -438,6 +438,16 @@ export function EmergencyRouting({ open, onClose }: Props) {
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1 font-mono break-all">ID: {result.emergencyId}</p>
+                {/* R5: Federated Incident ID display */}
+                {(result as any)?.federatedId && (
+                  <div className="mt-2 p-2 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+                    <div className="text-[10px] uppercase tracking-wide text-blue-600 dark:text-blue-400">Federated Incident Reference</div>
+                    <div className="text-xs font-mono text-blue-700 dark:text-blue-300">{(result as any).federatedId}</div>
+                    <div className="text-[10px] text-blue-600/70 dark:text-blue-400/70 mt-1">
+                      Links this emergency across participating institutions. Each institution maintains its own case.
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             <pre className="text-xs whitespace-pre-wrap font-mono text-foreground/80 bg-white/50 dark:bg-black/20 rounded-md p-2 border border-border/40 max-h-48 overflow-y-auto">{result.statusNote}</pre>

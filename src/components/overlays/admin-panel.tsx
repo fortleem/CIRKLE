@@ -37,7 +37,8 @@ import {
   ChevronRight, Cpu as CpuIcon, Zap, Globe, ArrowUpRight, ArrowDownRight,
   TriangleAlert, Ban, Trash2, ShieldAlert, Server as ServerIcon, GitCommit,
   ListChecks, Hash, Eye, EyeOff, Layers, FolderTree, Gauge, Code2,
-  CircleCheck, CircleAlert, Info, Bug, ToggleRight, type LucideIcon,
+  CircleCheck, CircleAlert, Info, Bug, ToggleRight, Shield, Scale, Building2,
+  type LucideIcon,
 } from "lucide-react";
 
 import { OverlayShell } from "@/components/ui/overlay-shell";
@@ -2944,6 +2945,210 @@ function ProtectionRow({ label, ok }: { label: string; ok: boolean }) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+//  Sovereign Environment Section (R1 — ACA, Police, EMS, Fire, Traffic)
+// ────────────────────────────────────────────────────────────────────────────
+
+function SovereignSection() {
+  const { data, loading, error, refresh } = useAdminData<any>("/api/federation/institutions");
+  const [showAcaLogin, setShowAcaLogin] = useState(false);
+
+  const institutions = data?.institutions || [];
+  const byType: Record<string, any[]> = {};
+  for (const inst of institutions) {
+    const t = inst.type || "other";
+    if (!byType[t]) byType[t] = [];
+    byType[t].push(inst);
+  }
+
+  return (
+    <div className="space-y-4">
+      <SectionHeader title="Sovereign Environment" description="ACA, Police, EMS, Fire, Traffic — confidential institutional workspaces" />
+
+      {/* ACA Access Button — R1 */}
+      <AdminCard title="ACA Sovereign Access" icon={Shield}>
+        <div className="space-y-3">
+          <p className="text-sm text-secondary">
+            The ACA (Administrative Control Authority) environment is a completely separate, confidential institutional layer.
+            It is invisible to ordinary citizens. Access requires ACA-provisioned identity.
+          </p>
+          <Button
+            onClick={() => {
+              toast.info("Opening ACA Login — DEV MODE (no auth)");
+              window.dispatchEvent(new CustomEvent("circle:aca-login"));
+            }}
+            className="bg-slate-800 text-slate-100 hover:bg-slate-700"
+          >
+            <Shield className="w-4 h-4 mr-2" />
+            Enter ACA Environment
+          </Button>
+          <div className="text-xs text-amber-500">
+            ⚠️ DEV MODE — Credentials are NOT verified. Production MUST use PKI / hardware keys.
+          </div>
+        </div>
+      </AdminCard>
+
+      {/* Institution Registry Quick Access */}
+      <AdminCard title="Institution Registry" icon={Building2}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => window.dispatchEvent(new CustomEvent("circle:institution-registry"))}
+        >
+          Open Full Registry
+        </Button>
+      </AdminCard>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <StatCard label="Institutions" value={formatNumber(institutions.length)} icon={Building2} />
+        <StatCard label="ACA Cases" value="—" icon={Shield} accent="amber" />
+        <StatCard label="Active Signals" value="—" icon={AlertTriangle} accent="amber" />
+        <StatCard label="Federated Incidents" value="—" icon={Network} />
+      </div>
+
+      {/* Institutions by type */}
+      {Object.keys(byType).length > 0 && (
+        <AdminCard title="Institutions by Type">
+          <div className="space-y-2">
+            {Object.entries(byType).map(([type, items]) => (
+              <div key={type} className="flex items-center gap-2 p-2 rounded-lg bg-white/5">
+                <Badge variant="outline" className="capitalize">{type}</Badge>
+                <span className="text-sm">{items.length} registered</span>
+                <span className="text-xs text-secondary ml-auto">
+                  {items[0]?.integrationLevel !== undefined ? `Level ${items[0].integrationLevel}` : "Level 0"}
+                </span>
+              </div>
+            ))}
+          </div>
+        </AdminCard>
+      )}
+
+      {/* Sovereign principles */}
+      <AdminCard title="Architectural Rules" icon={Scale}>
+        <ul className="text-xs space-y-1 text-secondary">
+          <li>• Circle does not replace government</li>
+          <li>• Each institution is a sovereign security + operational domain</li>
+          <li>• Emergency → Police/EMS/Fire/Traffic (NEVER ACA)</li>
+          <li>• Signal ≠ Case (AI cannot auto-convert)</li>
+          <li>• No cross-institution privilege inheritance</li>
+          <li>• Federation ≠ Centralization</li>
+        </ul>
+      </AdminCard>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  AI Governance Admin Section (R7)
+// ────────────────────────────────────────────────────────────────────────────
+
+function AIGovernanceAdminSection() {
+  const { data: killSwitchData, loading, error, refresh } = useAdminData<any>("/api/ai/kill-switch");
+  const { data: automationData } = useAdminData<any>("/api/ai/automation-level");
+
+  const killSwitches = killSwitchData?.states || [];
+  const automationLevels = automationData?.levels || [];
+
+  return (
+    <div className="space-y-4">
+      <SectionHeader title="AI Governance" description="Zero-trust AI — data access broker, kill switch, automation levels" />
+
+      {/* AI Authority Boundary */}
+      <AdminCard title="AI Human-Authority Boundary" icon={Shield}>
+        <div className="space-y-2 text-xs">
+          <div className="text-emerald-500 font-medium">AI CAN:</div>
+          <div className="text-secondary">detect · connect · correlate · classify · summarize · prioritize · simulate · recommend · warn</div>
+          <div className="text-red-500 font-medium mt-2">AI CANNOT (independently):</div>
+          <div className="text-secondary">declare guilt · impose discipline · issue authoritative findings · unmask protected identities · destroy evidence · close sensitive investigations</div>
+        </div>
+      </AdminCard>
+
+      {/* Kill Switch */}
+      <AdminCard title="AI Kill Switch" icon={Cpu}>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm">Total AI features: {killSwitches.length || 0}</span>
+          <Button variant="outline" size="sm" onClick={() => window.dispatchEvent(new CustomEvent("circle:ai-governance"))}>
+            Open Full Panel
+          </Button>
+        </div>
+        <div className="text-xs text-amber-500">
+          Can disable individual models/features WITHOUT disabling the entire platform.
+        </div>
+      </AdminCard>
+
+      {/* Automation Levels */}
+      <AdminCard title="AI Automation Levels">
+        <div className="space-y-1 text-xs">
+          <div className="flex justify-between"><span>Level 0 — Information only</span><Badge variant="outline">Safe</Badge></div>
+          <div className="flex justify-between"><span>Level 1 — Recommendation</span><Badge variant="outline">Safe</Badge></div>
+          <div className="flex justify-between"><span>Level 2 — Human approval required</span><Badge variant="secondary">Caution</Badge></div>
+          <div className="flex justify-between"><span>Level 3 — Low-risk automation (by policy)</span><Badge variant="secondary">Caution</Badge></div>
+          <div className="flex justify-between"><span>Level 4 — Prohibited autonomous action</span><Badge variant="destructive">Blocked</Badge></div>
+        </div>
+      </AdminCard>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  Policy Engine Admin Section
+// ────────────────────────────────────────────────────────────────────────────
+
+function PolicyAdminSection() {
+  const { data, loading, error, refresh } = useAdminData<any>("/api/policy/rules");
+
+  const rules = data?.rules || [];
+  const byCategory: Record<string, number> = {};
+  for (const r of rules) {
+    byCategory[r.category] = (byCategory[r.category] || 0) + 1;
+  }
+
+  return (
+    <div className="space-y-4">
+      <SectionHeader title="Policy Engine" description="Configurable policy rules — access, retention, escalation, AI, evidence" />
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <StatCard label="Total Rules" value={formatNumber(rules.length)} icon={Scale} />
+        <StatCard label="Active" value={formatNumber(rules.filter((r: any) => r.status === "active").length)} icon={CheckCircle2} accent="green" />
+        <StatCard label="Categories" value={formatNumber(Object.keys(byCategory).length)} icon={Grid3x3} />
+        <StatCard label="Institutions" value={formatNumber(new Set(rules.map((r: any) => r.institution).filter(Boolean)).size)} icon={Building2} />
+      </div>
+
+      <AdminCard title="Rules by Category">
+        {Object.keys(byCategory).length > 0 ? (
+          <div className="space-y-1">
+            {Object.entries(byCategory).map(([cat, count]) => (
+              <div key={cat} className="flex items-center justify-between p-2 rounded-lg bg-white/5">
+                <Badge variant="outline" className="capitalize">{cat}</Badge>
+                <span className="text-sm">{count} rules</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-sm text-secondary text-center py-4">
+            No policy rules yet. Seed defaults or create new rules.
+            <div className="mt-2">
+              <Button variant="outline" size="sm" onClick={() => window.dispatchEvent(new CustomEvent("circle:policy-engine"))}>
+                Open Policy Engine
+              </Button>
+            </div>
+          </div>
+        )}
+      </AdminCard>
+
+      <AdminCard title="Policy Principles" icon={Scale}>
+        <ul className="text-xs space-y-1 text-secondary">
+          <li>• Everything government-facing is policy-configurable</li>
+          <li>• No hard-coded government assumptions</li>
+          <li>• Use configuration and explicit authorization</li>
+          <li>• Categories: access, retention, escalation, emergency, disclosure, AI, evidence</li>
+        </ul>
+      </AdminCard>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 //  Section router
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -2962,6 +3167,9 @@ function SectionRouter({ id }: { id: AdminSectionId }) {
     case "errors":   return <ErrorsSection />;
     case "features": return <FeaturesSection />;
     case "system":   return <SystemSection />;
+    case "sovereign":     return <SovereignSection />;
+    case "ai-governance": return <AIGovernanceAdminSection />;
+    case "policy":        return <PolicyAdminSection />;
     default:         return <EmptyState message="Unknown section" />;
   }
 }
