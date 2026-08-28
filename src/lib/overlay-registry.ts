@@ -1383,6 +1383,35 @@ export const OVERLAY_REGISTRY: OverlayEntry[] = [
     event: "circle:trust-center",
     keywords: ["security", "privacy", "trust", "identity", "encryption", "devices", "sessions"],
   },
+
+  // ── P2: Passkey + WebRTC + Notifications ────────────────────────────────
+  {
+    id: "passkey-setup",
+    name: "Passkeys",
+    description: "Register passkeys (WebAuthn) for phishing-resistant authentication.",
+    emoji: "🔑",
+    category: "privacy",
+    event: "circle:passkey-setup",
+    keywords: ["passkey", "webauthn", "biometric", "face-id", "fingerprint", "security-key"],
+  },
+  {
+    id: "webrtc-call-settings",
+    name: "Call Settings",
+    description: "WebRTC STUN/TURN server configuration for reliable calls.",
+    emoji: "📞",
+    category: "safety",
+    event: "circle:webrtc-settings",
+    keywords: ["webrtc", "turn", "stun", "ice", "call", "config", "nat"],
+  },
+  {
+    id: "unified-notification-center",
+    name: "Notifications",
+    description: "Unified notification center — merges every source into a priority-grouped feed.",
+    emoji: "🔔",
+    category: "productivity",
+    event: "circle:unified-notifications",
+    keywords: ["notification", "unread", "alert", "message", "mention", "call", "follow", "payment", "shield", "ai", "referral"],
+  },
 ];
 
 // ── Category metadata ──────────────────────────────────────────────────

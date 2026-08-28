@@ -180,6 +180,10 @@ const PolicyEngineOverlay = dynamic(() => import("@/components/overlays/policy-e
 // ── P2: Universal Search + Trust Center ──
 const UniversalSearch = dynamic(() => import("@/components/overlays/universal-search").then(m => ({ default: m.UniversalSearch })), { ssr: false });
 const TrustCenter = dynamic(() => import("@/components/overlays/trust-center").then(m => ({ default: m.TrustCenter })), { ssr: false });
+// ── P2: Passkey + WebRTC + Notifications ──
+const PasskeySetup = dynamic(() => import("@/components/overlays/passkey-setup").then(m => ({ default: m.PasskeySetup })), { ssr: false });
+const WebRTCCallSettings = dynamic(() => import("@/components/overlays/webrtc-call-settings").then(m => ({ default: m.WebRTCCallSettings })), { ssr: false });
+const UnifiedNotificationCenter = dynamic(() => import("@/components/overlays/unified-notification-center").then(m => ({ default: m.UnifiedNotificationCenter })), { ssr: false });
 import { useApp } from "@/lib/app-store";
 import { useAuth } from "@/lib/auth-store";
 import { toast } from "sonner";
@@ -522,6 +526,10 @@ export default function Page() {
   // ── P2: Universal Search + Trust Center state ──
   const [universalSearchOpen, setUniversalSearchOpen] = useState(false);
   const [trustCenterOpen, setTrustCenterOpen] = useState(false);
+  // ── P2: Passkey + WebRTC + Notifications state ──
+  const [passkeySetupOpen, setPasskeySetupOpen] = useState(false);
+  const [webrtcSettingsOpen, setWebrtcSettingsOpen] = useState(false);
+  const [unifiedNotifOpen, setUnifiedNotifOpen] = useState(false);
   const [circleDetailId, setCircleDetailId] = useState<string | null>(null);
   const [composer, setComposer] = useState<{ open: boolean; kind?: "post" | "poll" | "media"; draft?: string; anonymous?: boolean; circleId?: string }>({ open: false });
   const Screen = screens[tab];
@@ -960,6 +968,13 @@ export default function Page() {
     const onTrustCenter = () => setTrustCenterOpen(true);
     window.addEventListener("circle:universal-search", onUniversalSearch);
     window.addEventListener("circle:trust-center", onTrustCenter);
+    // ── P2: Passkey + WebRTC + Notifications events ──
+    const onPasskeySetup = () => setPasskeySetupOpen(true);
+    const onWebrtcSettings = () => setWebrtcSettingsOpen(true);
+    const onUnifiedNotif = () => setUnifiedNotifOpen(true);
+    window.addEventListener("circle:passkey-setup", onPasskeySetup);
+    window.addEventListener("circle:webrtc-settings", onWebrtcSettings);
+    window.addEventListener("circle:unified-notifications", onUnifiedNotif);
     return () => {
       window.removeEventListener("circle:composer", onComposer as any);
       window.removeEventListener("circle:governance", onGovernance);
@@ -1123,6 +1138,10 @@ export default function Page() {
       // ── P2: Universal Search + Trust Center cleanup ──
       window.removeEventListener("circle:universal-search", onUniversalSearch);
       window.removeEventListener("circle:trust-center", onTrustCenter);
+      // ── P2: Passkey + WebRTC + Notifications cleanup ──
+      window.removeEventListener("circle:passkey-setup", onPasskeySetup);
+      window.removeEventListener("circle:webrtc-settings", onWebrtcSettings);
+      window.removeEventListener("circle:unified-notifications", onUnifiedNotif);
     };
   }, []);
 
@@ -1389,6 +1408,10 @@ export default function Page() {
       {/* ── P2: Universal Search + Trust Center overlays ── */}
       <UniversalSearch open={universalSearchOpen} onClose={() => setUniversalSearchOpen(false)} />
       <TrustCenter open={trustCenterOpen} onClose={() => setTrustCenterOpen(false)} />
+      {/* ── P2: Passkey + WebRTC + Notifications overlays ── */}
+      <PasskeySetup open={passkeySetupOpen} onClose={() => setPasskeySetupOpen(false)} />
+      <WebRTCCallSettings open={webrtcSettingsOpen} onClose={() => setWebrtcSettingsOpen(false)} />
+      <UnifiedNotificationCenter open={unifiedNotifOpen} onClose={() => setUnifiedNotifOpen(false)} />
 
       {/* P1.7 — Circle Groups: creation flow + detail view. Reachable
           from any surface via `circle:create-circle` and

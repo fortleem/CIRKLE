@@ -10697,3 +10697,88 @@ JWT also acceptable via `Authorization: Bearer <jwt>` for non-browser clients.
 2. SQLite Prisma quirks handled: removed `mode: "insensitive"` (Postgres-only), removed `Post.isDeleted` filter (column doesn't exist on Post model — only on Message).
 3. POST `/api/trust-center` revoke is a stub — returns 200 OK without persistence (CIRKLE doesn't yet persist session state). Overlay updates optimistically.
 4. Wiring into `page.tsx` (event listeners + overlay mounts) NOT done — per CREATE-ONLY constraint. Follow-up agent should add the 2 listeners + 2 mount points.
+
+---
+
+## P2-PASSKEY-WEBRTC — Passkey Auth + WebRTC TURN (full-stack-developer)
+
+**Files created (11):**
+- `src/lib/passkey-service.ts` — WebAuthn registration + verification (in-memory store, documents prod DB persistence)
+- `src/app/api/auth/passkey/register-options/route.ts` — GET, requires auth
+- `src/app/api/auth/passkey/verify-registration/route.ts` — POST, requires auth
+- `src/app/api/auth/passkey/auth-options/route.ts` — GET, anonymous (login challenge)
+- `src/app/api/auth/passkey/verify-auth/route.ts` — POST, anonymous → issues JWT cookie
+- `src/lib/webrtc-turn-config.ts` — env-var readers + `getTurnStatus()` + `getIceServers()`
+- `src/lib/webrtc-config.ts` — wrapper exposing `getIceServers()` / `getTurnInfo()`
+- `src/lib/webrtc-enhanced.ts` — re-exports `webrtc-service.ts` + prototype patch + `WebRTCCallSessionEnhanced` + `getCallDiagnostics()`
+- `src/app/api/calls/turn-status/route.ts` — GET, anonymous
+- `src/components/overlays/passkey-setup.tsx` — passkey enrollment + list + demo sign-in
+- `src/components/overlays/webrtc-call-settings.tsx` — STUN/TURN status + admin form (demo)
+
+**Events dispatched (2):**
+- `circle:passkey-setup`
+- `circle:webrtc-settings`
+
+**Overlay-registry entries needed (2 — NOT added per CREATE-ONLY rule):**
+- `passkey-setup` (emoji 🔑, category privacy, event `circle:passkey-setup`)
+- `webrtc-call-settings` (emoji 📞, category safety, event `circle:webrtc-settings`)
+
+**Lint:** All 11 new files pass eslint cleanly. `bun run lint` reports 2 errors in pre-existing files created by other agents (`overlay-host.ts`, `rate-limit-all.ts`) — NOT my files, NOT modified by me.
+
+**Issues:**
+1. Passkey credentials stored in-memory Map (lost on restart). Prisma `DevicePublicKey` model exists but stores ECDH/ECDSA device-encryption keys — needs WebAuthn-specific columns or new `PasskeyCredential` model for prod.
+2. WebAuthn challenge tolerance: when no outstanding challenge is on record, verify step accepts any challenge (dev-only, marked ⚠️ PROD: tighten).
+3. WebRTC enhanced service monkey-patches `WebRTCCallSession.prototype.createPeerConnection` to call `pc.setConfiguration({ iceServers })` — applied on first import.
+4. Admin TURN config form is display-only (no `/api/admin/turn-config` route created per file-ownership).
+5. Wiring into `page.tsx` + `overlay-registry.ts` NOT done per CREATE-ONLY constraint.
+
+---
+
+## P2-CONTENT-HOST-NOTIFY (Cross-module Content Model + Registry-driven Overlay Host + Universal Notification Center + Rate Limit Expansion)
+
+**Agent**: full-stack-developer (Z.ai Code)
+**Status**: ✅ COMPLETE — 6 files created, lint-clean (0 errors / 0 warnings), all DB calls wrapped in try/catch
+
+### Files Created (6)
+
+| File | Purpose |
+|---|---|
+| `src/lib/content-model.ts` | Unified ContentObject model + converters (Post, Message, Mail, Job) + `searchContent` / `getContentById` / `getContentGraph` cross-module query API |
+| `src/lib/overlay-host.tsx` | `createOverlayHost()` factory — collapses 154 useState + 151 addEventListener + 150 mount points into ONE Map + ONE useEffect + ONE dynamic-import render loop |
+| `src/lib/notification-center.ts` | Unified notification aggregator — 13 sources (messages, missed calls, mentions, follows, mail, payments, jobs, referrals, AI approvals, DSR, AI incidents, ACA cases, shield reports) |
+| `src/lib/rate-limit-all.ts` | Presets (AUTH 5/min, DESTRUCTIVE 3/min, SENSITIVE 10/min, STANDARD 30/min, PUBLIC 60/min) + `withRateLimitAll` / `applyRateLimitToRoute` / `checkRateLimit` / `presetForRoute` / 20-route `RECOMMENDED_ROUTES_TO_WRAP` |
+| `src/app/api/notifications/unified/route.ts` | GET `/api/notifications/unified` (rate-limited PUBLIC 60/min) + POST mark_read / mark_all_read (SENSITIVE 10/min) |
+| `src/components/overlays/unified-notification-center.tsx` | Fullscreen overlay: priority-grouped feed, filter chips, search, mark-as-read (single + all), action buttons → `circle:navigate` |
+
+### Events Dispatched (2 unique)
+
+| Event | When | Payload |
+|---|---|---|
+| `circle:unified-notifications` | Overlay opens | `{ detail: { open: true } }` |
+| `circle:navigate` | Notification action button clicked | `{ detail: { tab, notificationId, module } }` |
+
+### Overlay-Registry Entries Needed (1 — not added per CREATE-ONLY rule)
+
+```ts
+{
+  id: "unified-notification-center",
+  name: "Notifications",
+  description: "Unified notification center — merges every source (messages, calls, mentions, follows, payments, AI approvals, shield alerts) into a priority-grouped feed.",
+  emoji: "🔔",
+  category: "productivity",
+  event: "circle:unified-notifications",
+  keywords: ["notification", "unread", "alert", "message", "mention", "call", "follow", "payment", "shield", "ai", "referral"],
+}
+```
+
+### Lint
+
+`bun run lint` → 0 errors / 0 warnings ✅
+
+### Issues / Deviations
+
+1. **`overlay-host.tsx` instead of `overlay-host.ts`**: the brief specified `.ts`, but the file contains JSX (it returns a React component + an error fallback with inline JSX). ESLint rejects JSX in `.ts` files. Renamed to `.tsx` — this is the idiomatic React convention and does not affect any imports (Next.js / TS resolve both extensions).
+2. **Notification read-state**: CIRKLE has no `Notification` model in Prisma. Read-state is tracked in an in-memory `Set<string>` in `notification-center.ts`. For `message:*` and `mail:*` IDs, `markAsRead` also persists back to the source `Message.status` / `MailMessage.read` columns. Other ID prefixes (`call`, `follow`, `referral`, etc.) remain in-memory only — a future `Notification` Prisma model would persist them.
+3. **`rate-limit-all.ts` route recommendations**: `RECOMMENDED_ROUTES_TO_WRAP` lists 20 specific routes that should adopt the wrapper. The actual wrapping of those existing routes is NOT done per CREATE-ONLY — follow-up agent should add `applyRateLimitToRoute(GET, "PUBLIC")` to each.
+4. **Wiring into `page.tsx`** (event listener for `circle:unified-notifications` + mount point) NOT done — per CREATE-ONLY constraint. Follow-up agent should add 1 listener + 1 mount point, OR migrate `page.tsx` to use `createOverlayHost` and remove ~150 manual wirings at once.
+5. **OverlayHost is built but not wired**: `createOverlayHost` is ready to consume `OVERLAY_REGISTRY` via `fromRegistry(OVERLAY_REGISTRY)`. A follow-up migration of `page.tsx` would replace the existing 154 useState + 151 addEventListener with a single `<host.OverlayHost />` mount. This is a substantial refactor (would touch ~1000 lines of `page.tsx`) and is intentionally left for a dedicated migration task.
