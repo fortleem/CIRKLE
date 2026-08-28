@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { withRateLimit } from "@/lib/api-rate-limit";
 
 /**
  * POST /api/account/dsr
@@ -21,7 +22,7 @@ const VALID_TYPES = new Set([
   "objection",
 ]);
 
-export async function POST(req: NextRequest) {
+async function dsrPostHandler(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const username = String(body?.username || "").trim().toLowerCase().replace(/@cirkle$/i, "").replace(/^@/, "");
@@ -74,12 +75,19 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// P1 FIX: Rate-limited to prevent abuse (DSR submission — 5 req/min)
+export const POST = withRateLimit(dsrPostHandler, {
+  maxRequests: 5,
+  windowMs: 60_000,
+  keyBy: "ip",
+});
+
 /**
  * GET /api/account/dsr?username=foo
  *
  * Lists the user's submitted DSRs so they can track status.
  */
-export async function GET(req: NextRequest) {
+async function dsrGetHandler(req: NextRequest) {
   try {
     const url = new URL(req.url);
     const username = (url.searchParams.get("username") || "").trim().toLowerCase().replace(/@cirkle$/i, "").replace(/^@/, "");
@@ -110,3 +118,10 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+// P1 FIX: Rate-limited to prevent abuse (DSR read — 5 req/min)
+export const GET = withRateLimit(dsrGetHandler, {
+  maxRequests: 5,
+  windowMs: 60_000,
+  keyBy: "ip",
+});

@@ -177,6 +177,9 @@ const ServiceOutageReport = dynamic(() => import("@/components/overlays/service-
 const EvidenceVault = dynamic(() => import("@/components/overlays/evidence-vault").then(m => ({ default: m.EvidenceVault })), { ssr: false });
 const AIGovernancePanel = dynamic(() => import("@/components/overlays/ai-governance-panel").then(m => ({ default: m.AIGovernancePanel })), { ssr: false });
 const PolicyEngineOverlay = dynamic(() => import("@/components/overlays/policy-engine").then(m => ({ default: m.PolicyEngineOverlay })), { ssr: false });
+// ── P2: Universal Search + Trust Center ──
+const UniversalSearch = dynamic(() => import("@/components/overlays/universal-search").then(m => ({ default: m.UniversalSearch })), { ssr: false });
+const TrustCenter = dynamic(() => import("@/components/overlays/trust-center").then(m => ({ default: m.TrustCenter })), { ssr: false });
 import { useApp } from "@/lib/app-store";
 import { useAuth } from "@/lib/auth-store";
 import { toast } from "sonner";
@@ -516,6 +519,9 @@ export default function Page() {
   const [evidenceVaultOpen, setEvidenceVaultOpen] = useState(false);
   const [aiGovernanceOpen, setAiGovernanceOpen] = useState(false);
   const [policyEngineOpen, setPolicyEngineOpen] = useState(false);
+  // ── P2: Universal Search + Trust Center state ──
+  const [universalSearchOpen, setUniversalSearchOpen] = useState(false);
+  const [trustCenterOpen, setTrustCenterOpen] = useState(false);
   const [circleDetailId, setCircleDetailId] = useState<string | null>(null);
   const [composer, setComposer] = useState<{ open: boolean; kind?: "post" | "poll" | "media"; draft?: string; anonymous?: boolean; circleId?: string }>({ open: false });
   const Screen = screens[tab];
@@ -949,6 +955,11 @@ export default function Page() {
     window.addEventListener("circle:evidence-vault", onEvidenceVault);
     window.addEventListener("circle:ai-governance", onAiGovernance);
     window.addEventListener("circle:policy-engine", onPolicyEngine);
+    // ── P2: Universal Search + Trust Center events ──
+    const onUniversalSearch = () => setUniversalSearchOpen(true);
+    const onTrustCenter = () => setTrustCenterOpen(true);
+    window.addEventListener("circle:universal-search", onUniversalSearch);
+    window.addEventListener("circle:trust-center", onTrustCenter);
     return () => {
       window.removeEventListener("circle:composer", onComposer as any);
       window.removeEventListener("circle:governance", onGovernance);
@@ -1109,6 +1120,9 @@ export default function Page() {
       window.removeEventListener("circle:evidence-vault", onEvidenceVault);
       window.removeEventListener("circle:ai-governance", onAiGovernance);
       window.removeEventListener("circle:policy-engine", onPolicyEngine);
+      // ── P2: Universal Search + Trust Center cleanup ──
+      window.removeEventListener("circle:universal-search", onUniversalSearch);
+      window.removeEventListener("circle:trust-center", onTrustCenter);
     };
   }, []);
 
@@ -1372,6 +1386,9 @@ export default function Page() {
       <EvidenceVault open={evidenceVaultOpen} onClose={() => setEvidenceVaultOpen(false)} />
       <AIGovernancePanel open={aiGovernanceOpen} onClose={() => setAiGovernanceOpen(false)} />
       <PolicyEngineOverlay open={policyEngineOpen} onClose={() => setPolicyEngineOpen(false)} />
+      {/* ── P2: Universal Search + Trust Center overlays ── */}
+      <UniversalSearch open={universalSearchOpen} onClose={() => setUniversalSearchOpen(false)} />
+      <TrustCenter open={trustCenterOpen} onClose={() => setTrustCenterOpen(false)} />
 
       {/* P1.7 — Circle Groups: creation flow + detail view. Reachable
           from any surface via `circle:create-circle` and

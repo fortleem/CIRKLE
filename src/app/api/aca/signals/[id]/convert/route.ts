@@ -10,6 +10,10 @@
  *
  * CRITICAL: This endpoint is sovereign to ACA agents. The AI never calls it.
  *
+ * P0 FIX: Route is now auth-gated. Requires a valid `cirkle-session` cookie
+ * AND `isAca` clearance on the session (in addition to the existing
+ * `x-aca-session-id` ACA-session check). Returns 401 / 403 otherwise.
+ *
  * Body:
  *   { caseTitle, caseDescription, casePriority?, department?, service?,
  *     geography?, assignedAgentId?, assignedAgentName?, rationale? }
@@ -25,6 +29,7 @@ import {
 import {
   createCase, persistCase, type AcaCasePriority,
 } from "@/lib/aca-case-manager";
+import { getSessionFromRequest } from "@/lib/server-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +44,15 @@ interface RouteParams { params: Promise<{ id: string }> }
 
 export async function POST(req: Request, ctx: RouteParams) {
   const { id } = await ctx.params;
+  // ── P0 FIX: auth-gate (Circle session + isAca clearance) ───────────────────
+  const session = await getSessionFromRequest(req);
+  if (!session) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  if (!session.isAca) {
+    return NextResponse.json({ error: "forbidden", details: "ACA clearance required" }, { status: 403 });
+  }
+
   const sessionId = getSessionId(req);
   const { agent } = sessionId ? validateAcaSession(sessionId) : { agent: null };
 

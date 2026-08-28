@@ -26,6 +26,7 @@ import {
   type InstitutionType,
   type InstitutionStatus,
 } from "@/lib/institution-registry";
+import { withRateLimit } from "@/lib/api-rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,7 @@ const ALLOWED_STATUSES = new Set<InstitutionStatus>([
   "active", "pending_verification", "stale", "suspended", "retired",
 ]);
 
-export async function GET(req: NextRequest) {
+async function listInstitutionsHandler(req: NextRequest) {
   try {
     const url = new URL(req.url);
     const type = url.searchParams.get("type")?.trim() || "";
@@ -62,7 +63,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
+async function registerInstitutionHandler(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     if (!body || typeof body !== "object") {
@@ -105,3 +106,17 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// P1 FIX: Rate-limited to prevent abuse (institutions list — 30 req/min)
+export const GET = withRateLimit(listInstitutionsHandler, {
+  maxRequests: 30,
+  windowMs: 60_000,
+  keyBy: "ip",
+});
+
+// P1 FIX: Rate-limited to prevent abuse (institution registration — 30 req/min)
+export const POST = withRateLimit(registerInstitutionHandler, {
+  maxRequests: 30,
+  windowMs: 60_000,
+  keyBy: "ip",
+});

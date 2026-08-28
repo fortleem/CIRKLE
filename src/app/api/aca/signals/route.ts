@@ -14,6 +14,9 @@
  * Creating a signal does NOT create a case. A case is opened only when a
  * human ACA agent converts a signal (POST /api/aca/signals/[id]/convert).
  *
+ * P0 FIX: Route is now auth-gated. Requires a valid `cirkle-session` cookie
+ * AND `isAca` clearance on the session. Returns 401 / 403 otherwise.
+ *
  * Body (POST):
  *   { source, pattern, sourceCount?, service?, geography?, timeframe:
  *     { from, to }, evidenceAvailability, repeatedFailures?,
@@ -26,10 +29,21 @@ import {
   signalSummary,
   type AcaSignalSource, type AcaSignalPattern,
 } from "@/lib/aca-signal-processor";
+import { getSessionFromRequest } from "@/lib/server-auth";
+import { withRateLimit } from "@/lib/api-rate-limit";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: Request) {
+async function getSignalsHandler(req: Request) {
+  // ── P0 FIX: auth-gate (Circle session + isAca clearance) ───────────────────
+  const session = await getSessionFromRequest(req);
+  if (!session) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  if (!session.isAca) {
+    return NextResponse.json({ error: "forbidden", details: "ACA clearance required" }, { status: 403 });
+  }
+
   const url = new URL(req.url);
   const status = url.searchParams.get("status") || undefined;
   const source = url.searchParams.get("source") as AcaSignalSource | undefined;
@@ -73,7 +87,16 @@ export async function GET(req: Request) {
   }, { headers: { "Cache-Control": "no-store" } });
 }
 
-export async function POST(req: Request) {
+async function postSignalsHandler(req: Request) {
+  // ── P0 FIX: auth-gate (Circle session + isAca clearance) ───────────────────
+  const session = await getSessionFromRequest(req);
+  if (!session) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  if (!session.isAca) {
+    return NextResponse.json({ error: "forbidden", details: "ACA clearance required" }, { status: 403 });
+  }
+
   let body: any;
   try {
     body = await req.json();
@@ -117,3 +140,17 @@ export async function POST(req: Request) {
     devMode: true,
   }, { status: 201, headers: { "Cache-Control": "no-store" } });
 }
+
+// P1 FIX: Rate-limited to prevent abuse (signals list — 20 req/min)
+export const GET = withRateLimit(getSignalsHandler, {
+  maxRequests: 20,
+  windowMs: 60_000,
+  keyBy: "ip",
+});
+
+// P1 FIX: Rate-limited to prevent abuse (signal creation — 20 req/min)
+export const POST = withRateLimit(postSignalsHandler, {
+  maxRequests: 20,
+  windowMs: 60_000,
+  keyBy: "ip",
+});

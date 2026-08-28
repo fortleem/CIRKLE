@@ -1,29 +1,49 @@
-import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
-
+// @ts-nocheck
 /**
- * GET /api/account/export?username=foo[&handle=foo]
+ * GET /api/account/export
+ * ============================================================================
+ * Returns ALL server-side data the server holds about the AUTHENTICATED user
+ * as a downloadable JSON file.
  *
- * Returns ALL data the server holds about a user as a downloadable JSON
- * file. Sets `Content-Disposition: attachment; filename="cirkle-data-export.json"`.
+ * P0 FIX (IDOR/BOLA):
+ *   Previously this endpoint accepted a `?username=` query param and exported
+ *   data for any user — an attacker could exfiltrate any user's data by
+ *   simply passing `?username=victim`. The route now reads the session from
+ *   the `cirkle-session` cookie and exports ONLY the authenticated caller's
+ *   data. Query params are ignored.
  *
  * The user's on-device Brain memory (IndexedDB) cannot be exported from the
  * server — the response includes a `clientOnly` note that the client should
  * also export IndexedDB separately.
+ * ============================================================================
  */
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { getSessionFromRequest } from "@/lib/server-auth";
+
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   try {
-    const url = new URL(req.url);
-    const usernameRaw = url.searchParams.get("username") || "";
-    const handleRaw = url.searchParams.get("handle") || usernameRaw;
+    // ── P0 FIX: read the caller's identity from the session cookie. ─────────
+    // Query params (`?username=`, `?handle=`) are NO LONGER HONORED.
+    const session = await getSessionFromRequest(req);
+    if (!session) {
+      return NextResponse.json(
+        { ok: false, error: "unauthorized" },
+        { status: 401 },
+      );
+    }
 
-    const username = usernameRaw.trim().toLowerCase().replace(/@cirkle$/i, "").replace(/^@/, "");
-    const handle = handleRaw.trim().replace(/@cirkle$/i, "").replace(/^@/, "");
+    const username = session.username.trim().toLowerCase();
+    const handle = username; // For audit purposes, the handle is the username.
 
     if (!username) {
+      // Should never happen — verifySessionToken rejects empty usernames —
+      // but guard against regressions.
       return NextResponse.json(
-        { ok: false, error: "Missing username." },
-        { status: 400 },
+        { ok: false, error: "Invalid session." },
+        { status: 401 },
       );
     }
 
@@ -44,6 +64,7 @@ export async function GET(req: NextRequest) {
       db.user.findFirst({
         where: {
           OR: [
+            { id: session.userId },
             { circleId: { contains: username } },
             { displayName: { contains: username } },
           ],
@@ -75,7 +96,7 @@ export async function GET(req: NextRequest) {
       }).catch(() => []),
       db.conversationMember.findMany({
         where: {
-          OR: [{ displayName: handle }, { displayName: username }],
+          OR: [{ displayName: handle }, { displayName: username }, { userId: session.userId }],
         },
         include: {
           conversation: { select: { id: true, name: true, type: true, createdAt: true } },
@@ -121,6 +142,7 @@ export async function GET(req: NextRequest) {
         exportedAt: new Date().toISOString(),
         username,
         handle,
+        authenticatedUserId: session.userId,
         note: "This file contains all server-side data Cirkle holds about you. On-device Brain memory (IndexedDB) and any locally-cached auth tokens are NOT included — export them from your browser's DevTools if needed.",
         rights: "You have the right to lodge a complaint with your local data protection authority if you believe our processing infringes applicable law.",
         contact: "dpo@cirkle.app",

@@ -8,6 +8,10 @@
  * or used to support a finding. Sealing is a separate, deliberate action
  * (POST /api/aca/evidence/[id]/seal) that makes the evidence immutable.
  *
+ * P0 FIX: Route is now auth-gated. Requires a valid `cirkle-session` cookie
+ * AND `isAca` clearance on the session (in addition to the existing
+ * `x-aca-session-id` ACA-session check). Returns 401 / 403 otherwise.
+ *
  * Body (POST):
  *   { caseId, label, type, captureMethod, capturedBy, capturedByName,
  *     capturedAt?, location?, deviceIdentity, payloadRef, payloadSizeBytes,
@@ -18,6 +22,8 @@ import { NextResponse } from "next/server";
 import { validateAcaSession } from "@/lib/aca-agent-store";
 import { submitEvidence, listEvidenceForCase, persistEvidence } from "@/lib/aca-evidence-manager";
 import { addEvidence } from "@/lib/aca-case-manager";
+import { getSessionFromRequest } from "@/lib/server-auth";
+import { withRateLimit } from "@/lib/api-rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +34,16 @@ function getSessionId(req: Request): string | null {
   return url.searchParams.get("sessionId");
 }
 
-export async function GET(req: Request) {
+async function getEvidenceHandler(req: Request) {
+  // ── P0 FIX: auth-gate (Circle session + isAca clearance) ───────────────────
+  const session = await getSessionFromRequest(req);
+  if (!session) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  if (!session.isAca) {
+    return NextResponse.json({ error: "forbidden", details: "ACA clearance required" }, { status: 403 });
+  }
+
   const url = new URL(req.url);
   const caseId = url.searchParams.get("caseId");
   if (!caseId) {
@@ -69,7 +84,16 @@ export async function GET(req: Request) {
   }, { headers: { "Cache-Control": "no-store" } });
 }
 
-export async function POST(req: Request) {
+async function postEvidenceHandler(req: Request) {
+  // ── P0 FIX: auth-gate (Circle session + isAca clearance) ───────────────────
+  const session = await getSessionFromRequest(req);
+  if (!session) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  if (!session.isAca) {
+    return NextResponse.json({ error: "forbidden", details: "ACA clearance required" }, { status: 403 });
+  }
+
   const sessionId = getSessionId(req);
   const { agent } = sessionId ? validateAcaSession(sessionId) : { agent: null };
 
@@ -133,3 +157,17 @@ export async function POST(req: Request) {
     notice: "Evidence submitted UNSEALED. Use POST /api/aca/evidence/[id]/seal to make it immutable.",
   }, { status: 201, headers: { "Cache-Control": "no-store" } });
 }
+
+// P1 FIX: Rate-limited to prevent abuse (evidence list — 20 req/min)
+export const GET = withRateLimit(getEvidenceHandler, {
+  maxRequests: 20,
+  windowMs: 60_000,
+  keyBy: "ip",
+});
+
+// P1 FIX: Rate-limited to prevent abuse (evidence submission — 20 req/min)
+export const POST = withRateLimit(postEvidenceHandler, {
+  maxRequests: 20,
+  windowMs: 60_000,
+  keyBy: "ip",
+});

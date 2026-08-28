@@ -1,59 +1,87 @@
-import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
-
+// @ts-nocheck
 /**
  * POST /api/account/delete
- *
+ * ============================================================================
  * Cascades through every Prisma model that holds user data and deletes it.
  *
- * Body: { username: string, handle?: string }  (handle is the @cirkle username
- * used in posts; username is the User.username / AppConnection.userLabel).
+ * P0 FIX (IDOR/BOLA):
+ *   Previously this endpoint accepted a `username` in the body and deleted
+ *   ANY user's data — an attacker could delete any account by passing
+ *   `{ username: "victim" }`. The route now reads the session from the
+ *   `cirkle-session` cookie and deletes ONLY the authenticated caller's own
+ *   data. The body's `username` field is still accepted for backwards
+ *   compatibility, but MUST match the session — otherwise 403 is returned.
  *
- * Note: Cirkle uses a local-device auth model (password hashes live in
- * localStorage on the client). The server-side identifier is the `username`
- * string, which is reused across tables (User.username, Post.authorHandle,
- * Transaction.userLabel, AppConnection.userLabel, VerifyClaim.userLabel,
- * ShieldReport.officeName when user-attributed, etc.).
+ * Note: Cirkle uses a local-device auth model historically (password hashes
+ * live in localStorage on the client). The server-side identifier is the
+ * `username` string, which is reused across tables (User.username,
+ * Post.authorHandle, Transaction.userLabel, AppConnection.userLabel,
+ * VerifyClaim.userLabel, ShieldReport.officeName when user-attributed, etc.).
  *
  * This route is intentionally tolerant of partial matches — it deletes what
  * it can find and never throws on a missing table/row.
+ * ============================================================================
  */
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { getSessionFromRequest } from "@/lib/server-auth";
+import { deleteCredential } from "@/lib/server-credentials";
+
+export const dynamic = "force-dynamic";
+
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json().catch(() => ({}));
-    const username = String(body?.username || "").trim().toLowerCase();
-    const handle = String(body?.handle || username || "").trim();
-
-    if (!username) {
+    // ── P0 FIX: read the caller's identity from the session cookie. ─────────
+    const session = await getSessionFromRequest(req);
+    if (!session) {
       return NextResponse.json(
-        { ok: false, error: "Missing username." },
-        { status: 400 },
+        { ok: false, error: "unauthorized" },
+        { status: 401 },
       );
     }
 
-    // Defensive: strip any @cirkle suffix.
-    const cleanUsername = username.replace(/@cirkle$/i, "").replace(/^@/, "");
-    const cleanHandle = handle.replace(/@cirkle$/i, "").replace(/^@/, "");
+    const sessionUsername = session.username.trim().toLowerCase();
+
+    const body = await req.json().catch(() => ({}));
+    const bodyUsername = String(body?.username || "").trim().toLowerCase();
+
+    // Backwards-compat: if a username is supplied in the body, it MUST match
+    // the session. Otherwise this is a forbidden cross-account delete attempt.
+    if (bodyUsername && bodyUsername.replace(/@cirkle$/i, "").replace(/^@/, "") !== sessionUsername) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "forbidden",
+          details: "You can only delete your own account.",
+        },
+        { status: 403 },
+      );
+    }
+
+    const cleanUsername = sessionUsername.replace(/@cirkle$/i, "").replace(/^@/, "");
+    const cleanHandle = cleanUsername; // For audit purposes, the handle is the username.
 
     const stats: Record<string, number> = {};
 
-    // 1. User row (by username == circleId match — fallback to displayName).
+    // 1. User row (by id — authoritative post-P0 — with fallback to username
+    //    match for legacy seeded rows).
     try {
-      const user = await db.user.findFirst({
-        where: {
-          OR: [
-            { circleId: { contains: cleanUsername } },
-            { displayName: { contains: cleanUsername } },
-          ],
-        },
-        select: { id: true },
-      });
+      const user =
+        (await db.user.findUnique({
+          where: { id: session.userId },
+          select: { id: true },
+        }).catch(() => null)) ||
+        (await db.user.findFirst({
+          where: {
+            OR: [
+              { circleId: { contains: cleanUsername } },
+              { displayName: { contains: cleanUsername } },
+            ],
+          },
+          select: { id: true },
+        }).catch(() => null));
+
       if (user) {
-        // Cascading relations on User (ConversationMember, Message, Post,
-        // Transaction) handle their own deletes via onDelete: Cascade for
-        // ConversationMember/Message/Transaction. Post.authorId is
-        // nullable and uses restrict-by-default — we delete posts
-        // explicitly below first.
         await db.user.delete({ where: { id: user.id } }).catch(() => {});
         stats.user = 1;
       }
@@ -84,6 +112,7 @@ export async function POST(req: NextRequest) {
           OR: [
             { senderName: cleanHandle },
             { senderName: cleanUsername },
+            { senderId: session.userId },
           ],
         },
       });
@@ -112,7 +141,11 @@ export async function POST(req: NextRequest) {
     try {
       const memberships = await db.conversationMember.findMany({
         where: {
-          OR: [{ displayName: cleanHandle }, { displayName: cleanUsername }],
+          OR: [
+            { displayName: cleanHandle },
+            { displayName: cleanUsername },
+            { userId: session.userId },
+          ],
         },
         select: { conversationId: true, id: true },
       });
@@ -197,11 +230,7 @@ export async function POST(req: NextRequest) {
       console.warn("[account/delete] appConnections:", String((e as Error)?.message || e));
     }
 
-    // 10. Webhook events for any apps this user owned (best-effort: delete
-    //     events for apps where the user is the developer — we approximate
-    //     by appConnection existence, but since we already deleted those,
-    //     this is a no-op for most users).
-    //     Skipped to avoid deleting another user's events.
+    // 10. Webhook events — skipped (see original note).
     stats.webhookEvents = 0;
 
     // 11. Data Subject Requests — also delete the user's DSR history since
@@ -213,6 +242,27 @@ export async function POST(req: NextRequest) {
       stats.dsrRecords = r.count;
     } catch (e) {
       console.warn("[account/delete] dsrRecords:", String((e as Error)?.message || e));
+    }
+
+    // 12. E2EE device public keys — the user's published device keys.
+    try {
+      const r = await db.devicePublicKey.deleteMany({
+        where: { userLabel: { in: [cleanHandle, cleanUsername] } },
+      });
+      stats.devicePublicKeys = r.count;
+    } catch (e) {
+      console.warn("[account/delete] devicePublicKeys:", String((e as Error)?.message || e));
+    }
+
+    // 13. Server credential store — drop the password hash.
+    try {
+      if (deleteCredential(cleanUsername)) {
+        stats.credentials = 1;
+      } else {
+        stats.credentials = 0;
+      }
+    } catch {
+      stats.credentials = 0;
     }
 
     return NextResponse.json({

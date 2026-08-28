@@ -4,6 +4,9 @@
  * ============================================================================
  * System & infrastructure data for the admin panel.
  *
+ * P0 FIX: Route is now auth-gated. Requires a valid `cirkle-session` cookie
+ * AND `isAdmin` clearance on the session. Returns 401 / 403 otherwise.
+ *
  * Pulls from:
  *   - src/lib/env-validation.ts (env vars: required, optional, missing)
  *   - src/lib/db.ts (Turso connection check via a count query)
@@ -12,8 +15,6 @@
  * Returns:
  *   { env: {...}, database: {...}, git: {...}, backups: [...],
  *     package: {...}, runtime: {...} }
- *
- * NOTE: Not auth-gated during the admin panel building phase.
  * ============================================================================
  */
 import { NextResponse } from "next/server";
@@ -22,6 +23,7 @@ import { join } from "node:path";
 import { execSync } from "node:child_process";
 import { db } from "@/lib/db";
 import { getEnvStatus } from "@/lib/env-validation";
+import { getSessionFromRequest } from "@/lib/server-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +44,16 @@ function safeStat(path: string) {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  // ── P0 FIX: auth-gate ─────────────────────────────────────────────────────
+  const session = await getSessionFromRequest(req);
+  if (!session) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  if (!session.isAdmin) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+
   // ── Environment validation ──────────────────────────────────────────────
   const envStatus = getEnvStatus();
 

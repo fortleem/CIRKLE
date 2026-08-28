@@ -12,7 +12,12 @@
  *
  * Returns: { sessionId, agent, expiresAt }
  *
- * BUILDING PHASE — NO REAL AUTH:
+ * P0 FIX: Route is now auth-gated. Requires a valid `cirkle-session` cookie
+ * AND `isAca` clearance on the session (in addition to the existing mock
+ * MFA check). Returns 401 / 403 otherwise. The caller must be a Circle user
+ * with `isAca` clearance BEFORE they can perform ACA login.
+ *
+ * BUILDING PHASE — NO REAL AUTH (mock MFA):
  *   - A prominent amber "DEV MODE — NO AUTH" banner is shown by the ACA login
  *     overlay. Credentials are NOT verified against a real identity provider.
  *   - The mock MFA accepts any 6-digit numeric code.
@@ -20,7 +25,8 @@
  *     per CIRKLE-ACA-BLUEPRINT Chapter 5 (Zero-Trust ACA Architecture).
  *
  * This endpoint is sovereign to the ACA layer — it does NOT touch the public
- * Circle auth surface. A Circle citizen account has no path to ACA login.
+ * Circle auth surface. A Circle citizen account has no path to ACA login
+ * (the `isAca` clearance flag must be granted out-of-band).
  * ============================================================================
  */
 import { NextResponse } from "next/server";
@@ -28,6 +34,8 @@ import {
   acaAgentStore, startSession, auditFingerprint, verifyMfaMock,
   type AcaRole, type AcaClearance,
 } from "@/lib/aca-agent-store";
+import { getSessionFromRequest } from "@/lib/server-auth";
+import { withRateLimit } from "@/lib/api-rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +51,18 @@ interface LoginBody {
   clearance?: AcaClearance;
 }
 
-export async function POST(req: Request) {
+async function loginHandler(req: Request) {
+  // ── P0 FIX: auth-gate (Circle session + isAca clearance) ───────────────────
+  // A Circle citizen must be authenticated AND flagged `isAca` before they
+  // can do the ACA-specific MFA login.
+  const session = await getSessionFromRequest(req);
+  if (!session) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  if (!session.isAca) {
+    return NextResponse.json({ error: "forbidden", details: "ACA clearance required" }, { status: 403 });
+  }
+
   let body: LoginBody;
   try {
     body = (await req.json()) as LoginBody;
@@ -127,3 +146,10 @@ export async function POST(req: Request) {
     notice: "DEV MODE — NO AUTH. MFA is a mock. Production must use PKI / hardware keys.",
   }, { headers: { "Cache-Control": "no-store" } });
 }
+
+// P1 FIX: Rate-limited to prevent abuse (brute-force protection on login — 5 req/min)
+export const POST = withRateLimit(loginHandler, {
+  maxRequests: 5,
+  windowMs: 60_000,
+  keyBy: "ip",
+});

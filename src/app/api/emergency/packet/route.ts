@@ -26,6 +26,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { routeEmergency } from "@/lib/emergency-router";
 import type { EmergencyType } from "@/lib/smart-routing-engine";
 import { DeliveryStatus } from "@/lib/emergency-fallback";
+import { withRateLimit } from "@/lib/api-rate-limit";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -36,7 +37,7 @@ const VALID_TYPES: EmergencyType[] = ["police", "medical", "fire", "traffic", "o
 // (Production wires a Prisma model — see the summary file.)
 const ROUTE_STORE: Record<string, Awaited<ReturnType<typeof routeEmergency>>> = {};
 
-export async function POST(req: NextRequest) {
+async function emergencyPacketHandler(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const type = String(body.type || "").toLowerCase() as EmergencyType;
@@ -124,7 +125,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET() {
+async function emergencyPacketGetHandler(req: NextRequest) {
   return NextResponse.json(
     {
       ok: true,
@@ -160,3 +161,17 @@ export async function GET() {
 // Exported for the status route — allows cross-route access in dev mode.
 // (Production replaces ROUTE_STORE with a Prisma model — see summary.)
 ;(globalThis as any).__CIRKLE_EMERGENCY_ROUTE_STORE__ = ROUTE_STORE;
+
+// P1 FIX: Rate-limited to prevent abuse (emergency packet submission — 10 req/min)
+export const POST = withRateLimit(emergencyPacketHandler, {
+  maxRequests: 10,
+  windowMs: 60_000,
+  keyBy: "ip",
+});
+
+// P1 FIX: Rate-limited to prevent abuse (emergency packet metadata — 10 req/min)
+export const GET = withRateLimit(emergencyPacketGetHandler, {
+  maxRequests: 10,
+  windowMs: 60_000,
+  keyBy: "ip",
+});

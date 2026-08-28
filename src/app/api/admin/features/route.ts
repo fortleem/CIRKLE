@@ -4,16 +4,27 @@
  * PUT  /api/admin/features  — toggle a feature on/off
  *      body: { id: string, enabled: boolean }
  *
- * NOTE: Not auth-gated during the admin panel building phase.
+ * P0 FIX: Route is now auth-gated. Requires a valid `cirkle-session` cookie
+ * AND `isAdmin` clearance on the session. Returns 401 / 403 otherwise.
  * ============================================================================
  */
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { PLATFORM_FEATURES, resolveFeatureStates } from "@/lib/platform-features";
+import { getSessionFromRequest } from "@/lib/server-auth";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // ── P0 FIX: auth-gate ─────────────────────────────────────────────────────
+  const session = await getSessionFromRequest(req);
+  if (!session) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  if (!session.isAdmin) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+
   try {
     let dbToggles: Array<{ id: string; enabled: boolean }> = [];
     try {
@@ -52,6 +63,15 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
+  // ── P0 FIX: auth-gate ─────────────────────────────────────────────────────
+  const session = await getSessionFromRequest(req);
+  if (!session) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  if (!session.isAdmin) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+
   try {
     const body = await req.json().catch(() => ({}));
     const { id, enabled } = body;

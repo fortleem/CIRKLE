@@ -4,6 +4,9 @@
  * ============================================================================
  * Returns the email sending log (audit trail). Used by the admin panel.
  *
+ * P0 FIX: Route is now auth-gated. Requires a valid `cirkle-session` cookie
+ * AND `isAdmin` clearance on the session. Returns 401 / 403 otherwise.
+ *
  * Query params:
  *   ?take=50     — max 200, default 50
  *   ?skip=0
@@ -13,10 +16,20 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getSessionFromRequest } from "@/lib/server-auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
+  // ── P0 FIX: auth-gate ─────────────────────────────────────────────────────
+  const session = await getSessionFromRequest(req);
+  if (!session) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  if (!session.isAdmin) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+
   try {
     const url = new URL(req.url);
     const take = Math.min(200, Math.max(1, Number(url.searchParams.get("take") || "50")));

@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
 import { sealEvidence } from "@/lib/evidence-immutability";
+import { withRateLimit } from "@/lib/api-rate-limit";
 
 /**
  * POST /api/evidence/seal
@@ -10,7 +11,7 @@ import { sealEvidence } from "@/lib/evidence-immutability";
  *   { type, title, payloadRef, payloadBytes?, mime?, deviceIdentity,
  *     captureTimestamp, location?, agentId, assignmentId?, sealedBy?, metadata? }
  */
-export async function POST(req: NextRequest) {
+async function sealEvidenceHandler(req: NextRequest) {
   try {
     const body = await req.json();
     if (!body || !body.payloadRef || !body.deviceIdentity || !body.captureTimestamp || !body.agentId) {
@@ -41,3 +42,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
+
+// P1 FIX: Rate-limited to prevent abuse (evidence sealing — 10 req/min)
+export const POST = withRateLimit(sealEvidenceHandler, {
+  maxRequests: 10,
+  windowMs: 60_000,
+  keyBy: "ip",
+});

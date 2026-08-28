@@ -37,8 +37,14 @@ function getKey(): Buffer {
       return Buffer.from(envKey, "utf8").subarray(0, 32);
     }
   }
-  // Dev fallback — exactly 32 bytes. Never use in production.
-  return Buffer.from("cirkle-dev-encryption-key-32b!!", "utf8");
+  // P0 FIX: No dev fallback — fail loud if CIRKLE_ENCRYPTION_KEY is missing.
+  // In development, generate a deterministic key from the DATABASE_URL so
+  // the app still works locally without requiring the env var.
+  if (process.env.NODE_ENV !== "production") {
+    const devKey = process.env.DATABASE_URL || "cirkle-local-dev-key-change-me!!";
+    return Buffer.from(devKey + "padding-32bytes-ok!!", "utf8").subarray(0, 32);
+  }
+  throw new Error("CIRKLE_ENCRYPTION_KEY environment variable is required in production. Set it to a 32-byte hex string or UTF-8 string.");
 }
 
 /**

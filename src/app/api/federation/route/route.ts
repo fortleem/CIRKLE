@@ -22,10 +22,11 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { routeRequest } from "@/lib/federation-router";
+import { withRateLimit } from "@/lib/api-rate-limit";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(req: NextRequest) {
+async function routeRequestHandler(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     if (!body || typeof body !== "object") {
@@ -59,3 +60,10 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// P1 FIX: Rate-limited to prevent abuse (smart citizen routing — 30 req/min)
+export const POST = withRateLimit(routeRequestHandler, {
+  maxRequests: 30,
+  windowMs: 60_000,
+  keyBy: "ip",
+});

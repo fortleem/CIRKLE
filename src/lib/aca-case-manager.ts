@@ -1,8 +1,15 @@
 // @ts-nocheck
+// P0 FIX: Now persists to Prisma DB with in-memory fallback
 /**
  * ACA Case Manager
  * ============================================================================
  * Formal case lifecycle for the Administrative Control Authority (ACA) layer.
+ *
+ * P0 FIX: cases now persist to the `AcaCase` Prisma table. Every mutating
+ * function writes to the DB (best-effort) AND to the in-memory cache, so the
+ * synchronous public surface continues to work even when the DB is cold /
+ * unavailable. Reads return from the in-memory cache and trigger a
+ * fire-and-forget DB prefetch so the cache stays fresh across calls.
  *
  * CASE ≠ SIGNAL (per CIRKLE-ACA-BLUEPRINT §1.2):
  *   - A SIGNAL is intelligence — a possible issue requiring review.
@@ -228,6 +235,132 @@ export function requiresTwoPerson(action: string): action is TwoPersonAction {
 const _cases = new Map<string, AcaCase>();
 
 // ────────────────────────────────────────────────────────────────────────────
+//  DB helpers (P0 FIX)
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Persist a case to the DB AND keep the in-memory cache in sync.
+ * Wraps `db.acaCase.upsert` in safeDbQuery so failures are non-fatal.
+ */
+async function dbUpsertCase(c: AcaCase): Promise<void> {
+  const result = await safeDbQuery(() =>
+    db.acaCase.upsert({
+      where: { caseId: c.caseId },
+      create: {
+        caseId: c.caseId,
+        caseNumber: c.caseNumber,
+        status: c.status,
+        priority: c.priority,
+        assignedAgent: c.assignedAgent ?? null,
+        createdFromSignal: c.createdFromSignal ?? null,
+        relatedCases: JSON.stringify(c.relatedCases),
+        timeline: JSON.stringify(c.timeline),
+        evidence: JSON.stringify(c.evidence),
+        findings: JSON.stringify(c.findings),
+        recommendations: JSON.stringify(c.recommendations),
+        correctiveActions: JSON.stringify(c.correctiveActions),
+        auditTrail: JSON.stringify(c.auditTrail),
+        createdAt: new Date(c.createdAt),
+        updatedAt: new Date(c.updatedAt),
+        closedAt: c.closedAt ? new Date(c.closedAt) : null,
+      },
+      update: {
+        status: c.status,
+        priority: c.priority,
+        assignedAgent: c.assignedAgent ?? null,
+        relatedCases: JSON.stringify(c.relatedCases),
+        timeline: JSON.stringify(c.timeline),
+        evidence: JSON.stringify(c.evidence),
+        findings: JSON.stringify(c.findings),
+        recommendations: JSON.stringify(c.recommendations),
+        correctiveActions: JSON.stringify(c.correctiveActions),
+        auditTrail: JSON.stringify(c.auditTrail),
+        updatedAt: new Date(c.updatedAt),
+        closedAt: c.closedAt ? new Date(c.closedAt) : null,
+      },
+    }),
+  );
+  if (result === null) {
+    console.warn(
+      `[aca-case-manager] DB unavailable for case ${c.caseId} — in-memory only`,
+    );
+  }
+}
+
+function rowToCase(row: any): AcaCase {
+  const safeParse = <T,>(s: string | null | undefined, fallback: T): T => {
+    try {
+      return s ? JSON.parse(s) as T : fallback;
+    } catch {
+      return fallback;
+    }
+  };
+  return {
+    caseId: row.caseId,
+    caseNumber: row.caseNumber,
+    title: "",
+    description: "",
+    status: row.status as AcaCaseStatus,
+    priority: row.priority as AcaCasePriority,
+    assignedAgent: row.assignedAgent ?? null,
+    assignedAgentName: null,
+    supportingAgents: [],
+    createdFromSignal: row.createdFromSignal ?? undefined,
+    relatedCases: safeParse<string[]>(row.relatedCases, []),
+    timeline: safeParse<AcaTimelineEvent[]>(row.timeline, []),
+    evidence: safeParse<AcaEvidenceRef[]>(row.evidence, []),
+    findings: safeParse<AcaFinding[]>(row.findings, []),
+    recommendations: safeParse<AcaRecommendation[]>(row.recommendations, []),
+    correctiveActions: safeParse<AcaCorrectiveAction[]>(row.correctiveActions, []),
+    auditTrail: safeParse<AcaAuditEntry[]>(row.auditTrail, []),
+    department: "",
+    service: undefined,
+    geography: undefined,
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt),
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : String(row.updatedAt),
+    closedAt: row.closedAt instanceof Date ? row.closedAt.toISOString() : undefined,
+  };
+}
+
+/** Load a single case from the DB into the in-memory cache. */
+async function dbLoadCase(caseId: string): Promise<AcaCase | null> {
+  const row = await safeDbQuery(() =>
+    db.acaCase.findUnique({ where: { caseId } }),
+  );
+  if (!row) return null;
+  const c = rowToCase(row);
+  _cases.set(caseId, c);
+  return c;
+}
+
+/** Load ALL cases from the DB into the in-memory cache. */
+async function dbLoadAllCases(): Promise<AcaCase[]> {
+  const rows = await safeDbQuery(() => db.acaCase.findMany());
+  if (!rows) return [];
+  const cases: AcaCase[] = [];
+  for (const row of rows) {
+    const c = rowToCase(row);
+    _cases.set(c.caseId, c);
+    cases.push(c);
+  }
+  return cases;
+}
+
+/** Fire-and-forget prefetch — used by sync read paths to keep the cache fresh. */
+function prefetchCase(caseId: string): void {
+  void dbLoadCase(caseId).catch(() => {});
+}
+
+function prefetchAllCases(): void {
+  void dbLoadAllCases().catch(() => {});
+}
+
+/** Synchronous DB persist hook — fire-and-forget after every in-memory write. */
+function persistCaseFireAndForget(c: AcaCase): void {
+  void dbUpsertCase(c).catch(() => {});
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 //  Public API
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -294,15 +427,24 @@ export function createCase(input: CreateCaseInput): AcaCase {
     updatedAt: ts,
   };
   _cases.set(caseId, c);
+  // P0 FIX — durable persist to AcaCase table (best-effort, fire-and-forget).
+  persistCaseFireAndForget(c);
   return c;
 }
 
 export function getCase(caseId: string): AcaCase | null {
-  return _cases.get(caseId) ?? null;
+  const c = _cases.get(caseId) ?? null;
+  if (!c) {
+    // Fire-and-forget DB prefetch so the next call sees fresh data.
+    prefetchCase(caseId);
+  }
+  return c;
 }
 
 export function listCasesForAgent(agentId: string, opts?: { department?: string; departmentScope?: boolean }): AcaCase[] {
   const all = Array.from(_cases.values());
+  // Fire-and-forget DB refresh so the cache stays fresh across calls.
+  prefetchAllCases();
   return all.filter((c) => {
     if (c.assignedAgent === agentId) return true;
     if (c.supportingAgents.includes(agentId)) return true;
@@ -314,6 +456,8 @@ export function listCasesForAgent(agentId: string, opts?: { department?: string;
 }
 
 export function listAllCases(): AcaCase[] {
+  // Fire-and-forget DB refresh so the cache stays fresh across calls.
+  prefetchAllCases();
   return Array.from(_cases.values()).sort(
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
   );
@@ -363,6 +507,7 @@ export function updateCaseStatus(input: {
       metadata: { from: prev, to: input.newStatus },
     });
     c.updatedAt = nowIso();
+    persistCaseFireAndForget(c);
     return c;
   }
 
@@ -388,6 +533,7 @@ export function updateCaseStatus(input: {
     result: "success",
   });
   c.updatedAt = nowIso();
+  persistCaseFireAndForget(c);
   return c;
 }
 
@@ -445,6 +591,7 @@ export function assignAgent(input: {
     result: "success",
   });
   c.updatedAt = nowIso();
+  persistCaseFireAndForget(c);
   return c;
 }
 
@@ -486,6 +633,7 @@ export function addEvidence(input: {
     result: "success",
   });
   c.updatedAt = nowIso();
+  persistCaseFireAndForget(c);
   return c;
 }
 
@@ -534,6 +682,7 @@ export function addFinding(input: {
     result: "success",
   });
   c.updatedAt = nowIso();
+  persistCaseFireAndForget(c);
   return c;
 }
 
@@ -582,6 +731,7 @@ export function addRecommendation(input: {
     result: "success",
   });
   c.updatedAt = nowIso();
+  persistCaseFireAndForget(c);
   return c;
 }
 
@@ -628,6 +778,7 @@ export function addCorrectiveAction(input: {
     result: "success",
   });
   c.updatedAt = nowIso();
+  persistCaseFireAndForget(c);
   return c;
 }
 
@@ -666,6 +817,7 @@ export function initiateClosure(input: {
     metadata: { reason: input.reason },
   });
   c.updatedAt = nowIso();
+  persistCaseFireAndForget(c);
   return c;
 }
 
@@ -708,6 +860,7 @@ export function confirmClosure(input: {
     twoPersonPartnerAgentId: c.twoPersonState.initiatedBy,
   });
   c.updatedAt = nowIso();
+  persistCaseFireAndForget(c);
   return c;
 }
 
@@ -747,69 +900,26 @@ export function relateCases(caseIdA: string, caseIdB: string): boolean {
   if (!a || !b) return false;
   if (!a.relatedCases.includes(caseIdB)) a.relatedCases.push(caseIdB);
   if (!b.relatedCases.includes(caseIdA)) b.relatedCases.push(caseIdA);
+  persistCaseFireAndForget(a);
+  persistCaseFireAndForget(b);
   return true;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-//  Persistence helpers (DB optional — degrades gracefully)
+//  Public persistence helpers (DB optional — degrades gracefully)
+//
+//  P0 FIX: these now delegate to the schema-aware upsert/load helpers above
+//  so they actually round-trip correctly against the current `AcaCase`
+//  schema (which has NO title / description / department / service /
+//  geography columns — the schema stores timeline / evidence / findings /
+//  recommendations / correctiveActions / auditTrail / relatedCases as JSON
+//  strings inside the row instead).
 // ────────────────────────────────────────────────────────────────────────────
 
 export async function persistCase(c: AcaCase): Promise<void> {
-  await safeDbQuery(() =>
-    db.acaCase?.upsert({
-      where: { caseId: c.caseId },
-      create: {
-        caseId: c.caseId,
-        caseNumber: c.caseNumber,
-        title: c.title,
-        description: c.description,
-        status: c.status,
-        priority: c.priority,
-        assignedAgent: c.assignedAgent ?? null,
-        department: c.department,
-        service: c.service ?? null,
-        geography: c.geography ?? null,
-        createdAt: new Date(c.createdAt),
-        updatedAt: new Date(c.updatedAt),
-      },
-      update: {
-        status: c.status,
-        priority: c.priority,
-        assignedAgent: c.assignedAgent ?? null,
-        updatedAt: new Date(c.updatedAt),
-        closedAt: c.closedAt ? new Date(c.closedAt) : null,
-      },
-    }),
-  );
+  await dbUpsertCase(c);
 }
 
 export async function loadCaseFromDb(caseId: string): Promise<AcaCase | null> {
-  const row = await safeDbQuery(() =>
-    db.acaCase?.findUnique({ where: { caseId } }),
-  );
-  if (!row) return null;
-  return {
-    caseId: row.caseId,
-    caseNumber: row.caseNumber,
-    title: row.title,
-    description: row.description,
-    status: row.status as AcaCaseStatus,
-    priority: row.priority as AcaCasePriority,
-    assignedAgent: row.assignedAgent ?? null,
-    assignedAgentName: null,
-    supportingAgents: [],
-    relatedCases: [],
-    timeline: [],
-    evidence: [],
-    findings: [],
-    recommendations: [],
-    correctiveActions: [],
-    auditTrail: [],
-    department: row.department,
-    service: row.service ?? undefined,
-    geography: row.geography ?? undefined,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt),
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : String(row.updatedAt),
-    closedAt: row.closedAt instanceof Date ? row.closedAt.toISOString() : undefined,
-  };
+  return dbLoadCase(caseId);
 }

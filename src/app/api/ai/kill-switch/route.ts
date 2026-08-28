@@ -10,6 +10,7 @@ import {
   enableModel,
   listAllStates,
 } from "@/lib/ai-kill-switch";
+import { withRateLimit } from "@/lib/api-rate-limit";
 
 /**
  * GET /api/ai/kill-switch — list all kill switch states.
@@ -18,7 +19,7 @@ import {
  * DELETE /api/ai/kill-switch — emergency disable ALL AI capabilities.
  *   Query: ?by=<actor>&reason=<reason>
  */
-export async function GET() {
+async function getKillSwitchHandler(req: NextRequest) {
   const states = listAllStates();
   return NextResponse.json(
     { states, count: states.length },
@@ -26,7 +27,7 @@ export async function GET() {
   );
 }
 
-export async function POST(req: NextRequest) {
+async function postKillSwitchHandler(req: NextRequest) {
   try {
     const body = await req.json();
     if (!body || !body.action || !body.featureId || !body.by) {
@@ -82,7 +83,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function DELETE(req: NextRequest) {
+async function deleteKillSwitchHandler(req: NextRequest) {
   try {
     const by = req.nextUrl.searchParams.get("by");
     const reason = req.nextUrl.searchParams.get("reason");
@@ -102,3 +103,24 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
+
+// P1 FIX: Rate-limited to prevent abuse (kill-switch read — 5 req/min)
+export const GET = withRateLimit(getKillSwitchHandler, {
+  maxRequests: 5,
+  windowMs: 60_000,
+  keyBy: "ip",
+});
+
+// P1 FIX: Rate-limited to prevent abuse (critical AI control — 5 req/min)
+export const POST = withRateLimit(postKillSwitchHandler, {
+  maxRequests: 5,
+  windowMs: 60_000,
+  keyBy: "ip",
+});
+
+// P1 FIX: Rate-limited to prevent abuse (emergency disable ALL — 5 req/min)
+export const DELETE = withRateLimit(deleteKillSwitchHandler, {
+  maxRequests: 5,
+  windowMs: 60_000,
+  keyBy: "ip",
+});

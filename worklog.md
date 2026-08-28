@@ -10341,3 +10341,359 @@ The existing `src/lib/overlay-registry.ts` file is read-only during this task. T
 - Accessibility: aria-label coverage good (14-34 per screen), focus-visible present on 6/8 screens, OverlayShell implements proper focus trap + Esc + Tab cycling. **Gaps**: only 1 `<img>` has `alt` text across all screens; 24 overlays lack role=dialog/aria-modal; mixed dark/light token usage breaks contrast in some modules; reduced-motion respected via globals.css but not all framer-motion animations gated.
 - i18n: home-screen only uses `dict[locale]`; other 7 screens have hardcoded English strings (locale toggle in TopBar visually switches Arabic/English but screens stay English). App-store only supports `en`/`ar` even though i18n.ts ships 7 locale packs (fr/es/tr/ur/hi orphaned).
 - Frontend Score: **62/100** — Solid scaffolding (real APIs, OverlayShell, dock nav, error boundary, offline banner, dark mode), but undermined by 60 `@ts-nocheck` overlays, ~50 UI-mock overlays shipped as if real, 43+ dead toast-only buttons, profile rendering fake posts, undefined `text-brand-charcoal` token, 24 overlays with zero modal a11y, and 7/8 screens bypassing the i18n system.
+
+---
+
+## [P1-DEADCODE-RATELIMIT] — Dead Code Cleanup + Rate Limiting Expansion (2026-08-27)
+
+Task ID: P1-DEADCODE-RATELIMIT
+Agent: Backend (Dead-Code + Rate-Limit Pass)
+
+### Scope
+Apply P1 fixes from the architecture audit:
+1. Delete 20 confirmed dead lib modules / store (zero inbound imports).
+2. Wrap 15 critical unprotected API routes with `withRateLimit`.
+
+### 1. Dead code deleted (20 files)
+Verified each file had **0 inbound imports** (via `grep -rEn "(@/lib/<name>['\"]|@/lib/<name>/)" src/`) before deletion. The only references found were doc comments in `mini-services/news-service/index.ts` and `src/lib/oidc-provider.ts` (no code-level imports).
+
+- `src/lib/brain-federated.ts`
+- `src/lib/ai-cache.ts`
+- `src/lib/webz-news.ts`
+- `src/lib/news-service.ts`
+- `src/lib/mock.ts`
+- `src/lib/mock-images.ts`
+- `src/lib/roaming.ts`
+- `src/lib/tenant-context.ts`
+- `src/lib/data-plane-router.ts`
+- `src/lib/federation-service.ts`
+- `src/lib/mail-service.ts`
+- `src/lib/video-service.ts`
+- `src/lib/mapbox.ts`
+- `src/lib/oidc-client.ts`
+- `src/lib/db-init.ts`
+- `src/lib/db-regional.ts`
+- `src/lib/bot-sdk.ts`
+- `src/lib/accessibility.ts`
+- `src/lib/ad-compliance.ts`
+- `src/stores/circle-store.ts`
+
+### 2. Files that couldn't be deleted
+None — all 20 verified as dead code and removed.
+
+### 3. Rate-limited routes (15 files / 23 HTTP verbs wrapped)
+Pattern applied: rename inline `export async function VERB` to a local `async function verbHandler`, then `export const VERB = withRateLimit(verbHandler, { maxRequests, windowMs: 60_000, keyBy: "ip" })`. Each export carries a `// P1 FIX: Rate-limited to prevent abuse (...)` comment.
+
+| Route | Verbs wrapped | Limit |
+|---|---|---|
+| `account/export/route.ts` | GET | 5/min |
+| `account/delete/route.ts` | POST | 3/min (destructive) |
+| `account/dsr/route.ts` | GET, POST | 5/min |
+| `admin/seed/route.ts` | POST | 2/min |
+| `admin/smtp/route.ts` | GET, PUT | 10/min |
+| `aca/auth/login/route.ts` | POST | 5/min (brute-force) |
+| `aca/agents/route.ts` | GET, POST | 10/min |
+| `aca/cases/route.ts` | GET, POST | 20/min |
+| `aca/evidence/route.ts` | GET, POST | 20/min |
+| `aca/signals/route.ts` | GET, POST | 20/min |
+| `ai/kill-switch/route.ts` | GET, POST, DELETE | 5/min |
+| `evidence/seal/route.ts` | POST | 10/min |
+| `federation/institutions/route.ts` | GET, POST | 30/min |
+| `federation/route/route.ts` | POST | 30/min |
+| `emergency/packet/route.ts` | GET, POST | 10/min |
+
+### 4. Lint status
+`bun run lint` passes after every batch (3 batches: deletions → account/admin/aca → kill-switch/evidence/federation/emergency).
+- 0 errors.
+- 1 pre-existing warning (`src/lib/server-auth.ts:66 unused eslint-disable directive`) — not introduced by this task.
+- Dev server `/dev.log` shows clean `200` responses with no compile errors.
+
+### 5. Notes / Caveats
+- The `withRateLimit` wrapper is keyed by IP (via `getClientIP`) since CIRKLE has no auth middleware wired yet (`src/proxy.ts` is defined but never registered). Once `middleware.ts` exists, the sensitive routes (login, account/delete, kill-switch) should switch to `keyBy: "userId"` so the bucket travels with the authenticated identity rather than the IP.
+- For routes where the original handler took no `req` argument (`admin/seed POST`, `admin/smtp GET`, `ai/kill-switch GET`, `emergency/packet GET`), the handler signature was widened to accept `req: NextRequest` so the wrapper's `(req, ...rest)` shape typechecks — the handler body still ignores the request.
+- Comment-only references to deleted modules (`src/lib/oidc-provider.ts:45` references `src/lib/oidc-client.ts` in a doc string; `mini-services/news-service/index.ts:406` references `src/lib/news-service.ts`) were left in place — they are not runtime imports.
+
+### Stage Summary
+- 20 dead modules removed (~250KB of unreachable server code), 0 inbound-import regressions.
+- 15 previously-unprotected critical routes now enforce per-IP rate limits; brute-force on ACA login is capped at 5/min, destructive account-delete at 3/min, AI kill-switch controls at 5/min.
+- `bun run lint` clean. Dev server healthy.
+
+---
+
+## P0-EVIDENCE-PERSIST — Persist ACA evidence to Prisma DB (2026-08-28)
+
+**Problem**: The ACA sovereign layer stored evidence, chain-of-custody, access
+logs, cases, signals, and agent profiles in process-local `Map<string, X>`
+caches. On any server restart / serverless cold start, the entire ACA record
+vanished — the chain-of-custody broke (AUDIT-SECURITY-PRIVACY flagged this as
+the single most critical evidence gap: "Evidence seal F1 (in-memory only, lost
+on restart — chain-of-custody breaks)").
+
+**Fix applied**: rewired the four in-memory stores to write-through to their
+respective Prisma tables, with graceful in-memory fallback when the DB is
+unavailable. Synchronous public APIs were preserved (so callers don't break);
+async DB writes are awaited where the function is already async, and
+fire-and-forget where the function is sync.
+
+### Files modified
+- `src/lib/evidence-immutability.ts` — `AcaEvidence` rows now persist via
+  `db.acaEvidence.upsert`; `EvidenceChainOfCustody` rows persist custody
+  entries; `EvidenceAccessLog` rows persist access records. Extra fields not
+  in the schema (title, payloadRef, mime, derivedFrom, derivationKind, vault,
+  metadata, cryptographicSignature, originalHash) are packed into the
+  `derivedCopies` JSON column and unpacked on read. Added async variants
+  `getEvidenceAsync`, `listEvidenceAsync`, `getChainOfCustodyAsync`,
+  `verifyIntegrityAsync` for callers that want fresh DB reads. Sync surface
+  preserved: `sealEvidence`, `createDerivedCopy`, `recordAccess`,
+  `getEvidence`, `listEvidence`, `getChainOfCustody`, `verifyIntegrity`,
+  `assertMutable`, `attemptModifySealed`.
+
+- `src/lib/aca-case-manager.ts` — `dbUpsertCase` writes the full case state
+  (status, priority, assignedAgent, createdFromSignal, relatedCases,
+  timeline, evidence, findings, recommendations, correctiveActions,
+  auditTrail, closedAt) as JSON strings inside the schema's string columns.
+  Every mutating function (createCase, updateCaseStatus, assignAgent,
+  addEvidence, addFinding, addRecommendation, addCorrectiveAction,
+  initiateClosure, confirmClosure, closeCase, relateCases) now fires off
+  `persistCaseFireAndForget(c)` after the in-memory write. Reads trigger
+  fire-and-forget DB prefetches via `prefetchCase` / `prefetchAllCases`.
+
+- `src/lib/aca-signal-processor.ts` — `dbUpsertSignal` writes signal state
+  (source, pattern, sourceCount, service, geography, timeframe (JSON),
+  evidenceAvailability (JSON), repeatedFailures (JSON),
+  potentialIntegrityIndicators (JSON), reasonForReferral (JSON), status,
+  convertedToCaseId) to the `AcaSignal` table. Every mutating function
+  (createSignal, evaluateSignal, convertSignalToCase, markSignalConverted,
+  dismissSignal) now persists via `persistSignalFireAndForget(s)`. The
+  pre-existing `persistSignal` and `loadSignalFromDb` exports were BROKEN
+  (they referenced non-existent columns signalNumber / timeframeFrom /
+  timeframeTo / updatedAt / reviewedAt / reviewedBy — safeDbQuery swallowed
+  the error silently so they were no-ops). They now delegate to the
+  schema-aware helpers.
+
+- `src/lib/aca-agent-store.ts` — `dbUpsertAgent` writes agent profile state
+  (institutionalIdentity, role, department, unit, clearance, assignments
+  (JSON), devices (JSON), certifications (JSON), permissions (JSON),
+  sessionStatus, auditHistory (JSON), status) to the `AcaAgent` table.
+  Mutating functions (createAcaAgent, provisionAgent, revokeAgent) now
+  persist via `persistAgentFireAndForget(agent)`. Sessions remain in-memory
+  ONLY (short-lived by design — 15-min TTL). Added new `listAgents` and
+  `listAgentsAsync` exports. `getAgentProfile` now triggers a DB prefetch on
+  cache miss.
+
+### Design choices
+1. **Sync signatures preserved everywhere.** Many callers (including the
+   `/api/aca/*` routes and `src/screens/*`) call these functions synchronously
+   and depend on the return value being immediate. To preserve that contract
+   while still persisting to DB, mutating functions write to the in-memory
+   cache FIRST (synchronous), then fire off the DB write as
+   fire-and-forget (`void promise.catch(() => {})`). Reads return from the
+   in-memory cache and trigger fire-and-forget DB prefetches so subsequent
+   calls see fresh data.
+2. **Async functions await DB writes.** `sealEvidence` and `createDerivedCopy`
+   were already async — they now `await` the DB writes (so the chain-of-
+   custody is durable before the function returns). `recordAccess` is sync
+   and writes to DB fire-and-forget (an access log entry is append-only, so
+   eventual consistency is acceptable).
+3. **Async variants added** for callers that need fresh DB data without
+   waiting for the prefetch cycle: `getEvidenceAsync`, `listEvidenceAsync`,
+   `getChainOfCustodyAsync`, `verifyIntegrityAsync`, `listAgentsAsync`.
+4. **Schema-aware packing.** The `AcaEvidence` schema has only 16 columns
+   (no title / originalHash / cryptographicSignature / payloadRef / mime /
+   derivedFrom / derivationKind / vault / metadata fields). To preserve
+   immutability verification across DB round-trips, those fields are
+   packed into the `derivedCopies` JSON column on write and unpacked on read.
+   Same approach for the timeline/evidence/findings/etc. JSON columns on
+   `AcaCase`, and for assignments/devices/certifications/permissions/
+   auditHistory on `AcaAgent`.
+5. **Broken exports fixed.** The pre-existing `persistCase`, `loadCaseFromDb`,
+   `persistSignal`, `loadSignalFromDb`, `persistAgent`, `loadAgentFromDb`
+   helpers all referenced columns that don't exist in the current schema
+   (title, description, department, service, geography on AcaCase;
+   signalNumber, timeframeFrom, timeframeTo, updatedAt, reviewedAt,
+   reviewedBy on AcaSignal; displayName, createdBy on AcaAgent). Because
+   they were wrapped in `safeDbQuery`, the resulting Prisma errors were
+   silently swallowed and the helpers were effectively no-ops. They now
+   delegate to the new schema-aware helpers.
+6. **All DB calls wrapped in safeDbQuery** (from `src/lib/db-safe.ts`) which
+   catches "does not exist" / "Environment variable not found" / "PrismaClient"
+   errors and returns null. Each call site logs a `console.warn` on fallback
+   so failures are visible in dev.log without breaking the request flow.
+7. **`@ts-nocheck` at top of every modified file** (per task requirement).
+8. **`// P0 FIX: Now persists to Prisma DB with in-memory fallback` comment
+   at the top of each modified file** (per task requirement).
+
+### Verification
+- `bun run lint` passes (1 unrelated warning in `src/lib/server-auth.ts`
+  which was not modified by this task).
+- All four modules transpile cleanly via `bun build`.
+- All four modules import successfully at runtime via `bun -e`.
+- Smoke tests pass: sealed evidence → verify integrity → record access →
+  get chain of custody → create derived copy → assert attemptModifySealed
+  throws → assert assertMutable throws. Cases, signals, agents all create +
+  list + read + update successfully.
+- ACA API endpoints respond: `GET /api/aca/signals`, `GET /api/aca/cases`,
+  `GET /api/aca/agents` all return 200 with empty results on fresh DB.
+
+### Issues / notes
+- The `AcaEvidence` schema doesn't have a `sealedByName` / `agentId` column;
+  the agent ID is stored in `capturedBy`. The agent's display name is not
+  persisted (the existing in-memory store tracks it but the DB doesn't).
+  This is consistent with the existing pattern in `aca-case-manager.ts`
+  where `assignedAgentName` is also not persisted.
+- The `signalNumber` field on `AcaSignal` is generated in-memory but not
+  persisted (the schema has no `signalNumber` column). On DB round-trip,
+  `signalNumber` mirrors `signalId`. The `GET /api/aca/signals` route still
+  returns `signalNumber` for backwards-compat — it'll show the signalId
+  for DB-loaded signals and the in-memory-generated number for newly
+  created signals.
+- The existing `validateAcaSession` is fail-open by design (the audit task
+  flagged this). Sessions remain in-memory only per the task spec — they
+  are short-lived by design and revocation across processes is handled by
+  the existing fail-open contract. A future task could add a session
+  blacklist table to close the fail-open gap.
+- `_seeded` flag prevents re-seeding across calls. On a fresh DB, the seed
+  data (3 canonical evidence items) is mirrored into the DB on first call.
+  Subsequent calls find the in-memory cache populated.
+
+---
+
+## [P0-AUTH-IDOR] — Server-side auth + IDOR/BOLA fixes (2026-08-28)
+
+**Agent**: P0-AUTH-IDOR. Files in `agent-ctx/P0-AUTH-IDOR-*.md`.
+
+### Scope
+P0 stop-gap for the catastrophic auth posture flagged in AUDIT-BACKEND:
+- 0 of 356 API routes had real auth (`proxy()` was commented out, never wired).
+- `validateAcaSession` fail-open.
+- `/api/account/export` & `/api/account/delete` accepted any `username` in body (IDOR).
+- `/api/e2ee/keys` accepted `userLabel` in body (MITM).
+- `/api/conversations/[id]` returned any conversation by id (BOLA).
+- All 13 `/api/admin/*` & 8 `/api/aca/*` routes were unauthenticated.
+
+### Files created (8)
+1. `src/lib/server-auth.ts` — JWT (jose/HS256) helpers: `createSessionToken`,
+   `verifySessionToken`, `getSessionFromRequest`, `requireAuth`, `requireAdmin`,
+   `requireAcaAuth`, `setSessionCookie`, `clearSessionCookie`, `unauthorizedResponse`,
+   `forbiddenResponse`. Secret from `CIRKLE_JWT_SECRET` (dev fallback + console.warn).
+   Clearance flags (`isAdmin` / `isAca`) resolved from `CIRKLE_ADMIN_USERNAMES` /
+   `CIRKLE_ACA_USERNAMES` env vars at login time.
+2. `src/lib/require-auth.ts` — Re-export module so route files have a single
+   import path for the wrappers.
+3. `src/lib/server-credentials.ts` — In-memory bcrypt credential store (stop-gap:
+   the `User` Prisma model has no `passwordHash` column, and the schema is owned
+   by another task. This module is to be deleted once the schema gains a
+   `passwordHash` column).
+4. `src/app/api/auth/login/route.ts` — POST; bcrypt-verify against the credential
+   store; falls back to seeded User rows only when
+   `CIRKLE_DEV_TRUST_SEEDED_USERS=1`.
+5. `src/app/api/auth/session/route.ts` — GET (return current user; refresh
+   displayName from DB) + DELETE (logout; clear cookie).
+6. `src/app/api/auth/register/route.ts` — POST; validates username regex,
+   password length, COPPA age gate + parental email; creates `db.user` row +
+   credential-store entry; issues JWT cookie.
+
+### Files modified (17) — IDOR/BOLA fixes + admin/ACA gating
+IDOR fixes:
+7. `src/app/api/account/export/route.ts` — Reads session, ignores `?username=`,
+   exports ONLY the caller's data. 401 if no session.
+8. `src/app/api/account/delete/route.ts` — Reads session; if body has a
+   `username` that ≠ session.username → 403. Also drops the credential-store
+   entry + the user's `DevicePublicKey` rows.
+9. `src/app/api/e2ee/keys/route.ts` (POST only) — Reads session, FORCES
+   `userLabel = session.username`; body's `userLabel` ignored (or must match).
+10. `src/app/api/conversations/[id]/route.ts` — Reads session, verifies the
+    caller is a member of the conversation (`userId` OR `displayName ===
+    session.username`). 401 if no session, 403 if not a member.
+
+Admin gating (session + `isAdmin`):
+11. `src/app/api/admin/content/route.ts`
+12. `src/app/api/admin/email-log/route.ts`
+13. `src/app/api/admin/users/route.ts`
+14. `src/app/api/admin/system/route.ts`
+15. `src/app/api/admin/circles/route.ts`
+16. `src/app/api/admin/smtp/route.ts` (GET + PUT, P1 rate-limit preserved)
+17. `src/app/api/admin/payments/route.ts`
+18. `src/app/api/admin/seed/route.ts` (P1 rate-limit preserved)
+19. `src/app/api/admin/api-routes/route.ts`
+20. `src/app/api/admin/features/route.ts` (GET + PUT)
+21. `src/app/api/admin/db-setup/route.ts`
+22. `src/app/api/admin/overview/route.ts`
+23. `src/app/api/admin/overlays/route.ts`
+
+ACA gating (session + `isAca`, in addition to existing `x-aca-session-id`):
+24. `src/app/api/aca/agents/route.ts` (GET + POST)
+25. `src/app/api/aca/auth/login/route.ts` (POST)
+26. `src/app/api/aca/cases/route.ts` (GET + POST)
+27. `src/app/api/aca/cases/[id]/route.ts` (GET + PATCH + DELETE)
+28. `src/app/api/aca/signals/route.ts` (GET + POST)
+29. `src/app/api/aca/signals/[id]/convert/route.ts` (POST)
+30. `src/app/api/aca/evidence/route.ts` (GET + POST)
+31. `src/app/api/aca/evidence/[id]/seal/route.ts` (POST)
+
+### Cookie policy
+`cirkle-session` — httpOnly, secure (prod), sameSite=strict, path=/, maxAge=7d.
+JWT also acceptable via `Authorization: Bearer <jwt>` for non-browser clients.
+
+### Quality
+- `bun run lint` → 0 errors, 0 warnings.
+- All new files start with `// @ts-nocheck` per task spec.
+- All modified files preserve their existing functionality (rate-limit wrappers,
+  response shapes, error messages).
+- Each gated route has a `// P0 FIX: Route is now auth-gated` comment block at
+  the top of the handler.
+
+### Known issues / stop-gaps
+1. **Credential store is in-memory.** Restarting the dev server drops all
+   registered users' password hashes (JWTs remain valid until expiry since
+   they're stateless — only future logins need the credential store). The fix
+   requires adding a `passwordHash` column to `prisma/schema.prisma` (owned by
+   another task).
+2. **Admin/ACA clearance is determined by env vars** (`CIRKLE_ADMIN_USERNAMES`,
+   `CIRKLE_ACA_USERNAMES`). Real deployment should move to a DB-backed role
+   table.
+3. **Seeded User fallback.** Users created by the mock seed (no server-side
+   password) cannot log in unless `CIRKLE_DEV_TRUST_SEEDED_USERS=1` is set;
+   this is intentionally strict to avoid silently authenticating fake users
+   in prod.
+4. **`proxy.ts` still exists** with the commented-out auth reject — it is
+   not wired to a `middleware.ts` and is intentionally left untouched (the
+   P0 fix is at the route level; per-request middleware can be added later).
+
+---
+
+## P2-SEARCH-TRUST — Universal Search + Trust Center (2026-08-28)
+
+**Agent**: full-stack-developer (Z.ai Code)
+**Files created**: 7 (no existing files modified — CREATE-ONLY)
+
+| File | Purpose |
+|---|---|
+| `src/lib/universal-search.ts` | Cross-module search primitive — queries 8 DB surfaces (posts, messages, conversations, users, circles, services, photo collections, events, documents) in parallel. Every DB call try/catch'd → never throws. Permission-gates Wasl conversations + messages via `ConversationMember`. SQLite-aware (no `mode: "insensitive"`, no `Post.isDeleted`). |
+| `src/app/api/search/route.ts` | GET `/api/search?q=…&modules=wasl,midan&limit=20&userId=…` |
+| `src/components/overlays/universal-search.tsx` | Fullscreen glass-aesthetic search overlay. Large input + 9 module chips (All/Messages/Posts/People/Circles/Photos/Videos/News/Services). Results grouped by type with type-icon + module badge. Click result → dispatches the right navigation event (`circle:circle-detail`, `circle:circle-event-detail`, `circle:service-directory`, `circle:navigate`). 280ms debounced. Empty / loading / error states. |
+| `src/lib/trust-center.ts` | `getTrustCenterData(userId?)` — loads identity (User.verified), devices (DevicePublicKey), connected apps (AppConnection+App), audit events (CircleAuditLog), synthesises sessions, computes privacy score + recommendations. Mock fallback in dev mode. |
+| `src/app/api/trust-center/route.ts` | GET `/api/trust-center?userId=…` + POST revoke stub |
+| `src/components/overlays/trust-center.tsx` | Fullscreen dashboard: 9 collapsible SectionCards — Identity, Privacy Score (circular gauge), Recommendations, Encryption (E2EE/keys/backup switches), Devices, Sessions, Security Events, Data Access, Connected Apps. Optimistic UI on revoke. Emerald accent. |
+| `agent-ctx/P2-SEARCH-TRUST-full-stack-developer.md` | Work record |
+
+**Events dispatched** (6 total — 2 self-announce, 4 click-through):
+- `circle:universal-search` (overlay opens / activity log CTA)
+- `circle:trust-center` (overlay opens)
+- `circle:circle-detail` (search → circle result clicked)
+- `circle:circle-event-detail` (search → event result clicked)
+- `circle:service-directory` (search → service result clicked)
+- `circle:navigate` (search → user/message/conversation/post/photo/video/news/document clicked, payload includes `tab`)
+
+**Overlay-registry entries needed** (2 — not added per CREATE-ONLY rule):
+- `universal-search` (emoji 🔍, category productivity, event `circle:universal-search`)
+- `trust-center` (emoji 🛡️, category privacy, event `circle:trust-center`)
+
+**Lint**: `bun run lint` → 0 errors / 0 warnings ✅
+**Direct execution validation**: `universalSearch("a")` → 3 results (top: ServiceDirectoryEntry score 80); `getTrustCenterData()` → mock data (privacyScore=78, 4 recs); `getTrustCenterData("@layla")` → real DB identity (verified, EG, joined Apr 2026) ✅
+
+**Issues**:
+1. Standalone dev server was built at 02:19 (before files existed); `curl /api/search` returns 404 until the system rebuilds + restarts. Direct `bun run` execution confirms logic is correct.
+2. SQLite Prisma quirks handled: removed `mode: "insensitive"` (Postgres-only), removed `Post.isDeleted` filter (column doesn't exist on Post model — only on Message).
+3. POST `/api/trust-center` revoke is a stub — returns 200 OK without persistence (CIRKLE doesn't yet persist session state). Overlay updates optimistically.
+4. Wiring into `page.tsx` (event listeners + overlay mounts) NOT done — per CREATE-ONLY constraint. Follow-up agent should add the 2 listeners + 2 mount points.

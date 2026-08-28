@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { getSessionFromRequest } from "@/lib/server-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ interface PublishBody {
  */
 function normalizeLabel(raw: string | undefined): string | null {
   if (!raw) return null;
-  const v = raw.trim().toLowerCase().replace(/^@/, "");
+  const v = raw.trim().toLowerCase().replace(/^@/, "").replace(/@cirkle$/i, "");
   return v.length >= 1 && v.length <= 64 ? v : null;
 }
 
@@ -47,21 +48,47 @@ function isJwkLike(v: unknown): v is Record<string, unknown> {
  * Idempotent by [userLabel, deviceId]: re-publishing the same deviceId
  * upserts (e.g. after a fingerprint rotation).
  *
+ * P0 FIX (IDOR/BOLA):
+ *   Previously this endpoint accepted a `userLabel` in the body and published
+ *   keys for ANY user — an attacker could MITM by publishing their own key
+ *   under a victim's userLabel. The route now reads the session from the
+ *   `cirkle-session` cookie and FORCES the `userLabel` to match the
+ *   authenticated caller. The body's `userLabel` field is ignored (or, if
+ *   supplied, must match the session — otherwise 403).
+ *
  * Body: PublishBody
  * Returns: { ok, deviceId, fingerprint, publishedAt }
  */
 export async function POST(req: NextRequest) {
   try {
+    // ── P0 FIX: read the caller's identity from the session cookie. ─────────
+    const session = await getSessionFromRequest(req);
+    if (!session) {
+      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    }
+
     const body = (await req.json().catch(() => null)) as PublishBody | null;
     if (!body) {
       return NextResponse.json({ error: "invalid body" }, { status: 400 });
     }
 
-    const userLabel = normalizeLabel(body.userLabel);
-    const deviceId = body.deviceId?.trim() ?? "";
-    if (!userLabel) {
-      return NextResponse.json({ error: "userLabel is required" }, { status: 400 });
+    // P0 FIX: ignore the body's userLabel — derive it from the session.
+    const bodyLabel = normalizeLabel(body.userLabel);
+    const sessionLabel = normalizeLabel(session.username);
+    if (!sessionLabel) {
+      return NextResponse.json({ error: "invalid session username" }, { status: 401 });
     }
+    // If the caller supplied a userLabel that disagrees with the session,
+    // treat as a forbidden cross-account publish attempt.
+    if (bodyLabel && bodyLabel !== sessionLabel) {
+      return NextResponse.json(
+        { error: "forbidden", details: "userLabel must match the authenticated user" },
+        { status: 403 },
+      );
+    }
+    const userLabel = sessionLabel;
+
+    const deviceId = body.deviceId?.trim() ?? "";
     if (!deviceId || deviceId.length > 64) {
       return NextResponse.json({ error: "deviceId is required (max 64 chars)" }, { status: 400 });
     }

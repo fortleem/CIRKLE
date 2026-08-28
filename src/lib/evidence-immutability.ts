@@ -1,4 +1,5 @@
 // @ts-nocheck
+// P0 FIX: Now persists to Prisma DB with in-memory fallback
 /**
  * Evidence Immutability + Chain of Custody — Part IV §61–§63
  *
@@ -13,12 +14,20 @@
  *   • §69 Dual Evidence Vault — operational vault (investigators) vs.
  *     preservation vault (immutable originals).
  *
- * Storage: in-memory authoritative cache + best-effort AuditRecord persistence.
- * If the DB is unreachable the lib still works; on next request the audit trail
- * is rebuilt from in-memory state.
+ * P0 FIX Storage strategy:
+ *   • AcaEvidence rows are the durable source of truth across restarts.
+ *   • EvidenceChainOfCustody rows persist the provenance graph.
+ *   • EvidenceAccessLog rows persist the access audit trail.
+ *   • An in-memory cache (`store`) is kept in sync with every write so the
+ *     synchronous public surface (getEvidence / getChainOfCustody /
+ *     verifyIntegrity / listEvidence) continues to work without await.
+ *   • Every DB write is wrapped in safeDbQuery — if the DB is unavailable
+ *     (tables not yet created, env var missing, serverless cold start), the
+ *     in-memory cache remains authoritative and a warning is logged.
  */
 
 import { createHash } from "crypto";
+import { db } from "@/lib/db";
 import { safeDbQuery } from "@/lib/db-safe";
 
 // ── Types ─────────────────────────────────────────────────────────────────
@@ -104,7 +113,7 @@ export interface AccessRecord {
   ipAddress?: string;
 }
 
-// ── Internal in-memory state ──────────────────────────────────────────────
+// ── Internal in-memory cache (fallback + low-latency read cache) ──────────
 
 interface EvidenceStore {
   items: Map<string, ImmutableEvidence>;
@@ -118,9 +127,13 @@ const store: EvidenceStore = {
   access: new Map(),
 };
 
+let _seeded = false;
+
 // Seed a few canonical examples so the UI has something to render on first
 // load. These are illustrative ACA-grade artifacts only.
 function seedIfEmpty() {
+  if (_seeded) return;
+  _seeded = true;
   if (store.items.size > 0) return;
   const now = new Date().toISOString();
   const seed: ImmutableEvidence[] = [
@@ -221,6 +234,17 @@ function seedIfEmpty() {
       },
     ]);
   }
+  // Best-effort: mirror the seed into the DB so a fresh install has the same
+  // canonical examples available across restarts. Failures are non-fatal.
+  for (const e of seed) {
+    void dbCreateEvidence(e).catch(() => {});
+    for (const c of store.custody.get(e.evidenceId) ?? []) {
+      void dbAppendCustody(c).catch(() => {});
+    }
+    for (const a of store.access.get(e.evidenceId) ?? []) {
+      void dbAppendAccess(a).catch(() => {});
+    }
+  }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -244,7 +268,6 @@ function genEvidenceId(): string {
 function appendAudit(evidenceId: string, action: string, data: Record<string, unknown>): void {
   // Best-effort persistence to AuditRecord.
   void safeDbQuery(async () => {
-    const { db } = await import("@/lib/db");
     const prev = await db.auditRecord.findFirst({
       where: { target: "evidence" },
       orderBy: { timestamp: "desc" },
@@ -265,7 +288,274 @@ function appendAudit(evidenceId: string, action: string, data: Record<string, un
         previousHash,
       },
     });
+  }).catch(() => {
+    /* AuditRecord table may not exist yet — non-fatal */
   });
+}
+
+// ── DB persistence helpers (P0 FIX) ───────────────────────────────────────
+//
+// The AcaEvidence schema stores a subset of ImmutableEvidence fields directly
+// (evidenceId, type, captureMethod, capturedBy, capturedAt, location,
+// deviceIdentity, assignmentId, integrityHash, sealed, sealedAt, sealedBy).
+// The remaining fields (title, originalHash, cryptographicSignature,
+// payloadRef, payloadBytes, mime, derivedFrom, derivationKind, vault,
+// metadata) are persisted as JSON inside the `derivedCopies` column (which is
+// a JSON string in the schema) so they survive DB round-trips. On read, the
+// JSON is unpacked back into the ImmutableEvidence shape.
+//
+// All DB calls are wrapped in safeDbQuery — if the DB is unavailable, the
+// caller sees no error and the in-memory cache remains authoritative.
+
+function packExtraFields(item: ImmutableEvidence): string {
+  return JSON.stringify({
+    title: item.title,
+    originalHash: item.originalHash,
+    cryptographicSignature: item.cryptographicSignature,
+    payloadRef: item.payloadRef,
+    payloadBytes: item.payloadBytes ?? null,
+    mime: item.mime ?? null,
+    derivedFrom: item.derivedFrom ?? null,
+    derivationKind: item.derivationKind ?? "none",
+    vault: item.vault,
+    metadata: item.metadata ?? null,
+    agentId: item.agentId,
+  });
+}
+
+function unpackExtraFields(row: any): Partial<ImmutableEvidence> {
+  let extra: any = {};
+  try {
+    extra = row.derivedCopies ? JSON.parse(row.derivedCopies) : {};
+  } catch {
+    extra = {};
+  }
+  return {
+    title: extra.title ?? "(untitled)",
+    originalHash: row.integrityHash ?? extra.originalHash ?? "",
+    cryptographicSignature: extra.cryptographicSignature ?? "",
+    payloadRef: extra.payloadRef ?? "",
+    payloadBytes: extra.payloadBytes ?? undefined,
+    mime: extra.mime ?? undefined,
+    derivedFrom: extra.derivedFrom ?? undefined,
+    derivationKind: extra.derivationKind ?? "none",
+    vault: extra.vault ?? "operational",
+    metadata: extra.metadata ?? undefined,
+    agentId: extra.agentId ?? row.capturedBy ?? "",
+  };
+}
+
+function rowToEvidence(row: any): ImmutableEvidence | null {
+  if (!row) return null;
+  let location: ImmutableEvidence["location"];
+  try {
+    location = row.location ? JSON.parse(row.location) : undefined;
+  } catch {
+    location = undefined;
+  }
+  const extra = unpackExtraFields(row);
+  return {
+    evidenceId: row.evidenceId,
+    type: row.type as EvidenceType,
+    title: extra.title ?? "(untitled)",
+    originalHash: row.integrityHash ?? extra.originalHash ?? "",
+    sealedAt: row.sealedAt instanceof Date ? row.sealedAt.toISOString() : (row.sealedAt ?? new Date().toISOString()),
+    sealedBy: row.sealedBy ?? "",
+    sealed: Boolean(row.sealed),
+    deviceIdentity: row.deviceIdentity ?? "",
+    captureTimestamp: row.capturedAt instanceof Date ? row.capturedAt.toISOString() : (row.capturedAt ?? new Date().toISOString()),
+    location,
+    agentId: extra.agentId,
+    assignmentId: row.assignmentId ?? undefined,
+    cryptographicSignature: extra.cryptographicSignature,
+    payloadRef: extra.payloadRef,
+    payloadBytes: extra.payloadBytes,
+    mime: extra.mime,
+    derivedFrom: extra.derivedFrom,
+    derivationKind: extra.derivationKind,
+    vault: extra.vault,
+    metadata: extra.metadata,
+  };
+}
+
+/** Upsert an evidence item into the AcaEvidence table (best-effort). */
+export async function dbCreateEvidence(item: ImmutableEvidence): Promise<void> {
+  const result = await safeDbQuery(() =>
+    db.acaEvidence.upsert({
+      where: { evidenceId: item.evidenceId },
+      create: {
+        evidenceId: item.evidenceId,
+        type: item.type,
+        captureMethod: "device_capture",
+        capturedBy: item.agentId,
+        capturedAt: new Date(item.captureTimestamp),
+        location: item.location ? JSON.stringify(item.location) : null,
+        deviceIdentity: item.deviceIdentity,
+        assignmentId: item.assignmentId ?? null,
+        integrityHash: item.originalHash,
+        sealed: item.sealed,
+        sealedAt: item.sealedAt ? new Date(item.sealedAt) : null,
+        sealedBy: item.sealedBy ?? null,
+        derivedCopies: packExtraFields(item),
+        chainOfCustody: "[]",
+      },
+      update: {
+        sealed: item.sealed,
+        sealedAt: item.sealedAt ? new Date(item.sealedAt) : null,
+        sealedBy: item.sealedBy ?? null,
+        integrityHash: item.originalHash,
+        derivedCopies: packExtraFields(item),
+      },
+    }),
+  );
+  if (result === null) {
+    console.warn(
+      `[evidence-immutability] DB unavailable for evidence ${item.evidenceId} — falling back to in-memory only`,
+    );
+  }
+}
+
+/** Append a custody entry to the EvidenceChainOfCustody table (best-effort). */
+export async function dbAppendCustody(entry: CustodyEntry): Promise<void> {
+  const result = await safeDbQuery(() =>
+    db.evidenceChainOfCustody.create({
+      data: {
+        evidenceId: entry.evidenceId,
+        stage: entry.stage,
+        actor: entry.actor,
+        actorType: entry.actorType,
+        action: entry.action,
+        timestamp: new Date(entry.timestamp),
+        entryHash: entry.entryHash,
+        previousHash: entry.previousHash ?? null,
+      },
+    }),
+  );
+  if (result === null) {
+    console.warn(
+      `[evidence-immutability] DB unavailable for custody entry on ${entry.evidenceId} — in-memory only`,
+    );
+  }
+}
+
+/** Append an access record to the EvidenceAccessLog table (best-effort). */
+export async function dbAppendAccess(rec: AccessRecord): Promise<void> {
+  const result = await safeDbQuery(() =>
+    db.evidenceAccessLog.create({
+      data: {
+        evidenceId: rec.evidenceId,
+        actor: rec.actor,
+        actorType: rec.actorType,
+        action: rec.action,
+        timestamp: new Date(rec.timestamp),
+        purpose: rec.purpose ?? null,
+        authorizedBy: rec.authorizedBy ?? null,
+        ipAddress: rec.ipAddress ?? null,
+      },
+    }),
+  );
+  if (result === null) {
+    console.warn(
+      `[evidence-immutability] DB unavailable for access log on ${rec.evidenceId} — in-memory only`,
+    );
+  }
+}
+
+/** Load a single evidence item from the DB into the in-memory cache. */
+export async function dbLoadEvidence(evidenceId: string): Promise<ImmutableEvidence | null> {
+  const row = await safeDbQuery(() =>
+    db.acaEvidence.findUnique({ where: { evidenceId } }),
+  );
+  if (!row) return null;
+  const item = rowToEvidence(row);
+  if (item) {
+    store.items.set(evidenceId, item);
+    // Refresh custody + access in the same pass so callers see fresh data.
+    const chain = await dbLoadChain(evidenceId);
+    if (chain.length > 0) store.custody.set(evidenceId, chain);
+    const access = await dbLoadAccess(evidenceId);
+    if (access.length > 0) store.access.set(evidenceId, access);
+  }
+  return item ?? null;
+}
+
+/** Load the full chain of custody for an evidence item from the DB. */
+export async function dbLoadChain(evidenceId: string): Promise<CustodyEntry[]> {
+  const rows = await safeDbQuery(() =>
+    db.evidenceChainOfCustody.findMany({
+      where: { evidenceId },
+      orderBy: { timestamp: "asc" },
+    }),
+  );
+  if (!rows) return [];
+  return rows.map((r: any) => ({
+    evidenceId: r.evidenceId,
+    stage: r.stage as CustodyStage,
+    actor: r.actor,
+    actorType: r.actorType as CustodyEntry["actorType"],
+    action: r.action,
+    timestamp: r.timestamp instanceof Date ? r.timestamp.toISOString() : String(r.timestamp),
+    entryHash: r.entryHash,
+    previousHash: r.previousHash ?? undefined,
+  }));
+}
+
+/** Load the access log for an evidence item from the DB. */
+export async function dbLoadAccess(evidenceId: string): Promise<AccessRecord[]> {
+  const rows = await safeDbQuery(() =>
+    db.evidenceAccessLog.findMany({
+      where: { evidenceId },
+      orderBy: { timestamp: "asc" },
+    }),
+  );
+  if (!rows) return [];
+  return rows.map((r: any) => ({
+    evidenceId: r.evidenceId,
+    actor: r.actor,
+    actorType: r.actorType as AccessRecord["actorType"],
+    action: r.action as AccessAction,
+    timestamp: r.timestamp instanceof Date ? r.timestamp.toISOString() : String(r.timestamp),
+    purpose: r.purpose ?? undefined,
+    authorizedBy: r.authorizedBy ?? undefined,
+    ipAddress: r.ipAddress ?? undefined,
+  }));
+}
+
+/** Load ALL evidence items from the DB into the in-memory cache. */
+export async function dbLoadAllEvidence(): Promise<ImmutableEvidence[]> {
+  const rows = await safeDbQuery(() => db.acaEvidence.findMany());
+  if (!rows) return [];
+  const items: ImmutableEvidence[] = [];
+  for (const row of rows) {
+    const item = rowToEvidence(row);
+    if (item) {
+      store.items.set(item.evidenceId, item);
+      items.push(item);
+    }
+  }
+  return items;
+}
+
+/** Fire-and-forget prefetch — used by sync read paths to keep the cache fresh. */
+function prefetchEvidence(evidenceId: string): void {
+  void dbLoadEvidence(evidenceId).catch(() => {});
+}
+
+function prefetchAllEvidence(): void {
+  void (async () => {
+    try {
+      const items = await dbLoadAllEvidence();
+      // Update custody + access caches for each item in the background.
+      for (const item of items) {
+        const chain = await dbLoadChain(item.evidenceId);
+        if (chain.length > 0) store.custody.set(item.evidenceId, chain);
+        const access = await dbLoadAccess(item.evidenceId);
+        if (access.length > 0) store.access.set(item.evidenceId, access);
+      }
+    } catch {
+      /* DB unavailable — non-fatal */
+    }
+  })();
 }
 
 // ── Public API ────────────────────────────────────────────────────────────
@@ -331,6 +621,7 @@ export async function sealEvidence(
     metadata: input.metadata,
   };
 
+  // 1. In-memory write (synchronous, immediate).
   store.items.set(evidenceId, item);
   store.custody.set(evidenceId, [
     {
@@ -375,6 +666,18 @@ export async function sealEvidence(
       authorizedBy: sealedBy,
     },
   ]);
+
+  // 2. DB persistence (P0 FIX — durable across restarts).
+  //    `db.acaEvidence.update({ where: { evidenceId }, data: { sealed: true,
+  //    sealedAt, sealedBy } })` semantically — implemented as upsert here
+  //    because we are also creating the row.
+  await dbCreateEvidence(item);
+  for (const c of store.custody.get(evidenceId) ?? []) {
+    await dbAppendCustody(c);
+  }
+  for (const a of store.access.get(evidenceId) ?? []) {
+    await dbAppendAccess(a);
+  }
 
   appendAudit(evidenceId, "seal", { originalHash, sealedBy });
   return item;
@@ -469,6 +772,7 @@ export async function createDerivedCopy(
     },
   };
 
+  // 1. In-memory write.
   store.items.set(evidenceId, derived);
 
   // Inherit parent custody chain (provenance!) and append transformation entry.
@@ -500,6 +804,15 @@ export async function createDerivedCopy(
     },
   ]);
 
+  // 2. DB persistence (P0 FIX — durable derived copy + chain entries).
+  await dbCreateEvidence(derived);
+  for (const c of childChain) {
+    await dbAppendCustody(c);
+  }
+  for (const a of store.access.get(evidenceId) ?? []) {
+    await dbAppendAccess(a);
+  }
+
   appendAudit(evidenceId, "derive", {
     parent: parent.evidenceId,
     kind: input.derivationKind,
@@ -529,6 +842,10 @@ function deriveTypeFromKind(
 /**
  * Verify cryptographic integrity — recomputes the hash from the canonical
  * fields and checks it matches the stored originalHash.
+ *
+ * Sync surface preserved: reads from the in-memory cache. If the evidence is
+ * not in the cache, a fire-and-forget DB prefetch is triggered so a subsequent
+ * call sees fresh data.
  */
 export function verifyIntegrity(evidenceId: string): {
   verified: boolean;
@@ -536,7 +853,50 @@ export function verifyIntegrity(evidenceId: string): {
   actualHash: string;
   signatureValid: boolean;
 } {
+  seedIfEmpty();
   const item = store.items.get(evidenceId);
+  if (!item) {
+    prefetchEvidence(evidenceId);
+    throw new Error(`Evidence not found: ${evidenceId}`);
+  }
+  const canonical = item.derivedFrom
+    ? [
+        item.evidenceId,
+        item.derivedFrom,
+        item.derivationKind ?? "none",
+        item.payloadRef,
+        item.sealedAt,
+      ].join("|")
+    : [
+        item.evidenceId,
+        item.payloadRef,
+        item.captureTimestamp,
+        String(item.payloadBytes ?? 0),
+        item.mime ?? "",
+        item.deviceIdentity,
+      ].join("|");
+  const actualHash = hash(canonical);
+  const expectedSig = sign(canonical + item.sealedAt);
+  return {
+    verified: actualHash === item.originalHash,
+    expectedHash: item.originalHash,
+    actualHash,
+    signatureValid: expectedSig === item.cryptographicSignature,
+  };
+}
+
+/**
+ * Async variant — reads the evidence + chain + access log from the DB and
+ * returns a fresh view. Use this when callers can await and need the most
+ * up-to-date data (e.g. cross-process scenarios).
+ */
+export async function verifyIntegrityAsync(evidenceId: string): Promise<{
+  verified: boolean;
+  expectedHash: string;
+  actualHash: string;
+  signatureValid: boolean;
+}> {
+  const item = (await dbLoadEvidence(evidenceId)) ?? store.items.get(evidenceId);
   if (!item) {
     throw new Error(`Evidence not found: ${evidenceId}`);
   }
@@ -569,6 +929,9 @@ export function verifyIntegrity(evidenceId: string): {
 /**
  * Get the full chain of custody for an evidence item:
  *   source → record → ingestion → transformation → linkage → analysis → report
+ *
+ * Sync surface preserved: reads from the in-memory cache; a fire-and-forget
+ * DB refresh keeps the cache fresh across calls.
  */
 export function getChainOfCustody(evidenceId: string): {
   evidence: ImmutableEvidence;
@@ -580,6 +943,7 @@ export function getChainOfCustody(evidenceId: string): {
   seedIfEmpty();
   const evidence = store.items.get(evidenceId);
   if (!evidence) {
+    prefetchEvidence(evidenceId);
     throw new Error(`Evidence not found: ${evidenceId}`);
   }
   const chain = store.custody.get(evidenceId) ?? [];
@@ -590,12 +954,59 @@ export function getChainOfCustody(evidenceId: string): {
   const derivedFrom = evidence.derivedFrom
     ? store.items.get(evidence.derivedFrom)
     : undefined;
+  // Fire-and-forget refresh from DB so the next call sees fresh data.
+  void (async () => {
+    try {
+      const dbChain = await dbLoadChain(evidenceId);
+      if (dbChain.length > 0) store.custody.set(evidenceId, dbChain);
+      const dbAccess = await dbLoadAccess(evidenceId);
+      if (dbAccess.length > 0) store.access.set(evidenceId, dbAccess);
+    } catch {
+      /* DB unavailable — non-fatal */
+    }
+  })();
+  return { evidence, chain, accessLog, derivedChildren, derivedFrom };
+}
+
+/**
+ * Async variant — queries `db.evidenceChainOfCustody.findMany({ where:
+ * { evidenceId }, orderBy: { timestamp: "asc" } })` and returns the fresh
+ * chain from the DB (with in-memory fallback).
+ */
+export async function getChainOfCustodyAsync(evidenceId: string): Promise<{
+  evidence: ImmutableEvidence;
+  chain: CustodyEntry[];
+  accessLog: AccessRecord[];
+  derivedChildren: ImmutableEvidence[];
+  derivedFrom?: ImmutableEvidence;
+}> {
+  seedIfEmpty();
+  const evidence = (await dbLoadEvidence(evidenceId)) ?? store.items.get(evidenceId);
+  if (!evidence) {
+    throw new Error(`Evidence not found: ${evidenceId}`);
+  }
+  const chain = (await dbLoadChain(evidenceId)) || store.custody.get(evidenceId) || [];
+  const accessLog = (await dbLoadAccess(evidenceId)) || store.access.get(evidenceId) || [];
+  const allItems = (await dbLoadAllEvidence()) || Array.from(store.items.values());
+  const derivedChildren = allItems.filter((e) => e.derivedFrom === evidenceId);
+  const derivedFrom = evidence.derivedFrom
+    ? allItems.find((e) => e.evidenceId === evidence.derivedFrom) ??
+      store.items.get(evidence.derivedFrom)
+    : undefined;
+  // Keep in-memory cache in sync.
+  store.items.set(evidenceId, evidence);
+  store.custody.set(evidenceId, chain);
+  store.access.set(evidenceId, accessLog);
   return { evidence, chain, accessLog, derivedChildren, derivedFrom };
 }
 
 /**
  * Record who viewed / downloaded / exported the evidence (evidence access
  * audit). Every interaction with sealed evidence is logged.
+ *
+ * Sync surface preserved: writes to the in-memory cache immediately and fires
+ * off best-effort DB writes (EvidenceAccessLog + EvidenceChainOfCustody) so
+ * the audit trail survives restarts.
  */
 export function recordAccess(entry: Omit<AccessRecord, "timestamp"> & {
   timestamp?: string;
@@ -612,7 +1023,7 @@ export function recordAccess(entry: Omit<AccessRecord, "timestamp"> & {
   // Also append a custody entry at the appropriate stage.
   const stage: CustodyStage = record.action === "view" ? "analysis" : "linkage";
   const chain = store.custody.get(entry.evidenceId) ?? [];
-  chain.push({
+  const custodyEntry: CustodyEntry = {
     evidenceId: entry.evidenceId,
     stage,
     actor: record.actor,
@@ -621,8 +1032,13 @@ export function recordAccess(entry: Omit<AccessRecord, "timestamp"> & {
     timestamp: record.timestamp,
     entryHash: hash(entry.evidenceId + stage + record.timestamp),
     notes: record.purpose,
-  });
+  };
+  chain.push(custodyEntry);
   store.custody.set(entry.evidenceId, chain);
+
+  // P0 FIX — persist to EvidenceAccessLog + EvidenceChainOfCustody tables.
+  void dbAppendAccess(record).catch(() => {});
+  void dbAppendCustody(custodyEntry).catch(() => {});
 
   appendAudit(entry.evidenceId, record.action, {
     actor: record.actor,
@@ -634,12 +1050,44 @@ export function recordAccess(entry: Omit<AccessRecord, "timestamp"> & {
 /**
  * List evidence items, optionally filtered by vault (operational vs.
  * preservation).
+ *
+ * Sync surface preserved: returns the in-memory cache; a fire-and-forget DB
+ * refresh keeps the cache fresh across calls.
  */
 export function listEvidence(
   filter?: { vault?: "operational" | "preservation"; sealed?: boolean },
 ): ImmutableEvidence[] {
   seedIfEmpty();
   let items = Array.from(store.items.values());
+  if (filter?.vault) items = items.filter((e) => e.vault === filter.vault);
+  if (filter?.sealed !== undefined)
+    items = items.filter((e) => e.sealed === filter.sealed);
+  // Fire-and-forget refresh from DB so the next call sees fresh data.
+  prefetchAllEvidence();
+  return items.sort(
+    (a, b) => new Date(b.sealedAt).getTime() - new Date(a.sealedAt).getTime(),
+  );
+}
+
+/** Async variant — queries `db.acaEvidence.findMany(...)` directly. */
+export async function listEvidenceAsync(
+  filter?: { vault?: "operational" | "preservation"; sealed?: boolean },
+): Promise<ImmutableEvidence[]> {
+  seedIfEmpty();
+  const rows = await safeDbQuery(() =>
+    db.acaEvidence.findMany({
+      where: filter?.sealed !== undefined ? { sealed: filter.sealed } : undefined,
+      orderBy: { sealedAt: "desc" },
+    }),
+  );
+  let items: ImmutableEvidence[];
+  if (rows && rows.length > 0) {
+    items = rows.map(rowToEvidence).filter(Boolean) as ImmutableEvidence[];
+    // Keep in-memory cache in sync.
+    for (const it of items) store.items.set(it.evidenceId, it);
+  } else {
+    items = Array.from(store.items.values());
+  }
   if (filter?.vault) items = items.filter((e) => e.vault === filter.vault);
   if (filter?.sealed !== undefined)
     items = items.filter((e) => e.sealed === filter.sealed);
@@ -650,7 +1098,21 @@ export function listEvidence(
 
 export function getEvidence(evidenceId: string): ImmutableEvidence | undefined {
   seedIfEmpty();
-  return store.items.get(evidenceId);
+  const item = store.items.get(evidenceId);
+  if (!item) {
+    // Fire-and-forget DB prefetch so the next call sees fresh data.
+    prefetchEvidence(evidenceId);
+  }
+  return item;
+}
+
+/** Async variant — reads from DB and falls back to in-memory. */
+export async function getEvidenceAsync(
+  evidenceId: string,
+): Promise<ImmutableEvidence | undefined> {
+  seedIfEmpty();
+  const fromDb = await dbLoadEvidence(evidenceId);
+  return fromDb ?? store.items.get(evidenceId);
 }
 
 /**

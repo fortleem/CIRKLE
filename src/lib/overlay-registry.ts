@@ -1363,6 +1363,26 @@ export const OVERLAY_REGISTRY: OverlayEntry[] = [
     event: "circle:policy-engine",
     keywords: ["policy", "rules", "access", "retention", "escalation"],
   },
+
+  // ── P2: Universal Search + Trust Center ──────────────────────────────────
+  {
+    id: "universal-search",
+    name: "Universal Search",
+    description: "Search across every CIRKLE module — posts, messages, people, circles, photos, videos, news, services.",
+    emoji: "🔍",
+    category: "productivity",
+    event: "circle:universal-search",
+    keywords: ["search", "find", "universal", "global", "all", "across"],
+  },
+  {
+    id: "trust-center",
+    name: "Trust Center",
+    description: "Your security, privacy & identity dashboard — devices, sessions, encryption, recommendations.",
+    emoji: "🛡️",
+    category: "privacy",
+    event: "circle:trust-center",
+    keywords: ["security", "privacy", "trust", "identity", "encryption", "devices", "sessions"],
+  },
 ];
 
 // ── Category metadata ──────────────────────────────────────────────────

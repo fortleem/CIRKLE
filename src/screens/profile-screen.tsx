@@ -193,7 +193,9 @@ export function ProfileScreen() {
     markChecklistItem("post");
     // Optimistically show the post grid (mock preview) so the user sees what
     // their feed will look like after their first post.
-    setPostsCount(MOCK_POSTS.length);
+    // P0 FIX: Don't show fake MOCK_POSTS — just notify the user.
+    // Real posts will appear after the API returns them.
+    toast.success("Post composer opened", { description: "Your post will appear here once published." });
   };
 
   /** "Join a Circle" CTA — opens Circle Hub + marks checklist circle item. */
@@ -789,15 +791,10 @@ export function ProfileScreen() {
         ) : (
           <>
             <div className="grid grid-cols-3 gap-2">
-              {MOCK_POSTS.map((post) => (
-                <PostGridItem key={post.id} post={post} />
-              ))}
-            </div>
-            {/* Color legend */}
-            <div className="flex items-center justify-center gap-3 mt-3 text-[9px] text-muted-foreground">
-              <span className="flex items-center gap-1"><Type className="w-2.5 h-2.5 text-steel" /> Text</span>
-              <span className="flex items-center gap-1"><ImageIcon className="w-2.5 h-2.5 text-rose" /> Photo</span>
-              <span className="flex items-center gap-1"><Video className="w-2.5 h-2.5 text-teal" /> Video</span>
+              {/* P0 FIX: No fake posts — show a real loading state */}
+              <div className="col-span-3 text-center py-8 text-muted-foreground text-xs">
+                Your posts will appear here after you publish them.
+              </div>
             </div>
           </>
         )}
@@ -953,6 +950,12 @@ export function ProfileScreen() {
             title="Privacy center"
             sub="Granular controls for every module"
             onClick={() => window.dispatchEvent(new CustomEvent("circle:settings"))}
+          />
+          <Row
+            icon={ShieldCheck}
+            title="Trust Center"
+            sub="Security, devices, sessions, encryption status"
+            onClick={() => window.dispatchEvent(new CustomEvent("circle:trust-center"))}
           />
           <Row
             icon={Lock}

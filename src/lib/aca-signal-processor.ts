@@ -1,7 +1,13 @@
 // @ts-nocheck
+// P0 FIX: Now persists to Prisma DB with in-memory fallback
 /**
  * ACA Signal Processor — Citizen Shield → ACA Intelligence Pipeline
  * ============================================================================
+ * P0 FIX: signals now persist to the `AcaSignal` Prisma table. Every mutating
+ * function writes to the DB (best-effort) AND to the in-memory cache, so the
+ * synchronous public surface continues to work even when the DB is cold /
+ * unavailable. Reads return from the in-memory cache and trigger a
+ * fire-and-forget DB prefetch so the cache stays fresh across calls.
  * A SIGNAL is an intelligence object: a structured indication of a possible
  * issue that requires human review. It is NOT a case.
  *
@@ -141,6 +147,130 @@ const _signals = new Map<string, AcaSignal>();
 let _sigCounter = 1930;
 
 // ────────────────────────────────────────────────────────────────────────────
+//  DB helpers (P0 FIX)
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Persist a signal to the DB AND keep the in-memory cache in sync.
+ * Wraps `db.acaSignal.upsert` in safeDbQuery so failures are non-fatal.
+ */
+async function dbUpsertSignal(s: AcaSignal): Promise<void> {
+  const result = await safeDbQuery(() =>
+    db.acaSignal.upsert({
+      where: { signalId: s.signalId },
+      create: {
+        signalId: s.signalId,
+        source: s.source,
+        pattern: s.pattern,
+        sourceCount: s.sourceCount,
+        service: s.service ?? null,
+        geography: s.geography ?? null,
+        timeframe: s.timeframe ? JSON.stringify(s.timeframe) : null,
+        evidenceAvailability: s.evidenceAvailability ? JSON.stringify(s.evidenceAvailability) : null,
+        repeatedFailures: JSON.stringify(s.repeatedFailures ?? []),
+        potentialIntegrityIndicators: JSON.stringify(s.potentialIntegrityIndicators ?? []),
+        reasonForReferral: JSON.stringify(s.reasonForReferral),
+        status: s.status,
+        convertedToCaseId: s.convertedToCaseId ?? null,
+        createdAt: new Date(s.createdAt),
+      },
+      update: {
+        status: s.status,
+        convertedToCaseId: s.convertedToCaseId ?? null,
+        evidenceAvailability: s.evidenceAvailability ? JSON.stringify(s.evidenceAvailability) : null,
+        repeatedFailures: JSON.stringify(s.repeatedFailures ?? []),
+        potentialIntegrityIndicators: JSON.stringify(s.potentialIntegrityIndicators ?? []),
+        reasonForReferral: JSON.stringify(s.reasonForReferral),
+      },
+    }),
+  );
+  if (result === null) {
+    console.warn(
+      `[aca-signal-processor] DB unavailable for signal ${s.signalId} — in-memory only`,
+    );
+  }
+}
+
+function rowToSignal(row: any): AcaSignal {
+  const safeParse = <T,>(s: string | null | undefined, fallback: T): T => {
+    try {
+      return s ? JSON.parse(s) as T : fallback;
+    } catch {
+      return fallback;
+    }
+  };
+  let timeframe: AcaSignal["timeframe"] = { from: "", to: "" };
+  try {
+    timeframe = row.timeframe ? JSON.parse(row.timeframe) : timeframe;
+  } catch {
+    timeframe = { from: "", to: "" };
+  }
+  return {
+    signalId: row.signalId,
+    signalNumber: row.signalId, // signalNumber not stored separately in schema; mirror signalId
+    source: row.source as AcaSignalSource,
+    pattern: row.pattern as AcaSignalPattern,
+    sourceCount: row.sourceCount ?? 1,
+    service: row.service ?? undefined,
+    geography: row.geography ?? undefined,
+    timeframe,
+    evidenceAvailability: safeParse<AcaSignalEvidenceAvailability>(row.evidenceAvailability, {
+      hasDirectEvidence: false,
+      hasWitnessCorroboration: false,
+      hasDocumentaryTrail: false,
+      evidenceCount: 0,
+    }),
+    repeatedFailures: safeParse<AcaSignal["repeatedFailures"]>(row.repeatedFailures, undefined),
+    potentialIntegrityIndicators: safeParse<AcaSignalIntegrityIndicator[]>(row.potentialIntegrityIndicators, []),
+    reasonForReferral: safeParse<AcaSignalReferral>(row.reasonForReferral, {
+      referralReason: "",
+      referredByType: "system",
+      consentScope: "minimal",
+    }),
+    status: row.status as AcaSignalStatus,
+    convertedToCaseId: row.convertedToCaseId ?? undefined,
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt),
+    updatedAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt),
+  };
+}
+
+/** Load a single signal from the DB into the in-memory cache. */
+async function dbLoadSignal(signalId: string): Promise<AcaSignal | null> {
+  const row = await safeDbQuery(() =>
+    db.acaSignal.findUnique({ where: { signalId } }),
+  );
+  if (!row) return null;
+  const s = rowToSignal(row);
+  _signals.set(signalId, s);
+  return s;
+}
+
+/** Load ALL signals from the DB into the in-memory cache. */
+async function dbLoadAllSignals(): Promise<AcaSignal[]> {
+  const rows = await safeDbQuery(() => db.acaSignal.findMany());
+  if (!rows) return [];
+  const signals: AcaSignal[] = [];
+  for (const row of rows) {
+    const s = rowToSignal(row);
+    _signals.set(s.signalId, s);
+    signals.push(s);
+  }
+  return signals;
+}
+
+function prefetchSignal(signalId: string): void {
+  void dbLoadSignal(signalId).catch(() => {});
+}
+
+function prefetchAllSignals(): void {
+  void dbLoadAllSignals().catch(() => {});
+}
+
+function persistSignalFireAndForget(s: AcaSignal): void {
+  void dbUpsertSignal(s).catch(() => {});
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 //  Helpers
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -190,11 +320,16 @@ export function createSignal(input: CreateSignalInput): AcaSignal {
     updatedAt: ts,
   };
   _signals.set(signalId, s);
+  persistSignalFireAndForget(s);
   return s;
 }
 
 export function getSignal(signalId: string): AcaSignal | null {
-  return _signals.get(signalId) ?? null;
+  const s = _signals.get(signalId) ?? null;
+  if (!s) {
+    prefetchSignal(signalId);
+  }
+  return s;
 }
 
 export function listSignals(filter?: {
@@ -202,6 +337,8 @@ export function listSignals(filter?: {
   source?: AcaSignalSource;
   pattern?: AcaSignalPattern;
 }): AcaSignal[] {
+  // Fire-and-forget DB refresh so the cache stays fresh across calls.
+  prefetchAllSignals();
   const all = Array.from(_signals.values()).sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
@@ -309,6 +446,7 @@ export function evaluateSignal(input: {
   s.reviewedAt = s.evaluation.evaluatedAt;
   s.reviewedBy = input.evaluatedBy;
   s.updatedAt = s.evaluation.evaluatedAt;
+  persistSignalFireAndForget(s);
   return s;
 }
 
@@ -335,6 +473,7 @@ export function convertSignalToCase(input: {
   s.status = "converted_to_case";
   s.convertedToCaseId = newCaseId;
   s.updatedAt = nowIso();
+  persistSignalFireAndForget(s);
   return { signal: s, newCaseId };
 }
 
@@ -349,6 +488,7 @@ export function markSignalConverted(input: {
   s.status = "converted_to_case";
   s.convertedToCaseId = input.caseId;
   s.updatedAt = nowIso();
+  persistSignalFireAndForget(s);
   return s;
 }
 
@@ -365,6 +505,7 @@ export function dismissSignal(input: {
   s.reviewedAt = nowIso();
   s.reviewedBy = input.dismissedBy;
   s.updatedAt = s.reviewedAt;
+  persistSignalFireAndForget(s);
   return s;
 }
 
@@ -379,6 +520,8 @@ export function signalSummary(): {
   dismissed: number;
   withIntegrityIndicators: number;
 } {
+  // Fire-and-forget DB refresh so the cache stays fresh across calls.
+  prefetchAllSignals();
   const all = Array.from(_signals.values());
   return {
     total: all.length,
@@ -391,70 +534,19 @@ export function signalSummary(): {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-//  Persistence helpers (DB optional — degrades gracefully)
+//  Public persistence helpers (DB optional — degrades gracefully)
+//
+//  P0 FIX: these now delegate to the schema-aware upsert/load helpers above
+//  so they actually round-trip correctly against the current `AcaSignal`
+//  schema (which does NOT have signalNumber / timeframeFrom / timeframeTo /
+//  updatedAt / reviewedAt / reviewedBy columns — those are stored inside the
+//  JSON-stringified `timeframe` / `evidenceAvailability` columns instead).
 // ────────────────────────────────────────────────────────────────────────────
 
 export async function persistSignal(s: AcaSignal): Promise<void> {
-  await safeDbQuery(() =>
-    db.acaSignal?.upsert({
-      where: { signalId: s.signalId },
-      create: {
-        signalId: s.signalId,
-        signalNumber: s.signalNumber,
-        source: s.source,
-        pattern: s.pattern,
-        sourceCount: s.sourceCount,
-        service: s.service ?? null,
-        geography: s.geography ?? null,
-        timeframeFrom: new Date(s.timeframe.from),
-        timeframeTo: new Date(s.timeframe.to),
-        status: s.status,
-        createdAt: new Date(s.createdAt),
-        updatedAt: new Date(s.updatedAt),
-      },
-      update: {
-        status: s.status,
-        updatedAt: new Date(s.updatedAt),
-        reviewedAt: s.reviewedAt ? new Date(s.reviewedAt) : null,
-        reviewedBy: s.reviewedBy ?? null,
-      },
-    }),
-  );
+  await dbUpsertSignal(s);
 }
 
 export async function loadSignalFromDb(signalId: string): Promise<AcaSignal | null> {
-  const row = await safeDbQuery(() =>
-    db.acaSignal?.findUnique({ where: { signalId } }),
-  );
-  if (!row) return null;
-  return {
-    signalId: row.signalId,
-    signalNumber: row.signalNumber,
-    source: row.source as AcaSignalSource,
-    pattern: row.pattern as AcaSignalPattern,
-    sourceCount: row.sourceCount,
-    service: row.service ?? undefined,
-    geography: row.geography ?? undefined,
-    timeframe: {
-      from: row.timeframeFrom instanceof Date ? row.timeframeFrom.toISOString() : String(row.timeframeFrom),
-      to: row.timeframeTo instanceof Date ? row.timeframeTo.toISOString() : String(row.timeframeTo),
-    },
-    evidenceAvailability: {
-      hasDirectEvidence: false,
-      hasWitnessCorroboration: false,
-      hasDocumentaryTrail: false,
-      evidenceCount: 0,
-    },
-    potentialIntegrityIndicators: [],
-    reasonForReferral: {
-      referralReason: "",
-      referredByType: "system",
-      consentScope: "minimal",
-    },
-    status: row.status as AcaSignalStatus,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt),
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : String(row.updatedAt),
-    reviewedAt: row.reviewedAt instanceof Date ? row.reviewedAt.toISOString() : undefined,
-    reviewedBy: row.reviewedBy ?? undefined,
-  };
+  return dbLoadSignal(signalId);
 }

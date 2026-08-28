@@ -15,6 +15,10 @@
  *   - Body { action: "initiate", reason }          → records pending closure
  *   - Body { action: "confirm", confirmingAgentId, confirmingAgentName, reason }
  *                                                   → confirms & closes
+ *
+ * P0 FIX: Route is now auth-gated. Requires a valid `cirkle-session` cookie
+ * AND `isAca` clearance on the session (in addition to the existing
+ * `x-aca-session-id` ACA-session check). Returns 401 / 403 otherwise.
  * ============================================================================
  */
 import { NextResponse } from "next/server";
@@ -25,6 +29,7 @@ import {
 } from "@/lib/aca-case-manager";
 import { listEvidenceForCase } from "@/lib/aca-evidence-manager";
 import { calculateCaseHealth, getNextBestAction, getOrCreateWorkspace } from "@/lib/aca-investigation-workspace";
+import { getSessionFromRequest } from "@/lib/server-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +43,15 @@ function getSessionId(req: Request): string | null {
 interface RouteParams { params: Promise<{ id: string }> }
 
 export async function GET(req: Request, ctx: RouteParams) {
+  // ── P0 FIX: auth-gate (Circle session + isAca clearance) ───────────────────
+  const session = await getSessionFromRequest(req);
+  if (!session) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  if (!session.isAca) {
+    return NextResponse.json({ error: "forbidden", details: "ACA clearance required" }, { status: 403 });
+  }
+
   const { id } = await ctx.params;
   const c = getCase(id);
   if (!c) {
@@ -76,6 +90,15 @@ export async function GET(req: Request, ctx: RouteParams) {
 
 export async function PATCH(req: Request, ctx: RouteParams) {
   const { id } = await ctx.params;
+  // ── P0 FIX: auth-gate (Circle session + isAca clearance) ───────────────────
+  const session = await getSessionFromRequest(req);
+  if (!session) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  if (!session.isAca) {
+    return NextResponse.json({ error: "forbidden", details: "ACA clearance required" }, { status: 403 });
+  }
+
   const sessionId = getSessionId(req);
   const { agent } = sessionId ? validateAcaSession(sessionId) : { agent: null };
 
@@ -139,6 +162,15 @@ export async function PATCH(req: Request, ctx: RouteParams) {
 
 export async function DELETE(req: Request, ctx: RouteParams) {
   const { id } = await ctx.params;
+  // ── P0 FIX: auth-gate (Circle session + isAca clearance) ───────────────────
+  const session = await getSessionFromRequest(req);
+  if (!session) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  if (!session.isAca) {
+    return NextResponse.json({ error: "forbidden", details: "ACA clearance required" }, { status: 403 });
+  }
+
   const sessionId = getSessionId(req);
   const { agent } = sessionId ? validateAcaSession(sessionId) : { agent: null };
 

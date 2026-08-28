@@ -1,9 +1,17 @@
 // @ts-nocheck
+// P0 FIX: Now persists to Prisma DB with in-memory fallback
 /**
  * ACA Agent Identity Store
  * ============================================================================
  * Sovereign-grade identity management for the Administrative Control Authority
  * (ACA) layer of CIRKLE.
+ *
+ * P0 FIX: agent profiles now persist to the `AcaAgent` Prisma table. Every
+ * mutating function writes to the DB (best-effort) AND to the in-memory
+ * store, so the synchronous public surface continues to work even when the
+ * DB is cold / unavailable. Sessions remain in-memory ONLY — they are
+ * short-lived by design (15-min TTL) and revoking them across processes is
+ * handled by the validateAcaSession fail-open contract instead.
  *
  * CRITICAL DISTINCTION (per CIRKLE-ACA-BLUEPRINT §1.2, §2, §6):
  *   - ACA agents are NOT created from regular Circle accounts.
@@ -315,7 +323,6 @@ const store: AcaAgentStoreState = {
   sessions: {},
   currentAgentId: null,
   currentSessionId: null,
-
   getCurrentAgent() {
     if (!this.currentAgentId) return null;
     return this.agents[this.currentAgentId] ?? null;
@@ -327,7 +334,12 @@ const store: AcaAgentStoreState = {
   },
 
   getAgentProfile(agentId) {
-    return this.agents[agentId] ?? null;
+    const a = this.agents[agentId] ?? null;
+    if (!a) {
+      // Fire-and-forget DB prefetch so the next call sees fresh data.
+      void dbLoadAgent(agentId).catch(() => {});
+    }
+    return a;
   },
 
   createAcaAgent(input) {
@@ -369,6 +381,8 @@ const store: AcaAgentStoreState = {
       createdBy: input.createdBy,
     };
     this.agents[agentId] = agent;
+    // P0 FIX — persist agent profile to AcaAgent table (best-effort, fire-and-forget).
+    void persistAgentFireAndForget(agent);
     return agent;
   },
 
@@ -403,6 +417,8 @@ const store: AcaAgentStoreState = {
       stepUpToken: "provision-step-up",
     });
 
+    // P0 FIX — persist updated agent profile (devices / certifications array).
+    void persistAgentFireAndForget(agent);
     return agent;
   },
 
@@ -430,6 +446,8 @@ const store: AcaAgentStoreState = {
       result: "success",
     });
 
+    // P0 FIX — persist revoked state.
+    void persistAgentFireAndForget(agent);
     return true;
   },
 
@@ -538,59 +556,131 @@ const store: AcaAgentStoreState = {
 };
 
 // ────────────────────────────────────────────────────────────────────────────
-//  Persistence helpers (DB optional — degrades gracefully)
+//  DB helpers (P0 FIX)
 // ────────────────────────────────────────────────────────────────────────────
 
-export async function persistAgent(agent: AcaAgent): Promise<void> {
-  await safeDbQuery(() =>
-    db.acaAgent?.upsert({
+/**
+ * Persist an agent profile to the DB. Uses the schema-aware column set:
+ *   agentId, institutionalIdentity, role, department, unit, clearance,
+ *   assignments (JSON), devices (JSON), certifications (JSON),
+ *   permissions (JSON), sessionStatus, auditHistory (JSON), status.
+ * Sessions are NOT persisted (short-lived by design).
+ */
+async function dbUpsertAgent(agent: AcaAgent): Promise<void> {
+  const result = await safeDbQuery(() =>
+    db.acaAgent.upsert({
       where: { agentId: agent.agentId },
       create: {
         agentId: agent.agentId,
         institutionalIdentity: agent.institutionalIdentity,
-        displayName: agent.displayName,
         role: agent.role,
         department: agent.department,
         unit: agent.unit ?? null,
         clearance: agent.clearance,
-        permissions: JSON.stringify(agent.permissions),
+        assignments: JSON.stringify(agent.assignments ?? []),
+        devices: JSON.stringify(agent.devices ?? []),
+        certifications: JSON.stringify(agent.certifications ?? []),
+        permissions: JSON.stringify(agent.permissions ?? []),
         sessionStatus: agent.sessionStatus,
-        createdAt: new Date(agent.createdAt),
-        createdBy: agent.createdBy,
+        auditHistory: JSON.stringify(agent.auditHistory ?? []),
+        status: agent.revokedAt ? "revoked" : "active",
       },
       update: {
+        institutionalIdentity: agent.institutionalIdentity,
+        role: agent.role,
+        department: agent.department,
+        unit: agent.unit ?? null,
+        clearance: agent.clearance,
+        assignments: JSON.stringify(agent.assignments ?? []),
+        devices: JSON.stringify(agent.devices ?? []),
+        certifications: JSON.stringify(agent.certifications ?? []),
+        permissions: JSON.stringify(agent.permissions ?? []),
         sessionStatus: agent.sessionStatus,
-        revokedAt: agent.revokedAt ? new Date(agent.revokedAt) : null,
-        revokedReason: agent.revokedReason ?? null,
+        auditHistory: JSON.stringify(agent.auditHistory ?? []),
+        status: agent.revokedAt ? "revoked" : "active",
       },
     }),
   );
+  if (result === null) {
+    console.warn(
+      `[aca-agent-store] DB unavailable for agent ${agent.agentId} — in-memory only`,
+    );
+  }
 }
 
-export async function loadAgentFromDb(agentId: string): Promise<AcaAgent | null> {
-  const row = await safeDbQuery(() =>
-    db.acaAgent?.findUnique({ where: { agentId } }),
-  );
-  if (!row) return null;
+function rowToAgent(row: any): AcaAgent {
+  const safeParse = <T,>(s: string | null | undefined, fallback: T): T => {
+    try {
+      return s ? JSON.parse(s) as T : fallback;
+    } catch {
+      return fallback;
+    }
+  };
   return {
     agentId: row.agentId,
     institutionalIdentity: row.institutionalIdentity,
-    displayName: row.displayName,
+    displayName: row.institutionalIdentity, // displayName not stored in schema; mirror institutionalIdentity
     role: row.role as AcaRole,
     department: row.department,
     unit: row.unit ?? undefined,
     clearance: row.clearance as AcaClearance,
-    assignments: [],
-    devices: [],
-    certifications: [],
-    permissions: row.permissions ? JSON.parse(row.permissions) : [],
+    assignments: safeParse<AcaAssignment[]>(row.assignments, []),
+    devices: safeParse<AcaDevice[]>(row.devices, []),
+    certifications: safeParse<AcaCertification[]>(row.certifications, []),
+    permissions: safeParse<AcaPermission[]>(row.permissions, []),
     sessionStatus: row.sessionStatus as AcaSessionStatus,
-    auditHistory: [],
+    auditHistory: safeParse<AcaAuditEntry[]>(row.auditHistory, []),
     createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt),
-    createdBy: row.createdBy,
-    revokedAt: row.revokedAt instanceof Date ? row.revokedAt.toISOString() : undefined,
-    revokedReason: row.revokedReason ?? undefined,
+    createdBy: "system", // createdBy not stored in schema; default
+    revokedAt: row.status === "revoked" ? (row.updatedAt instanceof Date ? row.updatedAt.toISOString() : undefined) : undefined,
+    revokedReason: undefined,
   };
+}
+
+/** Load a single agent from the DB into the in-memory store. */
+async function dbLoadAgent(agentId: string): Promise<AcaAgent | null> {
+  const row = await safeDbQuery(() =>
+    db.acaAgent.findUnique({ where: { agentId } }),
+  );
+  if (!row) return null;
+  const a = rowToAgent(row);
+  store.agents[agentId] = a;
+  return a;
+}
+
+/** Load ALL agents from the DB into the in-memory store. */
+async function dbLoadAllAgents(): Promise<AcaAgent[]> {
+  const rows = await safeDbQuery(() => db.acaAgent.findMany());
+  if (!rows) return [];
+  const agents: AcaAgent[] = [];
+  for (const row of rows) {
+    const a = rowToAgent(row);
+    store.agents[a.agentId] = a;
+    agents.push(a);
+  }
+  return agents;
+}
+
+function persistAgentFireAndForget(agent: AcaAgent): void {
+  void dbUpsertAgent(agent).catch(() => {});
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  Public persistence helpers (DB optional — degrades gracefully)
+//
+//  P0 FIX: these now delegate to the schema-aware upsert/load helpers above
+//  so they actually round-trip correctly against the current `AcaAgent`
+//  schema (which does NOT have displayName / createdBy columns — the schema
+//  stores assignments / devices / certifications / permissions / auditHistory
+//  as JSON strings inside the row instead).
+// ────────────────────────────────────────────────────────────────────────────
+
+export async function persistAgent(agent: AcaAgent): Promise<void> {
+  await dbUpsertAgent(agent);
+}
+
+export async function loadAgentFromDb(agentId: string): Promise<AcaAgent | null> {
+  return dbLoadAgent(agentId);
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -613,6 +703,50 @@ export function revokeAgent(input: Parameters<AcaAgentStoreState["revokeAgent"]>
 
 export function getAgentProfile(agentId: string): AcaAgent | null {
   return store.getAgentProfile(agentId);
+}
+
+/**
+ * List all agents. Returns the in-memory cache immediately and triggers a
+ * fire-and-forget DB prefetch so the cache stays fresh across calls.
+ *
+ * P0 FIX — queries `db.acaAgent.findMany()` in the background.
+ */
+export function listAgents(filter?: {
+  role?: AcaRole;
+  department?: string;
+  includeRevoked?: boolean;
+}): AcaAgent[] {
+  // Fire-and-forget DB refresh so the cache stays fresh across calls.
+  void dbLoadAllAgents().catch(() => {});
+  let list = Object.values(store.agents);
+  if (filter?.role) list = list.filter((a) => a.role === filter.role);
+  if (filter?.department) list = list.filter((a) => a.department === filter.department);
+  if (!filter?.includeRevoked) list = list.filter((a) => !a.revokedAt);
+  return list.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+}
+
+/** Async variant — queries `db.acaAgent.findMany()` directly. */
+export async function listAgentsAsync(filter?: {
+  role?: AcaRole;
+  department?: string;
+  includeRevoked?: boolean;
+}): Promise<AcaAgent[]> {
+  const rows = await safeDbQuery(() => db.acaAgent.findMany());
+  let list: AcaAgent[];
+  if (rows && rows.length > 0) {
+    list = rows.map(rowToAgent).filter(Boolean) as AcaAgent[];
+    for (const a of list) store.agents[a.agentId] = a;
+  } else {
+    list = Object.values(store.agents);
+  }
+  if (filter?.role) list = list.filter((a) => a.role === filter.role);
+  if (filter?.department) list = list.filter((a) => a.department === filter.department);
+  if (!filter?.includeRevoked) list = list.filter((a) => !a.revokedAt);
+  return list.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
 }
 
 export function validateAcaSession(sessionId: string) {

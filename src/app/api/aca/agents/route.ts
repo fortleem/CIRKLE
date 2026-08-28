@@ -9,6 +9,11 @@
  * HEADERS:
  *   x-aca-session-id  — current agent's session id (for authorization)
  *
+ * P0 FIX: Route is now auth-gated. Requires a valid `cirkle-session` cookie
+ * AND `isAca` clearance on the session (in addition to the existing
+ * `x-aca-session-id` ACA-session check). Returns 401 / 403 otherwise.
+ * (P1 rate-limit wrapper is preserved.)
+ *
  * BUILDING PHASE — authorization is mock-permissive. A future iteration will
  * enforce the `agent.provision` permission via step-up re-authentication.
  * ============================================================================
@@ -18,6 +23,8 @@ import {
   acaAgentStore, createAcaAgent, provisionAgent,
   validateAcaSession, type AcaRole, type AcaClearance,
 } from "@/lib/aca-agent-store";
+import { withRateLimit } from "@/lib/api-rate-limit";
+import { getSessionFromRequest } from "@/lib/server-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +36,16 @@ function getSessionId(req: Request): string | null {
   return q ? q.trim() : null;
 }
 
-export async function GET(req: Request) {
+async function getAgentsHandler(req: Request) {
+  // ── P0 FIX: auth-gate (Circle session + isAca clearance) ───────────────────
+  const session = await getSessionFromRequest(req);
+  if (!session) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  if (!session.isAca) {
+    return NextResponse.json({ error: "forbidden", details: "ACA clearance required" }, { status: 403 });
+  }
+
   const sessionId = getSessionId(req);
   const { agent: requester } = sessionId ? validateAcaSession(sessionId) : { agent: null };
 
@@ -59,7 +75,16 @@ export async function GET(req: Request) {
   }, { headers: { "Cache-Control": "no-store" } });
 }
 
-export async function POST(req: Request) {
+async function postAgentsHandler(req: Request) {
+  // ── P0 FIX: auth-gate (Circle session + isAca clearance) ───────────────────
+  const session = await getSessionFromRequest(req);
+  if (!session) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  if (!session.isAca) {
+    return NextResponse.json({ error: "forbidden", details: "ACA clearance required" }, { status: 403 });
+  }
+
   const sessionId = getSessionId(req);
   const { agent: requester } = sessionId ? validateAcaSession(sessionId) : { agent: null };
 
@@ -115,3 +140,17 @@ export async function POST(req: Request) {
     notice: "DEV MODE — NO AUTH. Agent provisioned without identity proofing.",
   }, { status: 201, headers: { "Cache-Control": "no-store" } });
 }
+
+// P1 FIX: Rate-limited to prevent abuse (agent list — 10 req/min)
+export const GET = withRateLimit(getAgentsHandler, {
+  maxRequests: 10,
+  windowMs: 60_000,
+  keyBy: "ip",
+});
+
+// P1 FIX: Rate-limited to prevent abuse (agent provisioning — 10 req/min)
+export const POST = withRateLimit(postAgentsHandler, {
+  maxRequests: 10,
+  windowMs: 60_000,
+  keyBy: "ip",
+});

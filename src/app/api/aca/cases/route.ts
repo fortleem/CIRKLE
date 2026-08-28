@@ -9,6 +9,10 @@
  * POST creates a formal ACA case. When `fromSignalId` is provided, the case
  * is recorded as having been converted from that signal — but the signal→case
  * conversion is owned by /api/aca/signals/[id]/convert.
+ *
+ * P0 FIX: Route is now auth-gated. Requires a valid `cirkle-session` cookie
+ * AND `isAca` clearance on the session (in addition to the existing
+ * `x-aca-session-id` ACA-session check). Returns 401 / 403 otherwise.
  * ============================================================================
  */
 import { NextResponse } from "next/server";
@@ -17,6 +21,8 @@ import {
   createCase, listCasesForAgent, listAllCases, persistCase,
   type AcaCasePriority,
 } from "@/lib/aca-case-manager";
+import { getSessionFromRequest } from "@/lib/server-auth";
+import { withRateLimit } from "@/lib/api-rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +34,16 @@ function getSessionId(req: Request): string | null {
   return q ? q.trim() : null;
 }
 
-export async function GET(req: Request) {
+async function getCasesHandler(req: Request) {
+  // ── P0 FIX: auth-gate (Circle session + isAca clearance) ───────────────────
+  const session = await getSessionFromRequest(req);
+  if (!session) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  if (!session.isAca) {
+    return NextResponse.json({ error: "forbidden", details: "ACA clearance required" }, { status: 403 });
+  }
+
   const sessionId = getSessionId(req);
   const { agent } = sessionId ? validateAcaSession(sessionId) : { agent: null };
   const url = new URL(req.url);
@@ -74,7 +89,16 @@ export async function GET(req: Request) {
   }, { headers: { "Cache-Control": "no-store" } });
 }
 
-export async function POST(req: Request) {
+async function postCasesHandler(req: Request) {
+  // ── P0 FIX: auth-gate (Circle session + isAca clearance) ───────────────────
+  const session = await getSessionFromRequest(req);
+  if (!session) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  if (!session.isAca) {
+    return NextResponse.json({ error: "forbidden", details: "ACA clearance required" }, { status: 403 });
+  }
+
   const sessionId = getSessionId(req);
   const { agent } = sessionId ? validateAcaSession(sessionId) : { agent: null };
 
@@ -120,3 +144,17 @@ export async function POST(req: Request) {
     devMode: true,
   }, { status: 201, headers: { "Cache-Control": "no-store" } });
 }
+
+// P1 FIX: Rate-limited to prevent abuse (cases list — 20 req/min)
+export const GET = withRateLimit(getCasesHandler, {
+  maxRequests: 20,
+  windowMs: 60_000,
+  keyBy: "ip",
+});
+
+// P1 FIX: Rate-limited to prevent abuse (case creation — 20 req/min)
+export const POST = withRateLimit(postCasesHandler, {
+  maxRequests: 20,
+  windowMs: 60_000,
+  keyBy: "ip",
+});

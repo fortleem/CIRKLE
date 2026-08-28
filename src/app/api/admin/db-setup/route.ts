@@ -3,11 +3,24 @@
  * POST /api/admin/db-setup
  * Creates all Prisma tables in the database.
  * Call this once after deployment to initialize the database.
+ *
+ * P0 FIX: Route is now auth-gated. Requires a valid `cirkle-session` cookie
+ * AND `isAdmin` clearance on the session. Returns 401 / 403 otherwise.
  */
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getSessionFromRequest } from "@/lib/server-auth";
 
-export async function POST() {
+export async function POST(req: Request) {
+  // ── P0 FIX: auth-gate ─────────────────────────────────────────────────────
+  const session = await getSessionFromRequest(req);
+  if (!session) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  if (!session.isAdmin) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+
   try {
     // Test by creating a simple table query
     const result = await db.$queryRaw`SELECT name FROM sqlite_master WHERE type='table' LIMIT 1`.catch(() => null);

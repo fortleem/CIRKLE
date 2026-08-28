@@ -4,6 +4,9 @@
  * ============================================================================
  * Aggregated top-level dashboard for the CIRKLE Platform Admin Panel.
  *
+ * P0 FIX: Route is now auth-gated. Requires a valid `cirkle-session` cookie
+ * AND `isAdmin` clearance on the session. Returns 401 / 403 otherwise.
+ *
  * Pulls from:
  *   - /api/health           (system health, uptime, memory, version)
  *   - /api/brain/status     (AI providers, knowledge graph, features)
@@ -14,15 +17,13 @@
  * Returns a single JSON blob the admin "Overview" section can render in one
  * fetch. All sub-fetches are fault-tolerant — if one source is down, the
  * overview still returns with that field nulled out.
- *
- * NOTE: This endpoint is NOT auth-gated during the admin panel building
- * phase. A future iteration will gate it behind an OIDC admin role.
  * ============================================================================
  */
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getErrorStats } from "@/lib/error-monitoring";
 import { getEnvStatus } from "@/lib/env-validation";
+import { getSessionFromRequest } from "@/lib/server-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +39,16 @@ const BASE = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
   : "http://localhost:3000";
 
-export async function GET() {
+export async function GET(req: Request) {
+  // ── P0 FIX: auth-gate ─────────────────────────────────────────────────────
+  const session = await getSessionFromRequest(req);
+  if (!session) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  if (!session.isAdmin) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+
   const startedAt = Date.now();
 
   // ── Parallel data fetch ─────────────────────────────────────────────────

@@ -4,6 +4,9 @@
  * ============================================================================
  * Overlay registry + feature flag data for the admin panel.
  *
+ * P0 FIX: Route is now auth-gated. Requires a valid `cirkle-session` cookie
+ * AND `isAdmin` clearance on the session. Returns 401 / 403 otherwise.
+ *
  * Pulls from:
  *   - src/lib/overlay-registry.ts (OVERLAY_REGISTRY — 71 overlays)
  *   - src/lib/tabs.ts (PRIMARY_TABS + SECONDARY_TABS)
@@ -11,17 +14,25 @@
  * Returns:
  *   { totalOverlays, byCategory: [...], overlays: [...],
  *     primaryTabs, secondaryTabs, quickActions }
- *
- * NOTE: Not auth-gated during the admin panel building phase.
  * ============================================================================
  */
 import { NextResponse } from "next/server";
 import { OVERLAY_REGISTRY, getCommandEntries } from "@/lib/overlay-registry";
 import { PRIMARY_TABS, SECONDARY_TABS } from "@/lib/tabs";
+import { getSessionFromRequest } from "@/lib/server-auth";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
+  // ── P0 FIX: auth-gate ─────────────────────────────────────────────────────
+  const session = await getSessionFromRequest(req);
+  if (!session) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  if (!session.isAdmin) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+
   // ── Group by category ──────────────────────────────────────────────────
   const byCategory: Record<string, number> = {};
   for (const o of OVERLAY_REGISTRY) {
