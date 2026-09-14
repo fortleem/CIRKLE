@@ -8,4 +8,3 @@ node_modules/
 tool-results/
 tsconfig.tsbuildinfo
 .env
-db/ticket-keys.json

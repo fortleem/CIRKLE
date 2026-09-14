@@ -4,28 +4,15 @@
  * PUT  /api/admin/smtp  — update SMTP settings
  *      body: { host, port, username, password, fromEmail, fromName, encryption, enabled }
  *
- * P0 FIX: Route is now auth-gated. Requires a valid `cirkle-session` cookie
- * AND `isAdmin` clearance on the session. Returns 401 / 403 otherwise.
- * (P1 rate-limit wrapper is preserved.)
+ * NOTE: Not auth-gated during the admin panel building phase.
  * ============================================================================
  */
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { withRateLimit } from "@/lib/api-rate-limit";
-import { getSessionFromRequest } from "@/lib/server-auth";
 
 export const dynamic = "force-dynamic";
 
-async function getSmtpHandler(req: NextRequest) {
-  // ── P0 FIX: auth-gate ─────────────────────────────────────────────────────
-  const session = await getSessionFromRequest(req);
-  if (!session) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
-  if (!session.isAdmin) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  }
-
+export async function GET() {
   try {
     let settings = await db.smtpSettings.findUnique({ where: { id: "default" } });
 
@@ -74,23 +61,7 @@ async function getSmtpHandler(req: NextRequest) {
   }
 }
 
-// P1 FIX: Rate-limited to prevent abuse (SMTP read — 10 req/min)
-export const GET = withRateLimit(getSmtpHandler, {
-  maxRequests: 10,
-  windowMs: 60_000,
-  keyBy: "ip",
-});
-
-async function putSmtpHandler(req: NextRequest) {
-  // ── P0 FIX: auth-gate ─────────────────────────────────────────────────────
-  const session = await getSessionFromRequest(req);
-  if (!session) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
-  if (!session.isAdmin) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  }
-
+export async function PUT(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
 
@@ -147,10 +118,3 @@ async function putSmtpHandler(req: NextRequest) {
     );
   }
 }
-
-// P1 FIX: Rate-limited to prevent abuse (SMTP update — 10 req/min)
-export const PUT = withRateLimit(putSmtpHandler, {
-  maxRequests: 10,
-  windowMs: 60_000,
-  keyBy: "ip",
-});

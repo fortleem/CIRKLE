@@ -4,9 +4,6 @@
  * ============================================================================
  * API route inventory + rate-limit configuration for the admin panel.
  *
- * P0 FIX: Route is now auth-gated. Requires a valid `cirkle-session` cookie
- * AND `isAdmin` clearance on the session. Returns 401 / 403 otherwise.
- *
  * This route introspects the filesystem under src/app/api to enumerate every
  * route.ts file (237 routes as of v16.0) and groups them by top-level
  * folder. It also returns the rate-limit presets from src/lib/api-rate-limit.ts.
@@ -14,13 +11,14 @@
  * Returns:
  *   { totalRoutes, byFolder: [...], routes: [...],
  *     rateLimitPresets: {...}, validationWrappedCount }
+ *
+ * NOTE: Not auth-gated during the admin panel building phase.
  * ============================================================================
  */
 import { NextResponse } from "next/server";
 import { readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { RATE_LIMIT_PRESETS } from "@/lib/api-rate-limit";
-import { getSessionFromRequest } from "@/lib/server-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -46,16 +44,7 @@ function listRoutes(dir: string, basePath = "/api"): { path: string; folder: str
   return routes;
 }
 
-export async function GET(req: Request) {
-  // ── P0 FIX: auth-gate ─────────────────────────────────────────────────────
-  const session = await getSessionFromRequest(req);
-  if (!session) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
-  if (!session.isAdmin) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  }
-
+export async function GET() {
   const apiRoot = join(process.cwd(), "src", "app", "api");
   const routes = listRoutes(apiRoot);
 

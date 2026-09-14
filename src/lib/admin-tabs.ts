@@ -39,9 +39,6 @@ import {
   AlertTriangle,
   ServerCog,
   ToggleRight,
-  Shield,
-  Scale,
-  Cpu,
   type LucideIcon,
 } from "lucide-react";
 
@@ -58,10 +55,7 @@ export type AdminSectionId =
   | "api"
   | "errors"
   | "features"
-  | "system"
-  | "sovereign"
-  | "ai-governance"
-  | "policy";
+  | "system";
 
 export interface AdminSection {
   id: AdminSectionId;
@@ -73,7 +67,7 @@ export interface AdminSection {
   /** Primary data source — the API route the section fetches on mount. */
   endpoint: string;
   /** Category for grouping in the sidebar. */
-  group: "operations" | "intelligence" | "infrastructure" | "sovereign";
+  group: "operations" | "intelligence" | "infrastructure";
 }
 
 export const ADMIN_SECTIONS: AdminSection[] = [
@@ -207,44 +201,12 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     endpoint: "/api/admin/system",
     group: "infrastructure",
   },
-  // ── Sovereign Government Layer (R1 + R7 + Policy) ────────────────────
-  {
-    id: "sovereign",
-    label: "Sovereign Environment",
-    labelAr: "البيئة السيادية",
-    icon: Shield,
-    description: "ACA, Police, EMS, Fire, Traffic — sovereign institution workspaces",
-    descriptionAr: "ACA، الشرطة، الإسعاف، الحماية المدنية، المرور — مساحات العمل المؤسسية السيادية",
-    endpoint: "/api/federation/institutions",
-    group: "sovereign",
-  },
-  {
-    id: "ai-governance",
-    label: "AI Governance",
-    labelAr: "حوكمة الذكاء الاصطناعي",
-    icon: Cpu,
-    description: "AI data access broker, kill switch, automation levels, incidents",
-    descriptionAr: "وسيط الوصول للبيانات، مفتاح الإيقاف، مستويات الأتمتة، الحوادث",
-    endpoint: "/api/ai/kill-switch",
-    group: "sovereign",
-  },
-  {
-    id: "policy",
-    label: "Policy Engine",
-    labelAr: "محرك السياسات",
-    icon: Scale,
-    description: "Configurable policy rules — access, retention, escalation, AI, evidence",
-    descriptionAr: "قواعد سياسات قابلة للتكوين — الوصول، الاستبقاء، التصعيد، الذكاء الاصطناعي، الأدلة",
-    endpoint: "/api/policy/rules",
-    group: "sovereign",
-  },
 ];
 
-export const ADMIN_SECTION_GROUPS: { id: "operations" | "intelligence" | "infrastructure" | "sovereign"; label: string; labelAr: string }[] = [
+export const ADMIN_SECTION_GROUPS: { id: "operations" | "intelligence" | "infrastructure"; label: string; labelAr: string }[] = [
   { id: "operations", label: "Operations", labelAr: "العمليات" },
   { id: "intelligence", label: "Intelligence", labelAr: "الذكاء" },
   { id: "infrastructure", label: "Infrastructure", labelAr: "البنية التحتية" },
-  { id: "sovereign", label: "Sovereign", labelAr: "سيادي" },
 ];
 
 export const ADMIN_SECTION_COUNT = ADMIN_SECTIONS.length;
