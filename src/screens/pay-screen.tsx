@@ -789,7 +789,7 @@ export function PayScreen() {
               </div>
             ))}
             <button
-              onClick={() => toast.success("Split requests sent · 4 of 4 paid")}
+              onClick={() => toast.info("Receipt split requires payment integration — coming soon")}
               className="ms-3 text-xs px-3 py-1 rounded-full bg-primary text-primary-foreground"
             >
               Request
@@ -825,7 +825,7 @@ export function PayScreen() {
                     <div className="text-sm font-medium">Point camera at QR</div>
                     <div className="text-[11px] text-muted-foreground mt-1">P2P merchant codes supported</div>
                     <button
-                      onClick={() => { toast.success("Payment sent · SAR 45.00"); setAction(null); }}
+                      onClick={() => { toast.info("Payment sending requires payment integration"); setAction(null); }}
                       className="mt-3 px-4 py-2 rounded-full bg-primary text-primary-foreground text-xs"
                     >
                       Simulate scan
@@ -837,7 +837,7 @@ export function PayScreen() {
                     {[100, 250, 500, 1000].map(a => `${countryInfo.currency} ${a}`).map((amt) => (
                       <button
                         key={amt}
-                        onClick={() => { toast.success(`Topped up ${amt}`); setAction(null); }}
+                        onClick={() => { toast.info("Top-up requires payment integration"); setAction(null); }}
                         className="w-full rounded-xl bg-card border border-border p-3 flex items-center justify-between hover:bg-muted/40 transition"
                       >
                         <span className="text-sm font-medium">{amt}</span>
@@ -855,13 +855,13 @@ export function PayScreen() {
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <button
-                        onClick={() => { toast.success("Moved to vault"); setAction(null); }}
+                        onClick={() => { toast.info("Move to vault requires payment integration"); setAction(null); }}
                         className="py-2 rounded-full bg-primary text-primary-foreground text-xs"
                       >
                         Move to vault
                       </button>
                       <button
-                        onClick={() => { toast.success("Withdrawn to balance"); setAction(null); }}
+                        onClick={() => { toast.info("Withdrawal requires payment integration"); setAction(null); }}
                         className="py-2 rounded-full glass text-xs"
                       >
                         Withdraw
@@ -916,7 +916,7 @@ export function PayScreen() {
                   <div className="flex justify-between"><span className="text-muted-foreground">Fee</span><span>{txSheet.fee?.toFixed(2) || "0.00"} {txSheet.currency}</span></div>
                 </div>
                 <button
-                  onClick={() => { toast.success("Receipt downloaded"); setTxSheet(null); }}
+                  onClick={() => { toast.info("Receipt download requires payment integration"); setTxSheet(null); }}
                   className="w-full py-2.5 rounded-full bg-primary text-primary-foreground text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   aria-label="Download transaction receipt"
                 >

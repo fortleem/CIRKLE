@@ -763,7 +763,7 @@ export function ProfileScreen() {
           </h3>
           {postsCount > 0 && (
             <button
-              onClick={() => toast.success("Opening posts feed…")}
+              onClick={() => window.dispatchEvent(new CustomEvent("circle:navigate", { detail: { tab: "midan" } }))}
               className="text-[10px] text-secondary hover:underline flex items-center gap-0.5"
             >
               View all <ChevronRight className="w-2.5 h-2.5" />
@@ -1313,7 +1313,7 @@ function DataOwnershipBody({
         <ChevronRight className="w-4 h-4 text-muted-foreground" />
       </button>
       <button
-        onClick={() => toast.success("Transfer queued · 7-day cooling-off")}
+        onClick={() => toast.info("Data transfer requires verification — coming soon")}
         className="w-full rounded-xl bg-card border border-border p-3 flex items-center gap-3 hover:bg-muted/40 transition text-start"
       >
         <Database className="w-4 h-4 text-secondary" />
@@ -1356,7 +1356,7 @@ function AIPersonalizationBody() {
         All inference runs on-device. Cirkle servers never see your personalization data.
       </div>
       <button
-        onClick={() => toast.success("AI personalization cleared")}
+        onClick={() => toast.info("AI personalization reset")}
         className="w-full py-2.5 rounded-full bg-accent/15 text-accent text-xs"
       >
         Clear personalization
@@ -1476,7 +1476,7 @@ function PostGridItem({ post }: { post: MockPost }) {
   const { Icon, color, bg } = typeMeta[post.type];
   return (
     <button
-      onClick={() => toast.success(`Opening post from ${post.time} ago`)}
+      onClick={() => toast.info("Post detail view coming soon")}
       className="glass rounded-2xl p-2.5 text-left hover:bg-muted/50 transition flex flex-col gap-1.5 min-h-[130px]"
     >
       <div className="flex items-center justify-between">

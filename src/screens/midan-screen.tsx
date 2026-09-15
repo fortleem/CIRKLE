@@ -1352,7 +1352,7 @@ export function MidanScreen() {
                   ].map((s) => (
                     <button
                       key={s.l}
-                      onClick={() => toast.success(`Shared via ${s.l}`)}
+                      onClick={() => window.dispatchEvent(new CustomEvent("circle:universal-share", { detail: { source: "midan" } }))}
                       className="rounded-2xl glass p-3 text-center hover:bg-muted/50 transition"
                     >
                       <div className="w-10 h-10 mx-auto rounded-full bg-gradient-mesh flex items-center justify-center text-primary-foreground font-display">
@@ -1411,7 +1411,7 @@ export function MidanScreen() {
                   <div className="text-[11px] text-muted-foreground">{s.h} · {s.l.toLocaleString()} listening</div>
                 </div>
                 <button
-                  onClick={() => { setSpacesOpen(false); toast.success(`Joining “${s.t}”…`); }}
+                  onClick={() => { setSpacesOpen(false); window.dispatchEvent(new CustomEvent("circle:hub")); }}
                   className="text-xs px-3 py-1.5 rounded-full bg-primary text-primary-foreground"
                 >
                   Join

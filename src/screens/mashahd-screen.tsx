@@ -129,8 +129,8 @@ interface VideoItem {
   title: string;
   creator: string;
   handle: string;
-  avatar: string; // unused — kept for type-compat; rendered as gradient
-  thumbnail: string; // unused — kept for type-compat; rendered as gradient
+  avatar: string; // gradient avatar color
+  thumbnail: string; // URL to video poster frame (used by VideoThumb)
   duration: number;       // seconds
   views: number;          // raw count
   likes: number;          // raw count
@@ -878,7 +878,7 @@ export function MashahdScreen() {
             >
               <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-mesh">
                 <div className="w-full h-full rounded-full overflow-hidden">
-                  <GradientThumb className="w-full h-full" />
+                  <VideoThumb className="w-full h-full" title={c} />
                 </div>
               </div>
               <span className="text-[10px] text-muted-foreground max-w-[56px] truncate">{c}</span>
