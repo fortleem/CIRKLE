@@ -95,6 +95,7 @@ const CirkleShield = dynamic(() => import("@/components/overlays/cirkle-shield")
 const CirkleMint = dynamic(() => import("@/components/overlays/cirkle-mint").then(m => ({ default: m.CirkleMint })), { ssr: false });
 const VisaExplorer = dynamic(() => import("@/components/overlays/visa-explorer").then(m => ({ default: m.VisaExplorer })), { ssr: false });
 const OverlayBrowser = dynamic(() => import("@/components/overlays/overlay-browser").then(m => ({ default: m.OverlayBrowser })), { ssr: false });
+const FeatureBrowser = dynamic(() => import("@/components/overlays/feature-browser").then(m => ({ default: m.FeatureBrowser })), { ssr: false });
 const CirkleIdentity = dynamic(() => import("@/components/overlays/cirkle-identity").then(m => ({ default: m.CirkleIdentity })), { ssr: false });
 const ShieldDashboard = dynamic(() => import("@/components/overlays/shield-dashboard").then(m => ({ default: m.ShieldDashboard })), { ssr: false });
 const DataResidency = dynamic(() => import("@/components/overlays/data-residency").then(m => ({ default: m.DataResidency })), { ssr: false });
@@ -417,6 +418,7 @@ export default function Page() {
   const [mintOpen, setMintOpen] = useState(false);
   const [visaExplorerOpen, setVisaExplorerOpen] = useState(false);
   const [overlayBrowserOpen, setOverlayBrowserOpen] = useState(false);
+  const [featureBrowserOpen, setFeatureBrowserOpen] = useState(false);
   const [personalAIOpen, setPersonalAIOpen] = useState(false);
   const [meshDashboardOpen, setMeshDashboardOpen] = useState(false);
   const [oracleMarketsOpen, setOracleMarketsOpen] = useState(false);
@@ -693,6 +695,8 @@ export default function Page() {
 
     const onOverlayBrowser = () => setOverlayBrowserOpen(true);
     window.addEventListener("circle:overlay-browser", onOverlayBrowser);
+    const onFeatureBrowser = () => setFeatureBrowserOpen(true);
+    window.addEventListener("circle:feature-browser", onFeatureBrowser);
 
     const onPersonalAI = () => setPersonalAIOpen(true);
     window.addEventListener("circle:personal-ai", onPersonalAI);
@@ -967,6 +971,7 @@ export default function Page() {
       window.removeEventListener("circle:visa-explorer", onVisaExplorer);
 
       window.removeEventListener("circle:overlay-browser", onOverlayBrowser);
+      window.removeEventListener("circle:feature-browser", onFeatureBrowser);
       window.removeEventListener("circle:personal-ai", onPersonalAI);
       window.removeEventListener("circle:mesh-dashboard", onMeshDashboard);
       window.removeEventListener("circle:oracle-markets", onOracleMarkets);
@@ -1202,6 +1207,7 @@ export default function Page() {
       <VisaExplorer open={visaExplorerOpen} onClose={() => setVisaExplorerOpen(false)} passportCountry={country} />
 
       <OverlayBrowser open={overlayBrowserOpen} onClose={() => setOverlayBrowserOpen(false)} />
+      <FeatureBrowser open={featureBrowserOpen} onClose={() => setFeatureBrowserOpen(false)} />
 
       <PersonalAIOS open={personalAIOpen} onClose={() => setPersonalAIOpen(false)} />
 

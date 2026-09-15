@@ -24,6 +24,284 @@ export type OverlayCategory =
   | "productivity"
   | "health";
 
+// ── Feature Domains ────────────────────────────────────────────────────
+// Higher-level grouping that merges related overlays into coherent
+// feature collections. Each overlay maps to exactly one domain.
+// This replaces the scattered flat list with organized collections.
+
+export type FeatureDomain =
+  | "messaging"      // Wasl chat features: reactions, replies, disappearing, voice, calls
+  | "social_feed"    // Midan + Lamahat + Mashahd: posts, photos, videos, stories
+  | "ai_assistants"  // Brain AI, smart-reply, tone, summarize, catch-up, starters
+  | "ai_creative"    // Cirkle DNA, Mood, Verse, Spark, Create, Learn, Grow, Care
+  | "privacy_security" // Shield, privacy, ghost mode, app lock, data residency
+  | "civic"          // Citizen Shield, governance, admin
+  | "payments"       // Pay, commit, escrow, receipt split, oracle
+  | "travel"         // Rihla, visa, maps, vessel tracker
+  | "circles"        // Groups, hub, events, membership
+  | "professional"   // Creator studio, pro network, gradebook, bot developer
+  | "tools"          // Composer, overlay browser, settings, search, calendar
+  | "identity"       // Cirkle ID, verify, institution register
+  | "developer"      // Bot SDK, ad studio, mini-apps
+  | "communications"; // Calls, live translate, broadcast, mesh
+
+export interface FeatureDomainMeta {
+  id: FeatureDomain;
+  label: string;
+  labelAr: string;
+  emoji: string;
+  description: string;
+  /** Overlay IDs that belong to this domain. */
+  overlayIds: string[];
+  /** Overlays that are "primary" (shown first / as the main entry point). */
+  primaryIds: string[];
+  /** If this domain can be merged into a single overlay entry point, the primary overlay to open. */
+  entryPointOverlayId?: string;
+}
+
+/**
+ * Feature Domain Registry — merges 134 scattered overlays into 14 coherent collections.
+ *
+ * Each domain groups overlays that share a user intent. The OverlayBrowser
+ * and CommandPalette use this to show organized collections instead of a
+ * flat list of 134 items.
+ *
+ * "primaryIds" are the main entry points — clicking a domain opens the
+ * primary overlay first, with secondary features accessible from within.
+ */
+export const FEATURE_DOMAINS: FeatureDomainMeta[] = [
+  {
+    id: "messaging",
+    label: "Messaging",
+    labelAr: "الرسائل",
+    emoji: "💬",
+    description: "Wasl chat — messages, reactions, replies, voice, calls, groups",
+    overlayIds: [
+      "add-contact", "contact-qr", "institution-register",
+      "smart-reply-chips", "ai-tone-adjuster", "ai-conversation-starters",
+      "ai-friendship-health", "ai-action-items", "chat-summary", "chat-commit",
+      "message-reactions", "message-edit-history", "reply-thread",
+      "disappearing-messages", "scheduled-messages", "saved-messages",
+      "message-search", "story-status", "live-location", "poll-creator",
+      "voice-message-recorder", "webrtc-call", "group-video-call",
+      "voice-room", "meeting-notes", "call-screen",
+      "ghost-inbox", "whisper-mode", "chat-maze", "tribe-chat",
+      "mood-chat", "ai-mediator", "note-self", "word-aura", "word-garden",
+      "broadcast-channel", "smart-inbox",
+    ],
+    primaryIds: ["add-contact", "smart-reply-chips", "webrtc-call"],
+    entryPointOverlayId: "smart-inbox",
+  },
+  {
+    id: "social_feed",
+    label: "Social Feed",
+    labelAr: "التغذية الاجتماعية",
+    emoji: "📰",
+    description: "Posts, photos, videos, stories across Midan, Lamahat, Mashahd",
+    overlayIds: [
+      "composer", "smart-compose", "social-analytics", "smart-notifications",
+      "universal-share-sheet", "content-calendar", "content-discovery",
+      "social-challenges", "social-rituals", "mood-feed",
+      "time-capsule", "circle-aura", "universal-story",
+      "co-watch", "color-story", "living-photos", "mosaic-stories",
+      "time-shift-cam", "lamahat-viewer", "mashahd-player",
+      "mood-player", "photo-genealogy", "smart-chapters",
+      "thread-theatre", "topic-dna",
+    ],
+    primaryIds: ["composer", "smart-compose", "social-analytics"],
+    entryPointOverlayId: "smart-compose",
+  },
+  {
+    id: "ai_assistants",
+    label: "AI Assistants",
+    labelAr: "المساعدون الأذكياء",
+    emoji: "🤖",
+    description: "Brain AI, smart reply, tone adjustment, summaries, catch-up, recommendations",
+    overlayIds: [
+      "ai", "ai-recap", "ai-catch-up", "smart-notifications-v2",
+      "ai-director", "ai-conversation-starters", "ai-tone-adjuster",
+      "ai-friendship-health", "ai-action-items", "meeting-notes",
+      "voice-clone", "personal-ai",
+    ],
+    primaryIds: ["ai", "ai-catch-up", "personal-ai"],
+    entryPointOverlayId: "ai",
+  },
+  {
+    id: "ai_creative",
+    label: "AI Creative",
+    labelAr: "الإبداع بالذكاء",
+    emoji: "✨",
+    description: "Cirkle DNA, Mood, Verse, Spark, Create, Learn, Grow, Care, Oracle",
+    overlayIds: [
+      "cirkle-dna", "cirkle-mood", "cirkle-time", "cirkle-verse",
+      "cirkle-spark", "cirkle-create", "cirkle-learn", "cirkle-grow",
+      "cirkle-care", "cirkle-mint", "cirkle-oracle",
+      "echo-breaker", "echo-remix", "debate-arena",
+      "vibe-match", "word-aura", "word-garden",
+    ],
+    primaryIds: ["cirkle-dna", "cirkle-spark", "cirkle-create"],
+    entryPointOverlayId: "cirkle-dna",
+  },
+  {
+    id: "privacy_security",
+    label: "Privacy & Security",
+    labelAr: "الخصوصية والأمان",
+    emoji: "🔒",
+    description: "Shield, privacy controls, ghost mode, app lock, data residency",
+    overlayIds: [
+      "privacy-shield", "cirkle-shield", "app-lock",
+      "data-residency", "shield-dashboard",
+      "ghost-inbox", "whisper-mode",
+    ],
+    primaryIds: ["privacy-shield", "app-lock", "shield-dashboard"],
+    entryPointOverlayId: "privacy-shield",
+  },
+  {
+    id: "civic",
+    label: "Civic & Citizen",
+    labelAr: "المدني والمواطن",
+    emoji: "🛡️",
+    description: "Citizen Shield, governance center, platform admin",
+    overlayIds: [
+      "citizen-shield", "governance", "admin-panel", "cirkle-sentinel",
+      "pulse",
+    ],
+    primaryIds: ["citizen-shield", "admin-panel"],
+    entryPointOverlayId: "citizen-shield",
+  },
+  {
+    id: "payments",
+    label: "Payments & Commit",
+    labelAr: "المدفوعات والالتزام",
+    emoji: "💳",
+    description: "Circle Pay, CirkleCommit, receipt split, oracle markets, escrow",
+    overlayIds: [
+      "cirkle-commit", "receipt-split", "cirkle-mint",
+      "oracle-markets", "cirkle-oracle",
+    ],
+    primaryIds: ["cirkle-commit", "receipt-split"],
+    entryPointOverlayId: "cirkle-commit",
+  },
+  {
+    id: "travel",
+    label: "Travel & Maps",
+    labelAr: "السفر والخرائط",
+    emoji: "✈️",
+    description: "Rihla trips, visa explorer, maps, vessel tracker",
+    overlayIds: [
+      "visa-explorer", "vessel-tracker", "cirkle-maps", "circle-mail",
+    ],
+    primaryIds: ["visa-explorer", "cirkle-maps"],
+    entryPointOverlayId: "visa-explorer",
+  },
+  {
+    id: "circles",
+    label: "Circles & Groups",
+    labelAr: "الدوائر والمجموعات",
+    emoji: "⭕",
+    description: "Group creation, hub, events, membership, memory",
+    overlayIds: [
+      "hub", "circle-create", "circle-detail", "circle-events",
+      "group-memory", "mesh-presence", "mesh-dashboard",
+    ],
+    primaryIds: ["hub", "circle-create"],
+    entryPointOverlayId: "hub",
+  },
+  {
+    id: "professional",
+    label: "Professional & Creator",
+    labelAr: "المحترف وصانع المحتوى",
+    emoji: "💼",
+    description: "Creator studio, pro network, gradebook, knowledge wiki",
+    overlayIds: [
+      "creator-studio", "pro-network", "cirkle-gradebook",
+      "knowledge-wiki", "cirkle-learn", "cirkle-grow",
+    ],
+    primaryIds: ["creator-studio", "pro-network"],
+    entryPointOverlayId: "creator-studio",
+  },
+  {
+    id: "tools",
+    label: "Tools & Utilities",
+    labelAr: "الأدوات والمرافق",
+    emoji: "🔧",
+    description: "Composer, overlay browser, settings, search, calendar, QR",
+    overlayIds: [
+      "overlay-browser", "settings", "bot-developer", "ad-studio",
+    ],
+    primaryIds: ["overlay-browser", "settings"],
+    entryPointOverlayId: "overlay-browser",
+  },
+  {
+    id: "identity",
+    label: "Identity & Verify",
+    labelAr: "الهوية والتحقق",
+    emoji: "🆔",
+    description: "Cirkle ID, verification, institution registration",
+    overlayIds: [
+      "cirkle-identity", "cirkle-time", "cirkle-shield",
+    ],
+    primaryIds: ["cirkle-identity"],
+    entryPointOverlayId: "cirkle-identity",
+  },
+  {
+    id: "communications",
+    label: "Calls & Translation",
+    labelAr: "المكالمات والترجمة",
+    emoji: "📞",
+    description: "Voice/video calls, live translation, co-watch, broadcast",
+    overlayIds: [
+      "call-screen", "webrtc-call", "group-video-call", "voice-room",
+      "live-translate", "co-watch", "broadcast-channel",
+      "voice-clone-studio", "voice-message-recorder",
+    ],
+    primaryIds: ["webrtc-call", "live-translate"],
+    entryPointOverlayId: "webrtc-call",
+  },
+  {
+    id: "developer",
+    label: "Developer Platform",
+    labelAr: "منصة المطورين",
+    emoji: "👨‍💻",
+    description: "Bot developer, ad studio, mini-apps",
+    overlayIds: [
+      "bot-developer", "ad-studio",
+    ],
+    primaryIds: ["bot-developer"],
+    entryPointOverlayId: "bot-developer",
+  },
+];
+
+/**
+ * Get the domain for a given overlay ID.
+ */
+export function getDomainForOverlay(overlayId: string): FeatureDomain | null {
+  for (const domain of FEATURE_DOMAINS) {
+    if (domain.overlayIds.includes(overlayId)) return domain.id;
+  }
+  return null;
+}
+
+/**
+ * Get all overlays in a domain.
+ */
+export function getOverlaysByDomain(domainId: FeatureDomain): OverlayEntry[] {
+  const domain = FEATURE_DOMAINS.find(d => d.id === domainId);
+  if (!domain) return [];
+  return OVERLAY_REGISTRY.filter(o => domain.overlayIds.includes(o.id));
+}
+
+/**
+ * Get the primary overlay for a domain (the entry point).
+ */
+export function getDomainEntryPoint(domainId: FeatureDomain): OverlayEntry | null {
+  const domain = FEATURE_DOMAINS.find(d => d.id === domainId);
+  if (!domain?.entryPointOverlayId) return null;
+  return OVERLAY_REGISTRY.find(o => o.id === domain.entryPointOverlayId) || null;
+}
+
+export const FEATURE_DOMAIN_COUNT = FEATURE_DOMAINS.length;
+
 export interface OverlayEntry {
   id: string;           // e.g. "citizen-shield"
   name: string;         // e.g. "Citizen Shield"
@@ -652,11 +930,22 @@ export const OVERLAY_REGISTRY: OverlayEntry[] = [
   {
     id: "overlay-browser",
     name: "All Features",
-    description: "Browse all 71 Cirkle overlays in one place.",
+    description: "Browse all 134 Cirkle features organized into 14 collections.",
     emoji: "🧭",
     category: "productivity",
     event: "circle:overlay-browser",
-    keywords: ["browse", "all", "features", "discover", "search"],
+    keywords: ["browse", "all", "features", "discover", "search", "domain", "collection"],
+  },
+
+  // ── Feature Browser (domain-organized view) ───────────────────────────
+  {
+    id: "feature-browser",
+    name: "Feature Collections",
+    description: "Browse features organized by domain — Messaging, AI, Social, Payments, etc.",
+    emoji: "🗂️",
+    category: "productivity",
+    event: "circle:feature-browser",
+    keywords: ["features", "domains", "collections", "organized", "merge", "groups", "categories"],
   },
 
   // ── Admin Panel (building phase — no auth, will be hidden later) ─────

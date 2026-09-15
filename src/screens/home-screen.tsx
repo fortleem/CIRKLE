@@ -1848,12 +1848,12 @@ export function HomeScreen() {
               </div>
             </motion.button>
           ))}
-          {/* All-features tile — opens the OverlayBrowser (every Cirkle overlay) */}
+          {/* Feature Collections tile — opens the organized FeatureBrowser */}
           <motion.button
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: EXCLUSIVES.length * 0.05, duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            onClick={() => window.dispatchEvent(new CustomEvent("circle:overlay-browser"))}
+            onClick={() => window.dispatchEvent(new CustomEvent("circle:feature-browser"))}
             className="relative text-start rounded-2xl border border-secondary/50 bg-card p-4 flex items-start gap-3 hover:scale-[1.02] transition overflow-hidden group"
           >
             <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-secondary/40 to-primary/15 blur-3xl opacity-70 group-hover:opacity-100 transition" />
@@ -1862,17 +1862,17 @@ export function HomeScreen() {
             </div>
             <div className="relative flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
-                <span className="text-sm">🧭</span>
-                <div className="font-display text-base leading-tight">All Features</div>
+                <span className="text-sm">🗂️</span>
+                <div className="font-display text-base leading-tight">Feature Collections</div>
                 <span className="ms-auto text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded-full bg-secondary/20 text-secondary border border-secondary/30">
-                  71
+                  14
                 </span>
               </div>
               <div className="text-[11px] text-muted-foreground mt-1 leading-snug">
-                Browse all 71 Cirkle overlays in one place.
+                Browse all features organized into 14 collections.
               </div>
               <div className="mt-2 text-[10px] text-secondary flex items-center gap-1">
-                Try it <ChevronRight className="w-3 h-3" />
+                Explore <ChevronRight className="w-3 h-3" />
               </div>
             </div>
           </motion.button>
