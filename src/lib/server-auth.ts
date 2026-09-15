@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * CIRKLE — Server-side authentication helpers (P0-AUTH-IDOR)
  * ============================================================================

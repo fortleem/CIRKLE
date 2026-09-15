@@ -1,4 +1,3 @@
-// @ts-nocheck
 import "server-only";
 import { type CountryInfo, getCountry } from "@/lib/countries";
 import { getFeaturedEvents, getNearbyVenues } from "@/lib/egypt-knowledge";

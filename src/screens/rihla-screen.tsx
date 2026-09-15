@@ -17,6 +17,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getCountry, COUNTRY_MAP } from "@/lib/countries";
 import { useApp } from "@/lib/app-store";
+import { dict } from "@/lib/i18n";
 import {
   MapPin, Plane, Hotel, Languages, DollarSign, Sparkles, Calendar, X, Loader2,
   Check, Bus, FileCheck, Brain, CloudSun, Clock, Globe, Wallet, ShieldCheck,
@@ -367,7 +368,8 @@ function BrainDashboard({
   destination: { code: string; city: string };
   onChangeDestination: (d: { code: string; city: string }) => void;
 }) {
-  const { country } = useApp();
+  const { country, locale } = useApp();
+  const t = dict[locale]?.rihla || dict.en.rihla || {} as any;
   const userCountry = getCountry(country);
 
   const [weather, setWeather] = useState<WeatherInfo | null>(null);

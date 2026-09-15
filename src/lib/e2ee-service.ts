@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * CIRKLE — End-to-End Encryption Service Abstraction (P2.1, ADR-002).
  *
