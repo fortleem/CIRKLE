@@ -29,6 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useApp } from "@/lib/app-store";
 import { useAuth, cirkleInitials } from "@/lib/auth-store";
+import { dict } from "@/lib/i18n";
 import { CURRENT_USER } from "@/lib/circle/mock-data";
 import type { Conversation, ChatMessage, MessageStatus } from "@/lib/circle/types";
 import {
@@ -48,7 +49,7 @@ import {
 const FOLDERS = ["All", "Unread", "AI", "Channels"] as const;
 type Folder = (typeof FOLDERS)[number];
 
-const STORIES: string[] = ["You"]; // Real contacts loaded from API
+const STORIES: string[] = ["You"]; // Real contacts loaded from API — Stories UI itself is coming soon to Cirkle
 
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
@@ -188,6 +189,9 @@ export function WaslScreen() {
   const [query, setQuery] = useState("");
   const [folder, setFolder] = useState<Folder>("All");
   const [searching, setSearching] = useState(false);
+
+  const { locale } = useApp();
+  const t = dict[locale].wasl;
 
   // Derive the current user from the auth store (real logged-in account).
   // Falls back to getMe() only during SSR / pre-hydration / preview.
@@ -339,7 +343,7 @@ export function WaslScreen() {
       >
         <div className="px-5 pt-2 flex items-center justify-between">
           <h1 className="font-display text-4xl">
-            Wasl <span className="gradient-text-gold">·</span>{" "}
+            {t.title} <span className="gradient-text-gold">·</span>{" "}
             <span className="text-base text-muted-foreground tracking-widest uppercase">
               وصل
             </span>
@@ -387,7 +391,7 @@ export function WaslScreen() {
               }}
               onFocus={() => query.trim().length >= 2 && setSearching(true)}
               className="bg-transparent flex-1 outline-none text-sm"
-              placeholder="Search messages, people, files"
+              placeholder={t.search}
             />
             {searching && (
               <button
@@ -450,17 +454,26 @@ export function WaslScreen() {
           }} />
         ) : (
           <>
-            {/* Stories */}
+            {/* Stories — STORIES is a stub ["You"]. Stories UI is coming soon to Cirkle. */}
             <div className="flex gap-3 px-5 mt-5 overflow-x-auto scrollbar-hide">
+              {/* "Coming Soon" badge — surfaces that the stories rail is a stub. */}
+              <div className="shrink-0 flex flex-col items-center gap-1.5 self-start">
+                <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-secondary/15 text-secondary uppercase tracking-wider">
+                  Coming Soon
+                </span>
+              </div>
               {STORIES.map((s, i) => (
                 <button
                   key={s}
-                  onClick={() =>
-                    i === 0
-                      ? toast("Post a story — Coming soon")
-                      : toast(`Viewing ${s}'s story`)
-                  }
-                  className="flex flex-col items-center gap-1.5 shrink-0"
+                  onClick={() => {
+                    if (i === 0) {
+                      toast.info(t.storyComingSoon);
+                    } else {
+                      toast.info(t.storyComingSoon);
+                    }
+                  }}
+                  className="flex flex-col items-center gap-1.5 shrink-0 opacity-50 cursor-not-allowed"
+                  aria-label={`${t.stories} — ${t.storyComingSoon}`}
                 >
                   <div
                     className={`w-16 h-16 rounded-full p-[2px] ${
@@ -481,13 +494,13 @@ export function WaslScreen() {
               <div className="px-5 mt-6">
                 <div className="flex items-center justify-between mb-2">
                   <h2 className="font-display text-lg flex items-center gap-2">
-                    <Radio className="w-4 h-4 text-secondary" /> Official channels
+                    <Radio className="w-4 h-4 text-secondary" /> {t.officialChannels}
                   </h2>
                   <button
-                    onClick={() => toast("Discover channels — Coming soon")}
-                    className="text-[11px] text-secondary"
+                    onClick={() => toast.info(t.comingSoon)}
+                    className="text-[11px] text-secondary opacity-50 cursor-not-allowed"
                   >
-                    Discover
+                    {t.discover}
                   </button>
                 </div>
                 <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-5 px-5">

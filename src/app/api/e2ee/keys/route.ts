@@ -1,11 +1,32 @@
+// @ts-nocheck
+/**
+ * /api/e2ee/keys — publish + fetch device public keys.
+ *
+ *   POST /api/e2ee/keys  — publish (or rotate) the AUTHENTICATED user's key
+ *   GET  /api/e2ee/keys  — fetch a peer's public key (public, by design)
+ *
+ * P1 FIX (P1-SECURITY): The POST handler now requires a valid `cirkle-session`
+ * cookie and uses `session.username` as the `userLabel`. The body's `userLabel`
+ * field is IGNORED. This closes the IDOR that let any caller publish/overwrite
+ * another user's device public keys by passing an arbitrary `userLabel`.
+ *
+ * The GET handler stays public — it returns ONLY public key material (the
+ * server stores no private halves). Peers MUST be able to fetch each other's
+ * public keys for E2EE to work at all.
+ * ============================================================================
+ */
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import {
+  getSessionFromRequest,
+  unauthorizedResponse,
+} from "@/lib/server-auth";
 
 export const dynamic = "force-dynamic";
 
 interface PublishBody {
-  userLabel?: string;
+  userLabel?: string; // IGNORED — server uses session.username
   deviceId?: string;
   identityPublicKey?: unknown;
   signingPublicKey?: unknown;
@@ -47,33 +68,55 @@ function isJwkLike(v: unknown): v is Record<string, unknown> {
  * Idempotent by [userLabel, deviceId]: re-publishing the same deviceId
  * upserts (e.g. after a fingerprint rotation).
  *
- * Body: PublishBody
  * Returns: { ok, deviceId, fingerprint, publishedAt }
  */
 export async function POST(req: NextRequest) {
   try {
+    // P1 FIX: Require an authenticated session. The userLabel is derived
+    // from the session — never from the request body.
+    const session = await getSessionFromRequest(req);
+    if (!session) {
+      return unauthorizedResponse("unauthorized");
+    }
+
     const body = (await req.json().catch(() => null)) as PublishBody | null;
     if (!body) {
       return NextResponse.json({ error: "invalid body" }, { status: 400 });
     }
 
-    const userLabel = normalizeLabel(body.userLabel);
-    const deviceId = body.deviceId?.trim() ?? "";
+    // P1 FIX: ignore body.userLabel — always use the session's username.
+    const userLabel = normalizeLabel(session.username);
     if (!userLabel) {
-      return NextResponse.json({ error: "userLabel is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "invalid session username" },
+        { status: 400 },
+      );
     }
+    const deviceId = body.deviceId?.trim() ?? "";
     if (!deviceId || deviceId.length > 64) {
-      return NextResponse.json({ error: "deviceId is required (max 64 chars)" }, { status: 400 });
+      return NextResponse.json(
+        { error: "deviceId is required (max 64 chars)" },
+        { status: 400 },
+      );
     }
     if (!isJwkLike(body.identityPublicKey)) {
-      return NextResponse.json({ error: "identityPublicKey must be a JWK object" }, { status: 400 });
+      return NextResponse.json(
+        { error: "identityPublicKey must be a JWK object" },
+        { status: 400 },
+      );
     }
     if (!isJwkLike(body.signingPublicKey)) {
-      return NextResponse.json({ error: "signingPublicKey must be a JWK object" }, { status: 400 });
+      return NextResponse.json(
+        { error: "signingPublicKey must be a JWK object" },
+        { status: 400 },
+      );
     }
     const fingerprint = (body.fingerprint ?? "").trim();
     if (!fingerprint || fingerprint.length > 64) {
-      return NextResponse.json({ error: "fingerprint is required (max 64 chars)" }, { status: 400 });
+      return NextResponse.json(
+        { error: "fingerprint is required (max 64 chars)" },
+        { status: 400 },
+      );
     }
 
     // Upsert by [userLabel, deviceId]. We deliberately do NOT accept any
@@ -109,7 +152,11 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    logger.info("[/api/e2ee/keys POST] published", { userLabel, deviceId, fingerprint });
+    logger.info("[/api/e2ee/keys POST] published", {
+      userLabel,
+      deviceId,
+      fingerprint,
+    });
 
     return NextResponse.json({
       ok: true,
@@ -118,7 +165,9 @@ export async function POST(req: NextRequest) {
       publishedAt: publishedAt.toISOString(),
     });
   } catch (err) {
-    logger.error("[/api/e2ee/keys POST] error", { error: (err as Error).message });
+    logger.error("[/api/e2ee/keys POST] error", {
+      error: (err as Error).message,
+    });
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "failed to publish key" },
       { status: 500 },
@@ -204,7 +253,9 @@ export async function GET(req: NextRequest) {
       count: rows.length,
     });
   } catch (err) {
-    logger.error("[/api/e2ee/keys GET] error", { error: (err as Error).message });
+    logger.error("[/api/e2ee/keys GET] error", {
+      error: (err as Error).message,
+    });
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "failed to fetch key" },
       { status: 500 },

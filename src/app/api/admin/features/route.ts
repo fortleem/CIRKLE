@@ -4,16 +4,20 @@
  * PUT  /api/admin/features  — toggle a feature on/off
  *      body: { id: string, enabled: boolean }
  *
- * NOTE: Not auth-gated during the admin panel building phase.
+ * P1 FIX: Route is now auth-gated.
  * ============================================================================
  */
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { PLATFORM_FEATURES, resolveFeatureStates } from "@/lib/platform-features";
+import { adminGate } from "@/lib/require-auth";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // P1 FIX: Route is now auth-gated
+  const gate = await adminGate(req);
+  if (gate) return gate;
   try {
     let dbToggles: Array<{ id: string; enabled: boolean }> = [];
     try {
@@ -52,6 +56,9 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
+  // P1 FIX: Route is now auth-gated
+  const gate = await adminGate(req);
+  if (gate) return gate;
   try {
     const body = await req.json().catch(() => ({}));
     const { id, enabled } = body;

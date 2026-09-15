@@ -4,6 +4,8 @@
  * ============================================================================
  * API route inventory + rate-limit configuration for the admin panel.
  *
+ * P1 FIX: Route is now auth-gated.
+ *
  * This route introspects the filesystem under src/app/api to enumerate every
  * route.ts file (237 routes as of v16.0) and groups them by top-level
  * folder. It also returns the rate-limit presets from src/lib/api-rate-limit.ts.
@@ -11,14 +13,13 @@
  * Returns:
  *   { totalRoutes, byFolder: [...], routes: [...],
  *     rateLimitPresets: {...}, validationWrappedCount }
- *
- * NOTE: Not auth-gated during the admin panel building phase.
  * ============================================================================
  */
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { RATE_LIMIT_PRESETS } from "@/lib/api-rate-limit";
+import { adminGate } from "@/lib/require-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,10 @@ function listRoutes(dir: string, basePath = "/api"): { path: string; folder: str
   return routes;
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // P1 FIX: Route is now auth-gated
+  const gate = await adminGate(req);
+  if (gate) return gate;
   const apiRoot = join(process.cwd(), "src", "app", "api");
   const routes = listRoutes(apiRoot);
 

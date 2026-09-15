@@ -4,15 +4,19 @@
  * PUT  /api/admin/smtp  — update SMTP settings
  *      body: { host, port, username, password, fromEmail, fromName, encryption, enabled }
  *
- * NOTE: Not auth-gated during the admin panel building phase.
+ * P1 FIX: Route is now auth-gated.
  * ============================================================================
  */
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { adminGate } from "@/lib/require-auth";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // P1 FIX: Route is now auth-gated
+  const gate = await adminGate(req);
+  if (gate) return gate;
   try {
     let settings = await db.smtpSettings.findUnique({ where: { id: "default" } });
 
@@ -62,6 +66,9 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
+  // P1 FIX: Route is now auth-gated
+  const gate = await adminGate(req);
+  if (gate) return gate;
   try {
     const body = await req.json().catch(() => ({}));
 

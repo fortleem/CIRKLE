@@ -40,6 +40,7 @@ import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-store";
 import { useApp } from "@/lib/app-store";
+import { dict } from "@/lib/i18n";
 import { getPseudonym, pseudonymAvatarDataUrl, ANONYMOUS_PRIVACY_NOTICE } from "@/lib/anonymous-identity";
 
 /**
@@ -236,7 +237,8 @@ export function MidanScreen() {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("For you");
   const { user } = useAuth();
   const username = user?.username || null;
-  const { country, city } = useApp();
+  const { country, city, locale } = useApp();
+  const t = dict[locale].midan;
   const [brainBusy, setBrainBusy] = useState(false);
   // P1.6 — Anonymous Midan toggle. When on, posts go out under a
   // per-Circle pseudonymous identity stored only in localStorage. The
@@ -852,7 +854,7 @@ export function MidanScreen() {
                     : "bg-gradient-gold"
                 }`}
               >
-                {anonymous ? "Post anonymously" : "Post"}
+                {anonymous ? t.postAnonymously : t.post}
               </button>
             </div>
           </div>
@@ -865,16 +867,16 @@ export function MidanScreen() {
           <div className="flex items-center justify-between mb-2.5">
             <div className="flex items-center gap-2 min-w-0">
               <TrendingUp className="w-4 h-4 text-accent shrink-0" />
-              <h2 className="font-display text-base leading-none">Trending Now</h2>
+              <h2 className="font-display text-base leading-none">{t.trendingNow}</h2>
               <span className="text-[10px] text-muted-foreground truncate">
                 · Top {trendingPosts.length} by engagement
               </span>
             </div>
             <button
-              onClick={() => toast("Full trending page — coming soon")}
-              className="text-[11px] text-secondary hover:underline shrink-0"
+              onClick={() => toast.info(t.fullTrendingComingSoon)}
+              className="text-[11px] text-secondary hover:underline shrink-0 opacity-50 cursor-not-allowed"
             >
-              See all
+              {t.seeAll}
             </button>
           </div>
           <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2 -mx-1 px-1 snap-x">
@@ -1095,7 +1097,7 @@ export function MidanScreen() {
                       <span className="tabular-nums">{fmt(s.likes)}</span>
                     </button>
                     <button
-                      onClick={() => toast(`Detailed analytics for @${p.handle.replace(/^@/, "")}'s post — coming soon`)}
+                      onClick={() => toast.info(t.detailedAnalyticsComingSoon)}
                       className="group flex items-center gap-1 hover:text-secondary transition"
                       aria-label="View count"
                       title="Views"
@@ -1137,7 +1139,12 @@ export function MidanScreen() {
                       </button>
                     )}
                     <button
-                      onClick={() => toast("Detailed analytics — coming soon")}
+                      onClick={() => {
+                        // Wire to circle:settings — Analytics surfaces a
+                        // detail panel where deep-per-post metrics live.
+                        window.dispatchEvent(new CustomEvent("circle:settings", { detail: { section: "analytics" } }));
+                        toast.info(t.detailedAnalyticsComingSoon);
+                      }}
                       className="group p-1.5 rounded-full hover:text-foreground hover:bg-muted/60 transition ms-auto"
                       aria-label="Open detailed analytics"
                       title="Analytics"
@@ -1165,14 +1172,14 @@ export function MidanScreen() {
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <UserPlus className="w-4 h-4 text-secondary" />
-                      <h3 className="font-display text-sm">Who to follow</h3>
+                      <h3 className="font-display text-sm">{t.whoToFollow}</h3>
                       <span className="text-[10px] text-muted-foreground">· suggested by the Brain</span>
                     </div>
                     <button
-                      onClick={() => toast("More suggestions — coming soon")}
-                      className="text-[11px] text-secondary hover:underline"
+                      onClick={() => toast.info(t.moreSuggestionsComingSoon)}
+                      className="text-[11px] text-secondary hover:underline opacity-50 cursor-not-allowed"
                     >
-                      See more
+                      {t.seeMore}
                     </button>
                   </div>
                   <div className="space-y-3">
@@ -1239,12 +1246,12 @@ export function MidanScreen() {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Hash className="w-4 h-4 text-accent" />
-              <h2 className="font-display text-base leading-none">Trends for you</h2>
+              <h2 className="font-display text-base leading-none">{t.trendsForYou}</h2>
               <span className="text-[10px] text-muted-foreground">· {city || country || "Global"}</span>
             </div>
             <button
-              onClick={() => toast("Trend settings — coming soon")}
-              className="w-7 h-7 rounded-full hover:bg-muted/60 flex items-center justify-center text-muted-foreground hover:text-foreground transition"
+              onClick={() => toast.info(t.trendSettingsComingSoon)}
+              className="w-7 h-7 rounded-full hover:bg-muted/60 flex items-center justify-center text-muted-foreground hover:text-foreground transition opacity-50 cursor-not-allowed"
               aria-label="Trends info"
               title="Trending from real engagement — sponsored trends are clearly labelled"
             >

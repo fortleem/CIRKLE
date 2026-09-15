@@ -4,6 +4,8 @@
  * ============================================================================
  * Content moderation data for the admin panel.
  *
+ * P1 FIX: Route is now auth-gated.
+ *
  * Query params:
  *   ?take=50   — number of posts to return (max 200, default 50)
  *   ?skip=0    — pagination offset
@@ -14,16 +16,18 @@
  * Returns:
  *   { total, posts: [...], byModule: [...], byVisibility: [...],
  *     engagement: {...}, topTags: [...] }
- *
- * NOTE: Not auth-gated during the admin panel building phase.
  * ============================================================================
  */
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { adminGate } from "@/lib/require-auth";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
+  // P1 FIX: Route is now auth-gated
+  const gate = await adminGate(req);
+  if (gate) return gate;
   const url = new URL(req.url);
   const take = Math.min(200, Math.max(1, Number(url.searchParams.get("take") || "50")));
   const skip = Math.max(0, Number(url.searchParams.get("skip") || "0"));

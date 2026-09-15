@@ -4,6 +4,8 @@
  * ============================================================================
  * Aggregated top-level dashboard for the CIRKLE Platform Admin Panel.
  *
+ * P1 FIX: Route is now auth-gated.
+ *
  * Pulls from:
  *   - /api/health           (system health, uptime, memory, version)
  *   - /api/brain/status     (AI providers, knowledge graph, features)
@@ -14,15 +16,13 @@
  * Returns a single JSON blob the admin "Overview" section can render in one
  * fetch. All sub-fetches are fault-tolerant — if one source is down, the
  * overview still returns with that field nulled out.
- *
- * NOTE: This endpoint is NOT auth-gated during the admin panel building
- * phase. A future iteration will gate it behind an OIDC admin role.
  * ============================================================================
  */
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getErrorStats } from "@/lib/error-monitoring";
 import { getEnvStatus } from "@/lib/env-validation";
+import { adminGate } from "@/lib/require-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +38,10 @@ const BASE = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
   : "http://localhost:3000";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // P1 FIX: Route is now auth-gated
+  const gate = await adminGate(req);
+  if (gate) return gate;
   const startedAt = Date.now();
 
   // ── Parallel data fetch ─────────────────────────────────────────────────

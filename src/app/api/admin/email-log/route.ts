@@ -4,6 +4,8 @@
  * ============================================================================
  * Returns the email sending log (audit trail). Used by the admin panel.
  *
+ * P1 FIX: Route is now auth-gated.
+ *
  * Query params:
  *   ?take=50     — max 200, default 50
  *   ?skip=0
@@ -13,10 +15,14 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { adminGate } from "@/lib/require-auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
+  // P1 FIX: Route is now auth-gated
+  const gate = await adminGate(req);
+  if (gate) return gate;
   try {
     const url = new URL(req.url);
     const take = Math.min(200, Math.max(1, Number(url.searchParams.get("take") || "50")));

@@ -3,11 +3,17 @@
  * POST /api/admin/db-setup
  * Creates all Prisma tables in the database.
  * Call this once after deployment to initialize the database.
+ *
+ * P1 FIX: Route is now auth-gated.
  */
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { adminGate } from "@/lib/require-auth";
 
-export async function POST() {
+export async function POST(req: NextRequest) {
+  // P1 FIX: Route is now auth-gated
+  const gate = await adminGate(req);
+  if (gate) return gate;
   try {
     // Test by creating a simple table query
     const result = await db.$queryRaw`SELECT name FROM sqlite_master WHERE type='table' LIMIT 1`.catch(() => null);

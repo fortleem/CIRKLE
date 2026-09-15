@@ -19,6 +19,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { useApp } from "@/lib/app-store";
 import { useAuth } from "@/lib/auth-store";
+import { dict } from "@/lib/i18n";
 import { encodeGeohash } from "@/lib/geohash";
 
 /**
@@ -535,7 +536,8 @@ export function LamahatScreen() {
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState(12);
   const [loadingMore, setLoadingMore] = useState(false);
-  const { country, city } = useApp();
+  const { country, city, locale } = useApp();
+  const t = dict[locale].lamahat;
   const { user } = useAuth();
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -845,9 +847,9 @@ export function LamahatScreen() {
       {/* ── Header with no-ads + privacy badges (preserved) ── */}
       <div className="px-6 pt-2 flex items-center justify-between">
         <div>
-          <h1 className="font-display text-4xl">Lamahat</h1>
+          <h1 className="font-display text-4xl">{t.title}</h1>
           <p className="text-[10px] text-secondary mt-0.5 flex items-center gap-1">
-            <ShieldCheck className="w-2.5 h-2.5" /> No filters · No tracking · Your photos, your control
+            <ShieldCheck className="w-2.5 h-2.5" /> {t.subtitle}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -862,7 +864,7 @@ export function LamahatScreen() {
             ) : (
               <Brain className="w-3 h-3 text-secondary" />
             )}
-            Brain AI
+            {t.brainAI}
           </button>
           <button
             onClick={() => window.dispatchEvent(new CustomEvent("circle:composer", { detail: { kind: "media" } }))}

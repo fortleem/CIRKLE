@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth-store";
 import { motion } from "framer-motion";
 import { getCountry } from "@/lib/countries";
 import { useApp } from "@/lib/app-store";
+import { dict } from "@/lib/i18n";
 import {
   ScanLine, Send, Plus, Eye, EyeOff, Nfc, ShieldCheck,
   ArrowUpRight, ArrowDownLeft, X, Wallet, Loader2, Brain,
@@ -279,7 +280,8 @@ export function PayScreen() {
   const [txSheet, setTxSheet] = useState<Tx | null>(null);
   const [brainBusy, setBrainBusy] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
-  const { country, city } = useApp();
+  const { country, city, locale } = useApp();
+  const t = dict[locale].pay;
   const countryInfo = getCountry(country);
 
   // Real transactions straight from the API — drives the balance + the
@@ -393,7 +395,7 @@ export function PayScreen() {
           <div className="relative h-full flex flex-col justify-between">
             <div className="flex items-start justify-between">
               <div>
-                <div className="text-[10px] uppercase tracking-widest opacity-70">Balance</div>
+                <div className="text-[10px] uppercase tracking-widest opacity-70">{t.balance}</div>
                 <div className="font-display text-4xl mt-1">{hide ? "•••••" : `${balanceCurrency} ${balanceStr}`}</div>
               </div>
               <button
@@ -410,12 +412,12 @@ export function PayScreen() {
                 <div className="text-sm tracking-[0.3em] mt-1">•••• 4820</div>
               </div>
               <button
-                onClick={() => toast("Tap a contactless reader — Coming soon")}
-                className="flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
-                aria-label="Tap to pay via NFC — coming soon"
+                onClick={() => toast.info(t.nfcUnavailable)}
+                className="flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg opacity-50 cursor-not-allowed"
+                aria-label={t.tapToPay}
               >
                 <Nfc className="w-6 h-6 opacity-80" aria-hidden />
-                <span className="text-[10px] uppercase tracking-widest opacity-80">Tap to pay</span>
+                <span className="text-[10px] uppercase tracking-widest opacity-80">{t.tapToPay}</span>
               </button>
             </div>
           </div>
@@ -454,10 +456,10 @@ export function PayScreen() {
       {/* Quick actions */}
       <div className="grid grid-cols-4 gap-3 px-5 mt-5">
         {[
-          { icon: ScanLine, label: "Scan" },
-          { icon: Send, label: "Send" },
-          { icon: Plus, label: "Top-up" },
-          { icon: ShieldCheck, label: "Vault" },
+          { icon: ScanLine, label: t.scan },
+          { icon: Send, label: t.send },
+          { icon: Plus, label: t.topUp },
+          { icon: ShieldCheck, label: t.vault },
         ].map((q) => (
           <button
             key={q.label}
@@ -472,7 +474,7 @@ export function PayScreen() {
 
       {/* P2P contacts */}
       <div className="px-5 mt-6">
-        <h2 className="font-display text-xl mb-3">Send to</h2>
+        <h2 className="font-display text-xl mb-3">{t.sendTo}</h2>
         <div className="flex gap-3 overflow-x-auto scrollbar-hide">
           {CONTACTS.map((n) => (
             <button
@@ -659,15 +661,24 @@ export function PayScreen() {
       </div>
 
       {/* Transactions */}
-      <div className="px-5 mt-6">
+      <div className="px-5 mt-6" id="recent-activity">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-display text-xl md:text-2xl">Recent activity</h2>
+          <h2 className="font-display text-xl md:text-2xl">{t.recentActivity}</h2>
           <button
-            onClick={() => toast("Full history — Coming soon")}
+            onClick={() => {
+              // Scroll to the transactions list (the section is just below
+              // the header) so the "See all" affordance is still useful
+              // even without a dedicated history page. Also dispatch
+              // circle:navigate so the page-level router can react if a
+              // full-pay history view is added later.
+              window.dispatchEvent(new CustomEvent("circle:navigate", { detail: { tab: "pay" } }));
+              const el = document.getElementById("recent-activity");
+              if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
             className="text-xs text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1 py-0.5"
-            aria-label="See all transactions — coming soon"
+            aria-label={t.seeAll}
           >
-            See all
+            {t.seeAll}
           </button>
         </div>
         {txsLoading ? (
@@ -676,8 +687,8 @@ export function PayScreen() {
           </div>
         ) : txs.length === 0 ? (
           <div className="glass rounded-2xl p-8 text-center">
-            <p className="text-sm text-muted-foreground">No transactions yet</p>
-            <p className="text-[11px] text-muted-foreground/70 mt-1">Tap Send or Scan to make your first payment.</p>
+            <p className="text-sm text-muted-foreground">{t.noTransactions}</p>
+            <p className="text-[11px] text-muted-foreground/70 mt-1">{t.noTransactionsSub}</p>
           </div>
         ) : (
           <div className="glass rounded-2xl divide-y divide-border/60 overflow-hidden">

@@ -14,6 +14,7 @@ import {
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useApp } from "@/lib/app-store";
 import { useAuth, cirkleHandle, cirkleInitials } from "@/lib/auth-store";
+import { dict } from "@/lib/i18n";
 import { COUNTRIES, getCountry } from "@/lib/countries";
 import { Switch } from "@/components/ui/switch";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -139,6 +140,7 @@ export function ProfileScreen() {
     country, setCountry, city, setCity,
     ghostMode, setGhostMode,
   } = useApp();
+  const t = dict[locale].profile;
   const { user, logout } = useAuth();
   const [regionOpen, setRegionOpen] = useState(false);
   const [detailSheet, setDetailSheet] = useState<{ title: string; body: React.ReactNode } | null>(null);
@@ -193,7 +195,9 @@ export function ProfileScreen() {
     markChecklistItem("post");
     // Optimistically show the post grid (mock preview) so the user sees what
     // their feed will look like after their first post.
-    setPostsCount(MOCK_POSTS.length);
+    // P1 FIX: Don't show fake posts. Real posts will appear after API returns them.
+    setPostsCount(0);
+    toast.info("Post composer opened", { description: "Your post will appear here once published." });
   };
 
   /** "Join a Circle" CTA — opens Circle Hub + marks checklist circle item. */
@@ -404,15 +408,20 @@ export function ProfileScreen() {
           />
           {/* Edit cover affordance */}
           <button
-            onClick={() => toast.success("Cover photo upload coming soon")}
-            aria-label="Edit cover photo"
+            onClick={() => {
+              // Wire to circle:settings — cover photo upload lives in
+              // the Settings panel's ProfileAccountSection.
+              window.dispatchEvent(new CustomEvent("circle:settings", { detail: { section: "profile" } }));
+              toast.info(t.coverUploadHint);
+            }}
+            aria-label={t.editCover}
             className="absolute top-3 right-3 text-[10px] px-2.5 py-1.5 rounded-full bg-black/30 backdrop-blur-md border border-white/30 text-white flex items-center gap-1.5 hover:bg-black/50 transition"
           >
-            <Camera className="w-3 h-3" /> Edit cover
+            <Camera className="w-3 h-3" /> {t.editCover}
           </button>
           {/* Cover label */}
           <div className="absolute bottom-2.5 left-4 text-[10px] uppercase tracking-widest text-white/85 font-medium flex items-center gap-1">
-            <Sparkles className="w-2.5 h-2.5" /> Cover photo
+            <Sparkles className="w-2.5 h-2.5" /> {t.coverPhoto}
           </div>
         </div>
 
@@ -685,7 +694,7 @@ export function ProfileScreen() {
             onClick={onDiscoverPeople}
             className="w-full mt-1 py-2 rounded-full glass text-[11px] font-medium hover:bg-muted/50 transition flex items-center justify-center gap-1.5"
           >
-            <Compass className="w-3.5 h-3.5 text-secondary" /> Explore more people
+            <Compass className="w-3.5 h-3.5 text-secondary" /> {t.exploreMorePeople}
           </button>
         </div>
       </div>
@@ -694,15 +703,20 @@ export function ProfileScreen() {
       <div className="grid grid-cols-4 gap-2 px-4 mt-3">
         <QuickActionButton
           icon={Pencil}
-          label="Edit Profile"
-          onClick={() => toast.success("Edit profile coming soon")}
+          label={t.editProfile}
+          onClick={() => {
+            // Wire to circle:settings — the ProfileAccountSection in the
+            // Settings panel exposes display-name / DOB / email editing.
+            window.dispatchEvent(new CustomEvent("circle:settings", { detail: { section: "profile" } }));
+            toast.info(t.editProfileHint);
+          }}
         />
         <QuickActionButton
           icon={Share2}
-          label="Share Profile"
+          label={t.shareProfile}
           onClick={() => {
             try { navigator.clipboard?.writeText(`${window.location.origin}/@${user?.username || "guest"}`); } catch { /* no-op */ }
-            toast.success("Profile link copied");
+            toast.success(t.profileLinkCopied);
           }}
         />
         <QuickActionButton
@@ -789,9 +803,10 @@ export function ProfileScreen() {
         ) : (
           <>
             <div className="grid grid-cols-3 gap-2">
-              {MOCK_POSTS.map((post) => (
-                <PostGridItem key={post.id} post={post} />
-              ))}
+              {/* P1 FIX: No fake posts — show honest empty state */}
+              <div className="col-span-3 text-center py-8 text-muted-foreground text-xs">
+                Your posts will appear here after you publish them.
+              </div>
             </div>
             {/* Color legend */}
             <div className="flex items-center justify-center gap-3 mt-3 text-[9px] text-muted-foreground">

@@ -4,6 +4,8 @@
  * ============================================================================
  * System & infrastructure data for the admin panel.
  *
+ * P1 FIX: Route is now auth-gated.
+ *
  * Pulls from:
  *   - src/lib/env-validation.ts (env vars: required, optional, missing)
  *   - src/lib/db.ts (Turso connection check via a count query)
@@ -12,16 +14,15 @@
  * Returns:
  *   { env: {...}, database: {...}, git: {...}, backups: [...],
  *     package: {...}, runtime: {...} }
- *
- * NOTE: Not auth-gated during the admin panel building phase.
  * ============================================================================
  */
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { existsSync, readdirSync, statSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { execSync } from "node:child_process";
 import { db } from "@/lib/db";
 import { getEnvStatus } from "@/lib/env-validation";
+import { adminGate } from "@/lib/require-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,10 @@ function safeStat(path: string) {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // P1 FIX: Route is now auth-gated
+  const gate = await adminGate(req);
+  if (gate) return gate;
   // ── Environment validation ──────────────────────────────────────────────
   const envStatus = getEnvStatus();
 

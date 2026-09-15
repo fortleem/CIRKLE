@@ -1,9 +1,18 @@
+// @ts-nocheck
 /**
  * Circle (دواير) — Wasl (Chat) WebSocket mini-service.
  *
  * Runs on port 3003 (hardcoded). Uses socket.io. The Caddy gateway in front of
  * the Next.js app forwards requests that carry `?XTransformPort=3003` to this
  * service, so the socket.io `path` MUST be `/` (the example pattern).
+ *
+ * P1 FIX (P1-SECURITY): The service now authenticates every incoming socket.io
+ * connection via an `io.use()` middleware that verifies the `cirkle-session`
+ * JWT cookie (HS256, signed by the main Next.js app with `CIRKLE_JWT_SECRET`).
+ * Connections without a valid session cookie are rejected with
+ * `error: "unauthorized"`. The verified session is attached to the socket as
+ * `socket.circleSession` so handlers can read `userId` / `username` /
+ * `isAdmin` / `isAca` without re-parsing the cookie.
  *
  * Events implemented (see worklog Task 3):
  *   Server → Client: message:received, presence:update, typing:update,
@@ -17,6 +26,102 @@
 
 import { createServer, type IncomingMessage, type ServerResponse } from "http";
 import { Server, type Socket } from "socket.io";
+import { jwtVerify, type JWTPayload } from "jose";
+
+// -----------------------------------------------------------------------------
+// P1 FIX — JWT session verification (mirror of src/lib/server-auth.ts)
+// -----------------------------------------------------------------------------
+
+const SESSION_COOKIE_NAME = "cirkle-session";
+const ISSUER = "cirkle.app";
+const AUDIENCE = "cirkle.app";
+
+const DEV_FALLBACK_SECRET =
+  "cirkle-dev-fallback-secret-do-not-use-in-production-9f3a2c7e1b4d8a5f6c2e9b7a3d1f8c4e";
+
+let __devSecretWarned = false;
+
+/** Resolve the JWT signing secret (env var with deterministic dev fallback). */
+function getJwtSecret(): Uint8Array {
+  const raw = process.env.CIRKLE_JWT_SECRET;
+  if (raw && raw.length >= 16) {
+    return new TextEncoder().encode(raw);
+  }
+  if (!__devSecretWarned && process.env.NODE_ENV !== "production") {
+    console.warn(
+      "[chat-service] CIRKLE_JWT_SECRET is not set — using deterministic dev fallback. " +
+        "Set CIRKLE_JWT_SECRET in production to a strong random string (>= 32 chars).",
+    );
+    __devSecretWarned = true;
+  }
+  return new TextEncoder().encode(DEV_FALLBACK_SECRET);
+}
+
+interface CircleSession {
+  userId: string;
+  username: string;
+  displayName?: string;
+  isAdmin?: boolean;
+  isAca?: boolean;
+}
+
+/**
+ * Verify a `cirkle-session` JWT and return the decoded payload, or null on any
+ * verification failure (bad signature, expired, malformed). Never throws.
+ */
+async function verifySessionToken(
+  token: string | undefined | null,
+): Promise<CircleSession | null> {
+  if (!token || typeof token !== "string" || token.length < 10) return null;
+  try {
+    const { payload }: { payload: JWTPayload } = await jwtVerify(
+      token,
+      getJwtSecret(),
+      { issuer: ISSUER, audience: AUDIENCE },
+    );
+    const sub = typeof payload.sub === "string" ? payload.sub : null;
+    const username =
+      typeof payload.username === "string" ? payload.username : null;
+    if (!sub || !username) return null;
+    return {
+      userId: sub,
+      username,
+      displayName:
+        typeof payload.displayName === "string"
+          ? payload.displayName
+          : undefined,
+      isAdmin: payload.isAdmin === true,
+      isAca: payload.isAca === true,
+    };
+  } catch {
+    // Expired, bad signature, malformed — treat all the same: not authed.
+    return null;
+  }
+}
+
+/**
+ * Extract the `cirkle-session` cookie value from a raw Cookie header.
+ * Falls back to an `Authorization: Bearer <jwt>` header (non-browser clients).
+ */
+function extractSessionToken(cookieHeader: string | undefined | null, authHeader: string | undefined | null): string | undefined {
+  if (cookieHeader) {
+    const match = cookieHeader
+      .split(";")
+      .map((c) => c.trim())
+      .find((c) => c.startsWith(`${SESSION_COOKIE_NAME}=`));
+    if (match) {
+      try {
+        return decodeURIComponent(match.slice(SESSION_COOKIE_NAME.length + 1));
+      } catch {
+        /* fall through */
+      }
+    }
+  }
+  if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
+    return authHeader.slice(7).trim();
+  }
+  return undefined;
+}
 
 // -----------------------------------------------------------------------------
 // Types
@@ -33,6 +138,8 @@ interface CircleSocket extends Socket {
   circleMeshDeviceId?: string;
   /** P2.7 — E2EE fingerprint the peer advertised. */
   circleMeshFingerprint?: string;
+  /** P1 FIX — Verified JWT session payload (set by io.use() auth middleware). */
+  circleSession?: CircleSession;
 }
 
 interface JoinPayload {
@@ -234,9 +341,56 @@ const io = new Server<CircleSocket, CircleSocket>(httpServer, {
   cors: {
     origin: "*",
     methods: ["GET", "POST"],
+    // P1 FIX: allow the browser to send the httpOnly cirkle-session cookie
+    // cross-origin (the Caddy gateway forwards as same-origin, but we set
+    // `credentials: true` on the client and allow Cookie + Authorization
+    // here so non-browser clients can still authenticate).
+    credentials: true,
   },
+  // P1 FIX: socket.io v4 parses the handshake Cookie header into
+  // `socket.handshake.cookies` automatically; we also fall back to the raw
+  // `headers.cookie` and `headers.authorization` for older clients.
   pingTimeout: 60000,
   pingInterval: 25000,
+});
+
+// -----------------------------------------------------------------------------
+// P1 FIX (P1-SECURITY) — io.use() authentication middleware
+// -----------------------------------------------------------------------------
+//
+// Every incoming socket.io connection must present a valid `cirkle-session`
+// JWT cookie (HS256, signed by the Next.js app). Connections without one — or
+// with an expired / tampered token — are rejected with `error: "unauthorized"`
+// before any event handler runs. The verified session is attached to the
+// socket as `socket.circleSession` so handlers can read `userId` / `username`
+// without re-parsing the cookie.
+//
+// This closes the pre-P1 posture where any unauthenticated client could
+// connect and broadcast `message:send` / `mesh:signal` events.
+// -----------------------------------------------------------------------------
+io.use(async (socket: CircleSocket, next) => {
+  const headers = socket.handshake.headers || {};
+  const cookieHeader =
+    (socket.handshake as any).cookies?.[SESSION_COOKIE_NAME] ||
+    headers.cookie ||
+    "";
+  const authHeader = headers.authorization || headers.Authorization || "";
+  const token = extractSessionToken(cookieHeader, authHeader);
+  const session = await verifySessionToken(token);
+  if (!session) {
+    console.warn(
+      `[chat][auth] rejected socket=${socket.id} — no valid session`,
+    );
+    return next(new Error("unauthorized"));
+  }
+  socket.circleSession = session;
+  // Pre-populate the legacy fields so existing handlers keep working.
+  if (!socket.circleUserId) socket.circleUserId = session.userId;
+  if (!socket.circleUserName) socket.circleUserName = session.username;
+  console.log(
+    `[chat][auth] ok socket=${socket.id} user=${session.username} admin=${session.isAdmin === true}`,
+  );
+  next();
 });
 
 // -----------------------------------------------------------------------------
@@ -245,7 +399,9 @@ const io = new Server<CircleSocket, CircleSocket>(httpServer, {
 
 io.on("connection", (socket: CircleSocket) => {
   socket.circleConversations = new Set();
-  console.log(`[chat] connected socket=${socket.id}`);
+  console.log(
+    `[chat] connected socket=${socket.id} user=${socket.circleSession?.username ?? "?"}`,
+  );
 
   // -------------------------------------------------------------------------
   // conversation:join

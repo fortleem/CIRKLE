@@ -4,6 +4,8 @@
  * ============================================================================
  * Overlay registry + feature flag data for the admin panel.
  *
+ * P1 FIX: Route is now auth-gated.
+ *
  * Pulls from:
  *   - src/lib/overlay-registry.ts (OVERLAY_REGISTRY — 71 overlays)
  *   - src/lib/tabs.ts (PRIMARY_TABS + SECONDARY_TABS)
@@ -11,17 +13,19 @@
  * Returns:
  *   { totalOverlays, byCategory: [...], overlays: [...],
  *     primaryTabs, secondaryTabs, quickActions }
- *
- * NOTE: Not auth-gated during the admin panel building phase.
  * ============================================================================
  */
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { OVERLAY_REGISTRY, getCommandEntries } from "@/lib/overlay-registry";
 import { PRIMARY_TABS, SECONDARY_TABS } from "@/lib/tabs";
+import { adminGate } from "@/lib/require-auth";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // P1 FIX: Route is now auth-gated
+  const gate = await adminGate(req);
+  if (gate) return gate;
   // ── Group by category ──────────────────────────────────────────────────
   const byCategory: Record<string, number> = {};
   for (const o of OVERLAY_REGISTRY) {
