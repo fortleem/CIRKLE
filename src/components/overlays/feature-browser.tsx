@@ -4,7 +4,7 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  X, Search, ChevronRight, ArrowLeft, Sparkles, type LucideIcon,
+  X, Search, ChevronRight, ArrowLeft, Sparkles, Link2, type LucideIcon,
 } from "lucide-react";
 import { OverlayShell } from "@/components/ui/overlay-shell";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import {
   type FeatureDomain,
   type FeatureDomainMeta,
 } from "@/lib/overlay-registry";
+import { getConnectionsForDomain, type FeatureConnection } from "@/lib/feature-connections";
 
 interface Props {
   open: boolean;
@@ -46,14 +47,8 @@ export function FeatureBrowser({ open, onClose }: Props) {
   };
 
   const openDomain = (domain: FeatureDomainMeta) => {
-    // If the domain has an entry point overlay, open it
-    const entry = getDomainEntryPoint(domain.id);
-    if (entry) {
-      openOverlay(entry.event);
-    } else {
-      // Otherwise, show the domain's overlays
-      setSelectedDomain(domain.id);
-    }
+    // Always show the domain detail view first (with Works With + features)
+    setSelectedDomain(domain.id);
   };
 
   const domainOverlays = selectedDomain
@@ -154,7 +149,68 @@ export function FeatureBrowser({ open, onClose }: Props) {
                 <p className="text-xs text-muted-foreground mt-2">
                   {domainOverlays.length} features in this collection
                 </p>
+                {selectedDomainMeta?.entryPointOverlayId && (() => {
+                  const entry = getDomainEntryPoint(selectedDomain!);
+                  if (!entry) return null;
+                  return (
+                    <Button
+                      size="sm"
+                      onClick={() => openOverlay(entry.event)}
+                      className="mt-3 bg-gradient-to-r from-secondary/30 to-primary/20 border border-secondary/30 text-foreground hover:from-secondary/40"
+                    >
+                      <span className="mr-1">{entry.emoji}</span>
+                      Open {entry.name}
+                    </Button>
+                  );
+                })()}
               </div>
+
+              {/* Cross-feature connections */}
+              {(() => {
+                const connections = selectedDomain ? getConnectionsForDomain(selectedDomain) : [];
+                if (connections.length === 0) return null;
+                return (
+                  <div className="space-y-2">
+                    <h3 className="text-xs uppercase tracking-wide text-muted-foreground px-1 flex items-center gap-1">
+                      <Link2 className="w-3 h-3" /> Works With
+                    </h3>
+                    {connections.slice(0, 6).map((conn) => {
+                      const otherDomain = conn.fromDomain === selectedDomain ? conn.toDomain : conn.fromDomain;
+                      const otherMeta = FEATURE_DOMAINS.find(d => d.id === otherDomain);
+                      return (
+                        <button
+                          key={conn.id}
+                          onClick={() => openOverlay(conn.triggerEvent)}
+                          className="w-full flex items-center gap-3 p-3 rounded-xl glass hover:bg-muted/40 transition text-left group"
+                        >
+                          <span className="text-xl shrink-0">{conn.emoji}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm truncate">{conn.title}</span>
+                              {otherMeta && (
+                                <Badge variant="outline" className="text-[9px] shrink-0">
+                                  {otherMeta.emoji} {otherMeta.label}
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate">{conn.description}</p>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            {conn.status === "wired" ? (
+                              <Badge variant="outline" className="text-[9px] text-emerald-500 border-emerald-500/30">✓ Live</Badge>
+                            ) : conn.status === "partial" ? (
+                              <Badge variant="outline" className="text-[9px] text-amber-500 border-amber-500/30">◐ Partial</Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-[9px] text-muted-foreground">○ Planned</Badge>
+                            )}
+                            <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-1 transition" />
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
 
               {/* Primary features */}
               {selectedDomainMeta?.primaryIds && selectedDomainMeta.primaryIds.length > 0 && (
@@ -199,6 +255,8 @@ export function FeatureBrowser({ open, onClose }: Props) {
               {FEATURE_DOMAINS.map((domain) => {
                 const overlays = getOverlaysByDomain(domain.id);
                 const primaryCount = domain.primaryIds.length;
+                const connections = getConnectionsForDomain(domain.id);
+                const liveConnections = connections.filter(c => c.status === "wired").length;
                 return (
                   <button
                     key={domain.id}
@@ -218,6 +276,11 @@ export function FeatureBrowser({ open, onClose }: Props) {
                       <Badge variant="outline" className="text-[10px]">
                         {overlays.length} features
                       </Badge>
+                      {liveConnections > 0 && (
+                        <Badge variant="outline" className="text-[10px] text-emerald-500 border-emerald-500/30">
+                          <Link2 className="w-2.5 h-2.5 mr-1" /> {liveConnections} linked
+                        </Badge>
+                      )}
                       {primaryCount > 0 && (
                         <Badge variant="secondary" className="text-[10px]">
                           {primaryCount} primary

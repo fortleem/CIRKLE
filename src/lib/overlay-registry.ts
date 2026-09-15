@@ -74,7 +74,7 @@ export const FEATURE_DOMAINS: FeatureDomainMeta[] = [
     id: "messaging",
     label: "Messaging",
     labelAr: "الرسائل",
-    emoji: "💬",
+    emoji: "🗨️",
     description: "Wasl chat — messages, reactions, replies, voice, calls, groups",
     overlayIds: [
       "add-contact", "contact-qr", "institution-register",
@@ -96,7 +96,7 @@ export const FEATURE_DOMAINS: FeatureDomainMeta[] = [
     id: "social_feed",
     label: "Social Feed",
     labelAr: "التغذية الاجتماعية",
-    emoji: "📰",
+    emoji: "🗞️",
     description: "Posts, photos, videos, stories across Midan, Lamahat, Mashahd",
     overlayIds: [
       "composer", "smart-compose", "social-analytics", "smart-notifications",
@@ -115,7 +115,7 @@ export const FEATURE_DOMAINS: FeatureDomainMeta[] = [
     id: "ai_assistants",
     label: "AI Assistants",
     labelAr: "المساعدون الأذكياء",
-    emoji: "🤖",
+    emoji: "🧠",
     description: "Brain AI, smart reply, tone adjustment, summaries, catch-up, recommendations",
     overlayIds: [
       "ai", "ai-recap", "ai-catch-up", "smart-notifications-v2",
@@ -130,7 +130,7 @@ export const FEATURE_DOMAINS: FeatureDomainMeta[] = [
     id: "ai_creative",
     label: "AI Creative",
     labelAr: "الإبداع بالذكاء",
-    emoji: "✨",
+    emoji: "🔮",
     description: "Cirkle DNA, Mood, Verse, Spark, Create, Learn, Grow, Care, Oracle",
     overlayIds: [
       "cirkle-dna", "cirkle-mood", "cirkle-time", "cirkle-verse",
@@ -146,7 +146,7 @@ export const FEATURE_DOMAINS: FeatureDomainMeta[] = [
     id: "privacy_security",
     label: "Privacy & Security",
     labelAr: "الخصوصية والأمان",
-    emoji: "🔒",
+    emoji: "🔐",
     description: "Shield, privacy controls, ghost mode, app lock, data residency",
     overlayIds: [
       "privacy-shield", "cirkle-shield", "app-lock",
@@ -160,7 +160,7 @@ export const FEATURE_DOMAINS: FeatureDomainMeta[] = [
     id: "civic",
     label: "Civic & Citizen",
     labelAr: "المدني والمواطن",
-    emoji: "🛡️",
+    emoji: "⚖️",
     description: "Citizen Shield, governance center, platform admin",
     overlayIds: [
       "citizen-shield", "governance", "admin-panel", "cirkle-sentinel",
@@ -173,7 +173,7 @@ export const FEATURE_DOMAINS: FeatureDomainMeta[] = [
     id: "payments",
     label: "Payments & Commit",
     labelAr: "المدفوعات والالتزام",
-    emoji: "💳",
+    emoji: "💎",
     description: "Circle Pay, CirkleCommit, receipt split, oracle markets, escrow",
     overlayIds: [
       "cirkle-commit", "receipt-split", "cirkle-mint",
@@ -186,7 +186,7 @@ export const FEATURE_DOMAINS: FeatureDomainMeta[] = [
     id: "travel",
     label: "Travel & Maps",
     labelAr: "السفر والخرائط",
-    emoji: "✈️",
+    emoji: "🧭",
     description: "Rihla trips, visa explorer, maps, vessel tracker",
     overlayIds: [
       "visa-explorer", "vessel-tracker", "cirkle-maps", "circle-mail",
@@ -198,7 +198,7 @@ export const FEATURE_DOMAINS: FeatureDomainMeta[] = [
     id: "circles",
     label: "Circles & Groups",
     labelAr: "الدوائر والمجموعات",
-    emoji: "⭕",
+    emoji: "🔵",
     description: "Group creation, hub, events, membership, memory",
     overlayIds: [
       "hub", "circle-create", "circle-detail", "circle-events",
@@ -211,7 +211,7 @@ export const FEATURE_DOMAINS: FeatureDomainMeta[] = [
     id: "professional",
     label: "Professional & Creator",
     labelAr: "المحترف وصانع المحتوى",
-    emoji: "💼",
+    emoji: "🎯",
     description: "Creator studio, pro network, gradebook, knowledge wiki",
     overlayIds: [
       "creator-studio", "pro-network", "cirkle-gradebook",
@@ -224,7 +224,7 @@ export const FEATURE_DOMAINS: FeatureDomainMeta[] = [
     id: "tools",
     label: "Tools & Utilities",
     labelAr: "الأدوات والمرافق",
-    emoji: "🔧",
+    emoji: "🧰",
     description: "Composer, overlay browser, settings, search, calendar, QR",
     overlayIds: [
       "overlay-browser", "settings", "bot-developer", "ad-studio",
@@ -236,7 +236,7 @@ export const FEATURE_DOMAINS: FeatureDomainMeta[] = [
     id: "identity",
     label: "Identity & Verify",
     labelAr: "الهوية والتحقق",
-    emoji: "🆔",
+    emoji: "🪪",
     description: "Cirkle ID, verification, institution registration",
     overlayIds: [
       "cirkle-identity", "cirkle-time", "cirkle-shield",
@@ -248,7 +248,7 @@ export const FEATURE_DOMAINS: FeatureDomainMeta[] = [
     id: "communications",
     label: "Calls & Translation",
     labelAr: "المكالمات والترجمة",
-    emoji: "📞",
+    emoji: "📡",
     description: "Voice/video calls, live translation, co-watch, broadcast",
     overlayIds: [
       "call-screen", "webrtc-call", "group-video-call", "voice-room",
@@ -262,7 +262,7 @@ export const FEATURE_DOMAINS: FeatureDomainMeta[] = [
     id: "developer",
     label: "Developer Platform",
     labelAr: "منصة المطورين",
-    emoji: "👨‍💻",
+    emoji: "⚡",
     description: "Bot developer, ad studio, mini-apps",
     overlayIds: [
       "bot-developer", "ad-studio",
