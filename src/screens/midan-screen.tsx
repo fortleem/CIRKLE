@@ -569,12 +569,17 @@ export function MidanScreen() {
   }, []);
 
   const toggleLike = (id: string) => {
+    // FIX: compute new state before toast, fire API call
+    const current = states[id];
+    const newLiked = current ? !current.liked : true;
     setStates((prev) => {
       const s = prev[id];
       if (!s) return prev;
-      return { ...prev, [id]: { ...s, liked: !s.liked, likes: s.liked ? s.likes - 1 : s.likes + 1 } };
+      return { ...prev, [id]: { ...s, liked: newLiked, likes: newLiked ? s.likes + 1 : s.likes - 1 } };
     });
-    toast.success(states[id]?.liked ? "Unliked" : "Liked ❤");
+    toast.success(current?.liked ? "Unliked" : "Liked ❤");
+    // Persist to API (non-blocking)
+    fetch("/api/posts", { method: "PATCH", body: JSON.stringify({ id, action: "like", value: newLiked }), headers: { "Content-Type": "application/json" } }).catch(() => {});
   };
 
   const toggleRepost = (id: string) => {
@@ -1516,13 +1521,13 @@ export function MidanScreen() {
                       }}
                       className={`rounded-xl p-2.5 text-center border transition ${
                         active
-                          ? "bg-gradient-gold text-brand-charcoal border-transparent font-medium"
+                          ? "bg-gradient-gold text-charcoal border-transparent font-medium"
                           : "glass hover:bg-muted/50 border-border/60"
                       }`}
                       aria-pressed={active}
                     >
                       <div className="text-xs font-medium leading-tight">{opt.label}</div>
-                      <div className={`text-[9px] mt-0.5 leading-tight ${active ? "text-brand-charcoal/70" : "text-muted-foreground"}`}>
+                      <div className={`text-[9px] mt-0.5 leading-tight ${active ? "text-charcoal/70" : "text-muted-foreground"}`}>
                         {opt.desc}
                       </div>
                     </button>

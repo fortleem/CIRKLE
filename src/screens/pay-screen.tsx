@@ -437,9 +437,9 @@ export function PayScreen() {
           <div className="absolute -top-10 -right-8 w-32 h-32 bg-secondary/20 rounded-full blur-3xl pointer-events-none" />
           <div className="w-11 h-11 rounded-xl bg-gradient-gold flex items-center justify-center shrink-0">
             {brainBusy ? (
-              <Loader2 className="w-5 h-5 text-brand-charcoal animate-spin" />
+              <Loader2 className="w-5 h-5 text-charcoal animate-spin" />
             ) : (
-              <Brain className="w-5 h-5 text-brand-charcoal" />
+              <Brain className="w-5 h-5 text-charcoal" />
             )}
           </div>
           <div className="flex-1 min-w-0">
@@ -572,7 +572,7 @@ export function PayScreen() {
           }`}>
             {insight.tone === "positive" ? <TrendingDown className="w-4 h-4 text-emerald-500" /> :
              insight.tone === "warning" ? <TrendingUp className="w-4 h-4 text-amber-500" /> :
-             <Sparkles className="w-4 h-4 text-brand-charcoal" />}
+             <Sparkles className="w-4 h-4 text-charcoal" />}
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-[9px] uppercase tracking-widest text-secondary flex items-center gap-1">

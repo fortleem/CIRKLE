@@ -325,7 +325,7 @@ function StoryRing({ story, onClick }: { story: Story; onClick: () => void }) {
         >
           <div className="w-full h-full rounded-full overflow-hidden border-2 border-background">
             <div
-              className="w-full h-full flex items-center justify-center text-sm font-bold text-brand-charcoal"
+              className="w-full h-full flex items-center justify-center text-sm font-bold text-charcoal"
               style={{ background: story.avatar }}
             >
               {story.isOwn ? <Plus className="w-6 h-6" /> : story.initials}
@@ -334,7 +334,7 @@ function StoryRing({ story, onClick }: { story: Story; onClick: () => void }) {
         </div>
         {story.isOwn ? (
           <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-gradient-gold flex items-center justify-center ring-2 ring-background">
-            <Plus className="w-3 h-3 text-brand-charcoal" />
+            <Plus className="w-3 h-3 text-charcoal" />
           </div>
         ) : story.count > 1 ? (
           <div className="absolute -bottom-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full glass-strong flex items-center justify-center ring-2 ring-background">
@@ -445,7 +445,7 @@ function StoryViewer({
         {/* Header: avatar + username + time */}
         <div className="absolute top-7 inset-x-3 flex items-center gap-2 text-cream z-10">
           <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-brand-charcoal shrink-0 ring-2 ring-white/30"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-charcoal shrink-0 ring-2 ring-white/30"
             style={{ background: story.avatar }}
           >
             {story.initials}
@@ -875,7 +875,7 @@ export function LamahatScreen() {
           </button>
           <button
             onClick={() => window.dispatchEvent(new CustomEvent("circle:composer", { detail: { kind: "media", draft: "📸 " } }))}
-            className="text-xs px-3 py-1.5 rounded-full bg-gradient-gold text-brand-charcoal font-medium flex items-center gap-1"
+            className="text-xs px-3 py-1.5 rounded-full bg-gradient-gold text-charcoal font-medium flex items-center gap-1"
           >
             <Camera className="w-3 h-3" /> Capture
           </button>
@@ -953,7 +953,7 @@ export function LamahatScreen() {
                   </span>
                 </div>
                 <div className="absolute top-2 right-2 z-10 w-7 h-7 rounded-full bg-gradient-gold flex items-center justify-center">
-                  <Sparkles className="w-3.5 h-3.5 text-brand-charcoal" />
+                  <Sparkles className="w-3.5 h-3.5 text-charcoal" />
                 </div>
               </div>
               <div className="p-3 bg-card">
@@ -1039,7 +1039,7 @@ export function LamahatScreen() {
                 onClick={() => setCategory(c)}
                 className={`shrink-0 text-xs px-3 py-1.5 rounded-full border transition ${
                   active
-                    ? "bg-gradient-gold text-brand-charcoal border-transparent font-medium"
+                    ? "bg-gradient-gold text-charcoal border-transparent font-medium"
                     : "glass text-foreground/80 hover:bg-muted/60 border-border/60"
                 }`}
               >
@@ -1099,7 +1099,7 @@ export function LamahatScreen() {
                   />
                   {c.pinned && (
                     <div className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-gradient-gold flex items-center justify-center">
-                      <Star className="w-3 h-3 text-brand-charcoal fill-current" />
+                      <Star className="w-3 h-3 text-charcoal fill-current" />
                     </div>
                   )}
                   <div className="absolute bottom-2 left-3 z-10 text-cream">
@@ -1171,7 +1171,7 @@ export function LamahatScreen() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                   {m.pinned && (
                     <div className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-gradient-gold flex items-center justify-center">
-                      <Crown className="w-3 h-3 text-brand-charcoal fill-current" />
+                      <Crown className="w-3 h-3 text-charcoal fill-current" />
                     </div>
                   )}
                   <div className="absolute bottom-2 left-3 right-3 z-10 text-cream">
@@ -1213,7 +1213,7 @@ export function LamahatScreen() {
                 {/* Author row */}
                 <div className="p-3 flex items-center gap-2.5">
                   <div
-                    className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-brand-charcoal ring-2 ring-secondary/30"
+                    className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-charcoal ring-2 ring-secondary/30"
                     style={{ background: m.avatar }}
                   >
                     {m.initials}
@@ -1414,7 +1414,7 @@ export function LamahatScreen() {
           </div>
           <button
             onClick={() => window.dispatchEvent(new CustomEvent("circle:composer", { detail: { kind: "media" } }))}
-            className="mt-4 text-xs px-4 py-2 rounded-full bg-gradient-gold text-brand-charcoal font-medium flex items-center gap-1"
+            className="mt-4 text-xs px-4 py-2 rounded-full bg-gradient-gold text-charcoal font-medium flex items-center gap-1"
           >
             <Plus className="w-3 h-3" /> Share a photo
           </button>
@@ -1443,7 +1443,7 @@ export function LamahatScreen() {
           {!search && category === "all" && (
             <button
               onClick={() => window.dispatchEvent(new CustomEvent("circle:composer", { detail: { kind: "media" } }))}
-              className="mt-4 text-xs px-4 py-2 rounded-full bg-gradient-gold text-brand-charcoal font-medium flex items-center gap-1"
+              className="mt-4 text-xs px-4 py-2 rounded-full bg-gradient-gold text-charcoal font-medium flex items-center gap-1"
             >
               <Plus className="w-3 h-3" /> Share a photo
             </button>
@@ -1480,7 +1480,7 @@ export function LamahatScreen() {
                 {/* Top-left: avatar + author + time (always visible) */}
                 <div className="absolute top-2 left-2 right-12 flex items-center gap-2 z-10">
                   <div
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-brand-charcoal shrink-0 ring-2 ring-white/40 shadow-md"
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-charcoal shrink-0 ring-2 ring-white/40 shadow-md"
                     style={{ background: meta.avatar }}
                     aria-hidden
                   >
@@ -1660,7 +1660,7 @@ export function LamahatScreen() {
                     onClick={() => setAlbumCategory(albumCategory === c ? "" : c)}
                     className={`text-xs px-3 py-1.5 rounded-full border transition ${
                       albumCategory === c
-                        ? "bg-gradient-gold text-brand-charcoal border-transparent font-medium"
+                        ? "bg-gradient-gold text-charcoal border-transparent font-medium"
                         : "glass hover:bg-muted/50 border-border/60"
                     }`}
                   >
@@ -1686,13 +1686,13 @@ export function LamahatScreen() {
                       onClick={() => setAlbumVisibility(opt.value)}
                       className={`rounded-xl p-2.5 text-center border transition ${
                         active
-                          ? "bg-gradient-gold text-brand-charcoal border-transparent font-medium"
+                          ? "bg-gradient-gold text-charcoal border-transparent font-medium"
                           : "glass hover:bg-muted/50 border-border/60"
                       }`}
                       aria-pressed={active}
                     >
                       <div className="text-xs font-medium leading-tight">{opt.label}</div>
-                      <div className={`text-[9px] mt-0.5 leading-tight ${active ? "text-brand-charcoal/70" : "text-muted-foreground"}`}>
+                      <div className={`text-[9px] mt-0.5 leading-tight ${active ? "text-charcoal/70" : "text-muted-foreground"}`}>
                         {opt.desc}
                       </div>
                     </button>
@@ -1729,7 +1729,7 @@ export function LamahatScreen() {
               <button
                 onClick={submitAlbum}
                 disabled={!albumTitle.trim() || creatingAlbum}
-                className="flex-1 text-xs px-3 py-2.5 rounded-xl bg-gradient-gold text-brand-charcoal font-medium hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-1.5"
+                className="flex-1 text-xs px-3 py-2.5 rounded-xl bg-gradient-gold text-charcoal font-medium hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-1.5"
               >
                 {creatingAlbum ? (
                   <>

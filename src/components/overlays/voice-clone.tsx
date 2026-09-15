@@ -228,7 +228,7 @@ export function VoiceClone({ open, onClose }: Props) {
 
                   <button
                     onClick={enable}
-                    className="w-full rounded-xl bg-gradient-gold text-brand-charcoal py-2.5 text-sm font-medium flex items-center justify-center gap-2 hover:opacity-90 transition"
+                    className="w-full rounded-xl bg-gradient-gold text-charcoal py-2.5 text-sm font-medium flex items-center justify-center gap-2 hover:opacity-90 transition"
                   >
                     <Check className="w-4 h-4" /> Continue to enable
                   </button>
@@ -240,7 +240,7 @@ export function VoiceClone({ open, onClose }: Props) {
                 <>
                   <section className="rounded-2xl border border-secondary/30 bg-gradient-to-br from-secondary/15 to-transparent p-4 flex items-center gap-3 relative overflow-hidden">
                     <div className="absolute -top-10 -right-10 w-32 h-32 bg-secondary/20 rounded-full blur-3xl" />
-                    <div className="relative w-12 h-12 rounded-xl bg-gradient-gold flex items-center justify-center"><Sparkles className="w-5 h-5 text-brand-charcoal" /></div>
+                    <div className="relative w-12 h-12 rounded-xl bg-gradient-gold flex items-center justify-center"><Sparkles className="w-5 h-5 text-charcoal" /></div>
                     <div className="relative flex-1">
                       <div className="font-display text-lg">Voice clone enabled</div>
                       <div className="text-xs text-muted-foreground">Stored encrypted on this device only.</div>

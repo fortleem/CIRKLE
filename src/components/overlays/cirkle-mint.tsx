@@ -1,5 +1,6 @@
 "use client";
 import { motion, AnimatePresence } from "framer-motion";
+import { OverlayShell } from "@/components/ui/overlay-shell";
 import { useState } from "react";
 import { X, Sparkles, Coins, TrendingUp, Heart, Bookmark } from "lucide-react";
 import { CircleMark } from "@/components/brand/circle-mark";

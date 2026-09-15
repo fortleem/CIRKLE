@@ -2596,7 +2596,7 @@ export function HomeScreen() {
         <div className="rounded-2xl border border-border bg-card p-4 relative overflow-hidden">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-xl bg-gradient-gold flex items-center justify-center text-brand-charcoal">
+              <div className="w-9 h-9 rounded-xl bg-gradient-gold flex items-center justify-center text-charcoal">
                 <Mail className="w-4 h-4" />
               </div>
               <div>

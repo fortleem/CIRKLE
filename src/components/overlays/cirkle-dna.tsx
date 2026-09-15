@@ -1,5 +1,6 @@
 "use client";
 import { motion, AnimatePresence } from "framer-motion";
+import { OverlayShell } from "@/components/ui/overlay-shell";
 import { X, Share2, Users, Sparkles, RefreshCw, Check } from "lucide-react";
 import { CircleMark } from "@/components/brand/circle-mark";
 import { toast } from "sonner";

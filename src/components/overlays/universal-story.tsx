@@ -195,7 +195,7 @@ export function UniversalStory({ open, onClose }: Props) {
             <div className="border-t border-border/50 px-5 py-3">
               <button
                 onClick={publish} disabled={!optimized}
-                className="w-full rounded-xl bg-gradient-gold text-brand-charcoal py-2.5 text-sm font-medium flex items-center justify-center gap-2 hover:opacity-90 transition disabled:opacity-50"
+                className="w-full rounded-xl bg-gradient-gold text-charcoal py-2.5 text-sm font-medium flex items-center justify-center gap-2 hover:opacity-90 transition disabled:opacity-50"
               >
                 <Send className="w-4 h-4" /> Publish
               </button>

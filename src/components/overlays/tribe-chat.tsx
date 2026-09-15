@@ -183,7 +183,7 @@ export function TribeChat({ open, onClose }: Props) {
                 <motion.div key={m.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
                   className={cn("flex items-start gap-2.5", m.you && "flex-row-reverse")}>
                   <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-xs shrink-0",
-                    m.you ? "bg-gradient-gold text-brand-charcoal" : "bg-gradient-to-br from-steel/30 to-primary/20 text-foreground")}>
+                    m.you ? "bg-gradient-gold text-charcoal" : "bg-gradient-to-br from-steel/30 to-primary/20 text-foreground")}>
                     {m.user[0]}
                   </div>
                   <div className={cn("max-w-[80%] px-3.5 py-2 rounded-2xl text-sm",
