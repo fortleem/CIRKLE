@@ -1,7 +1,7 @@
 import { logger } from "@/lib/logger";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { CURRENT_USER } from "@/lib/circle/mock-data";
+
 
 /**
  * GET /api/verify/start
@@ -13,7 +13,7 @@ export async function GET() {
     let existing: { type: string; label: string; status: string; attestor: string; issuedAt: Date }[] = [];
     try {
       existing = await db.verifyClaim.findMany({
-        where: { userLabel: CURRENT_USER.displayName },
+        where: { userLabel: "User" },
         orderBy: { issuedAt: "desc" },
       });
     } catch {
@@ -21,7 +21,7 @@ export async function GET() {
     }
     return NextResponse.json({
       ok: true,
-      user: CURRENT_USER.displayName,
+      user: "User",
       status: existing.length ? "verified" : "unverified",
       claims: existing.length,
       flow: ["scan_id", "liveness", "face_match", "attestation"],
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
       await db.verifyClaim.create({
         data: {
           id: claim.id,
-          userLabel: CURRENT_USER.displayName,
+          userLabel: "User",
           type: claim.type,
           label: claim.label,
           status: claim.status,

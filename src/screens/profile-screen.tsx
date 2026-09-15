@@ -1454,17 +1454,18 @@ type MockPost = {
 };
 
 /** Mock posts for the profile grid (UI preview — no backend yet). */
-const MOCK_POSTS: MockPost[] = [
-  { id: 1, type: "text", text: "Beautiful morning in the city — coffee and code, the perfect combo.", likes: 24, comments: 5, shares: 2, time: "2h" },
-  { id: 2, type: "photo", text: "Sunset from my balcony tonight 🌅", likes: 87, comments: 12, shares: 8, time: "5h" },
-  { id: 3, type: "video", text: "Travel vlog: mountains of the Asir region.", likes: 142, comments: 28, shares: 19, time: "1d" },
-  { id: 4, type: "text", text: "Three things I learned building Cirkle this week.", likes: 56, comments: 14, shares: 6, time: "1d" },
-  { id: 5, type: "photo", text: "Coffee art from the local café.", likes: 33, comments: 4, shares: 1, time: "2d" },
-  { id: 6, type: "video", text: "Quick tutorial: setting up privacy controls.", likes: 198, comments: 41, shares: 32, time: "3d" },
-  { id: 7, type: "text", text: "Privacy is not a feature — it's the foundation.", likes: 89, comments: 17, shares: 24, time: "4d" },
-  { id: 8, type: "photo", text: "Street art in the old district.", likes: 71, comments: 9, shares: 5, time: "5d" },
-  { id: 9, type: "video", text: "Live AMA about Cirkle Verify.", likes: 312, comments: 67, shares: 45, time: "1w" },
-];
+// REMOVED: MOCK_POSTS no longer used — display shows honest empty state
+// REMOVED: MOCK_POSTS — no longer used
+//   { id: 1, type: "text", text: "Beautiful morning in the city — coffee and code, the perfect combo.", likes: 24, comments: 5, shares: 2, time: "2h" },
+//   { id: 2, type: "photo", text: "Sunset from my balcony tonight 🌅", likes: 87, comments: 12, shares: 8, time: "5h" },
+//   { id: 3, type: "video", text: "Travel vlog: mountains of the Asir region.", likes: 142, comments: 28, shares: 19, time: "1d" },
+//   { id: 4, type: "text", text: "Three things I learned building Cirkle this week.", likes: 56, comments: 14, shares: 6, time: "1d" },
+//   { id: 5, type: "photo", text: "Coffee art from the local café.", likes: 33, comments: 4, shares: 1, time: "2d" },
+//   { id: 6, type: "video", text: "Quick tutorial: setting up privacy controls.", likes: 198, comments: 41, shares: 32, time: "3d" },
+//   { id: 7, type: "text", text: "Privacy is not a feature — it's the foundation.", likes: 89, comments: 17, shares: 24, time: "4d" },
+//   { id: 8, type: "photo", text: "Street art in the old district.", likes: 71, comments: 9, shares: 5, time: "5d" },
+//   { id: 9, type: "video", text: "Live AMA about Cirkle Verify.", likes: 312, comments: 67, shares: 45, time: "1w" },
+// ];
 
 /** Post grid item — small card with post-type icon, truncated text, engagement counts. Color-coded by type. */
 function PostGridItem({ post }: { post: MockPost }) {
